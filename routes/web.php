@@ -135,6 +135,22 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::get('/permissions/{user}/edit', [PermissionController::class, 'edit'])->name('permissions.edit');
     Route::put('/permissions/{user}', [PermissionController::class, 'update'])->name('permissions.update');
 
+    // ─── قرارداد کارمندان (پرسنل) ─────────────────────────────────────
+    // مدیریت و تأیید: دسترسی manage-staff-contracts
+    Route::middleware('can:manage-staff-contracts')->prefix('staff-contracts')->name('staff-contracts.')->group(function () {
+        Route::get('/', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'index'])->name('index');
+        Route::get('/create', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'create'])->name('create');
+        Route::post('/', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'store'])->name('store');
+        Route::get('/{staffContract}', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'show'])->name('show');
+        Route::post('/{staffContract}/approve', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'approve'])->name('approve');
+        Route::post('/{staffContract}/reject', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'reject'])->name('reject');
+        Route::post('/{staffContract}/regenerate-pdf', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'regeneratePdf'])->name('regenerate-pdf');
+        Route::get('/{staffContract}/download', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'download'])->name('download');
+        Route::get('/{staffContract}/file/{field}', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'document'])
+            ->where('field', '[a-z0-9_]+')->name('file');
+        Route::delete('/{staffContract}', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'destroy'])->name('destroy');
+    });
+
     // گزارش فعالیت (فایل‌محور، نگهداری ۱۵ روزه) — فقط مدیر کل
     Route::middleware('can:manage-permissions')->group(function () {
         Route::get('/activity-log', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('activity-log.index');
@@ -194,3 +210,29 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::get('/tasks/my', [ChatController::class, 'getMyTasks'])->name('tasks.my');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| قرارداد من (بخشِ خودِ کارمند)
+|--------------------------------------------------------------------------
+| هر کاربرِ لاگین‌کرده فقط قراردادهای خودش را می‌بیند و تکمیل می‌کند:
+| بارگذاری مدارک (تا ۲۰ مگابایت)، امضای الکترونیک، ضبط ویدیوی احراز و
+| در نهایت دانلود نسخهٔ PDF مهر و امضاشده پس از تأیید مدیریت.
+*/
+Route::middleware(['auth', 'verified.mobile'])
+    ->prefix('my-contracts')
+    ->name('my-contracts.')
+    ->group(function () {
+        Route::get('/', [\Modules\Staff\Http\Controllers\MyContractController::class, 'index'])->name('index');
+        Route::get('/{contract}', [\Modules\Staff\Http\Controllers\MyContractController::class, 'show'])->name('show');
+        Route::post('/{contract}/documents/{field}', [\Modules\Staff\Http\Controllers\MyContractController::class, 'uploadDocument'])
+            ->where('field', '[a-z0-9_]+')->name('documents.upload');
+        Route::delete('/{contract}/documents/{field}', [\Modules\Staff\Http\Controllers\MyContractController::class, 'deleteDocument'])
+            ->where('field', '[a-z0-9_]+')->name('documents.delete');
+        Route::post('/{contract}/signature', [\Modules\Staff\Http\Controllers\MyContractController::class, 'signature'])->name('signature');
+        Route::post('/{contract}/video', [\Modules\Staff\Http\Controllers\MyContractController::class, 'video'])->name('video');
+        Route::post('/{contract}/submit', [\Modules\Staff\Http\Controllers\MyContractController::class, 'submit'])->name('submit');
+        Route::get('/{contract}/download', [\Modules\Staff\Http\Controllers\MyContractController::class, 'download'])->name('download');
+        Route::get('/{contract}/file/{field}', [\Modules\Staff\Http\Controllers\MyContractController::class, 'file'])
+            ->where('field', '[a-z0-9_]+')->name('file');
+    });
