@@ -217,6 +217,69 @@ class OrderStatusLogActorTest extends TestCase
         $this->assertSame('سامانهٔ ووکامرس', $log->actor_name);
     }
 
+    public function test_assignment_writes_the_technician_name_into_the_order_history(): void
+    {
+        $this->mock(\Modules\CRM\Services\OrderSmsNotifier::class, function ($mock) {
+            $mock->shouldReceive('notify')->andReturnNull();
+        });
+
+        $tech = Technician::forceCreate([
+            'first_name' => 'کاظم', 'firstname_tech' => 'کاظم صادقی', 'status' => 'active',
+        ]);
+        $order = $this->order();
+
+        app(OrderAssigner::class)->assign($order, $tech, 'manual', null);
+
+        $log = OrderStatusLog::where('order_id', $order->id)->latest('id')->first();
+        $this->assertStringContainsString('تخصیص تکنسین', $log->note);
+        $this->assertStringContainsString('کاظم صادقی', $log->note);
+    }
+
+    public function test_reassignment_names_both_technicians(): void
+    {
+        $this->mock(\Modules\CRM\Services\OrderSmsNotifier::class, function ($mock) {
+            $mock->shouldReceive('notify')->andReturnNull();
+        });
+
+        $first = Technician::forceCreate([
+            'first_name' => 'اول', 'firstname_tech' => 'تکنسین اول', 'status' => 'active',
+        ]);
+        $second = Technician::forceCreate([
+            'first_name' => 'دوم', 'firstname_tech' => 'تکنسین دوم', 'status' => 'active',
+        ]);
+
+        $order = $this->order();
+        $assigner = app(OrderAssigner::class);
+        $assigner->assign($order, $first, 'manual', null);
+        $assigner->assign($order->fresh(), $second, 'auto', null);
+
+        $log = OrderStatusLog::where('order_id', $order->id)->latest('id')->first();
+        $this->assertStringContainsString('تغییر تکنسین', $log->note);
+        $this->assertStringContainsString('تکنسین اول', $log->note);
+        $this->assertStringContainsString('تکنسین دوم', $log->note);
+        // حالتِ غیردستی باید صریح در تاریخچه بیاید.
+        $this->assertStringContainsString('پخش خودکار', $log->note);
+    }
+
+    public function test_unassignment_names_the_removed_technician(): void
+    {
+        $this->mock(\Modules\CRM\Services\OrderSmsNotifier::class, function ($mock) {
+            $mock->shouldReceive('notify')->andReturnNull();
+        });
+
+        $tech = Technician::forceCreate([
+            'first_name' => 'پویا', 'firstname_tech' => 'پویا کریمی', 'status' => 'active',
+        ]);
+        $order = $this->order();
+        $assigner = app(OrderAssigner::class);
+        $assigner->assign($order, $tech, 'manual', null);
+        $assigner->unassign($order->fresh(), null);
+
+        $log = OrderStatusLog::where('order_id', $order->id)->latest('id')->first();
+        $this->assertStringContainsString('لغو تخصیص تکنسین', $log->note);
+        $this->assertStringContainsString('پویا کریمی', $log->note);
+    }
+
     public function test_history_keeps_the_old_technician_after_reassignment(): void
     {
         $this->mock(\Modules\CRM\Services\OrderSmsNotifier::class, function ($mock) {

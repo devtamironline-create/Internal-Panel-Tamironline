@@ -60,9 +60,13 @@ final class OrderAssigner
             'order_id' => $order->id,
             'from_status' => $previousStatus,
             'to_status' => $newStatus,
-            'note' => $shouldResetStatus
-                ? 'تخصیص مجدد — وضعیت از '.($previousStatusEnum?->label() ?? $previousStatus).' به جدید بازگردانده شد'
-                : 'تخصیص تکنسین (وضعیت تغییر نکرد — منتظر تماس تکنسین با مشتری)',
+            'note' => self::assignNote(
+                $technician,
+                $previousTechnicianId,
+                $mode,
+                $shouldResetStatus,
+                $previousStatusEnum?->label() ?? $previousStatus,
+            ),
             'changed_by' => $byUserId,
             'created_at' => now(),
         ]);
@@ -101,11 +105,13 @@ final class OrderAssigner
             'assigned_at' => null,
         ]);
 
+        $removedName = self::nameOf($previousTechnicianId);
+
         OrderStatusLog::create([
             'order_id' => $order->id,
             'from_status' => $previousStatus,
             'to_status' => OrderStatus::New->value,
-            'note' => 'لغو تخصیص تکنسین',
+            'note' => 'لغو تخصیص تکنسین «'.$removedName.'» — سفارش بدون تکنسین شد.',
             'changed_by' => $byUserId,
             'created_at' => now(),
         ]);
@@ -115,12 +121,60 @@ final class OrderAssigner
             'technician_id' => null,
             'previous_technician_id' => $previousTechnicianId,
             'mode' => 'unassign',
-            'note' => $note ?: 'تخصیص تکنسین توسط اپراتور لغو شد.',
+            'note' => $note ?: 'تخصیص تکنسین «'.$removedName.'» لغو شد.',
             'assigned_by' => $byUserId,
             'created_at' => now(),
         ]);
 
         return $order;
+    }
+
+    /**
+     * متنِ رویدادِ تخصیص در تاریخچهٔ وضعیت — همیشه با نامِ تکنسین.
+     *
+     * قبلاً فقط «تخصیص تکنسین» نوشته می‌شد و در تایم‌لاین معلوم نبود
+     * سفارش به چه کسی رسید؛ مخصوصاً وقتی وضعیت عوض نمی‌شود و ردیف هیچ
+     * اطلاعِ دیگری ندارد.
+     */
+    private static function assignNote(
+        Technician $technician,
+        ?int $previousTechnicianId,
+        string $mode,
+        bool $statusWasReset,
+        string $previousStatusLabel
+    ): string {
+        $name = self::technicianName($technician);
+        $parts = [];
+
+        if ($previousTechnicianId && $previousTechnicianId !== $technician->id) {
+            $parts[] = 'تغییر تکنسین: از «'.self::nameOf($previousTechnicianId).'» به «'.$name.'»';
+        } else {
+            $parts[] = 'تخصیص تکنسین: «'.$name.'»';
+        }
+
+        // حالتِ دستی خودش پیداست (اپراتورش در همان ردیف ثبت شده)؛ بقیه
+        // حالت‌ها باید صریح بیایند تا معلوم باشد سیستم تصمیم گرفته.
+        if ($mode !== 'manual' && isset(OrderAssignmentLog::MODES[$mode])) {
+            $parts[] = OrderAssignmentLog::MODES[$mode];
+        }
+
+        $parts[] = $statusWasReset
+            ? 'وضعیت از '.$previousStatusLabel.' به جدید بازگردانده شد'
+            : 'وضعیت تغییر نکرد — منتظر تماس تکنسین با مشتری';
+
+        return implode(' · ', $parts);
+    }
+
+    /** نامِ نمایشیِ یک تکنسین از روی شناسه (برای تکنسینِ قبلی). */
+    private static function nameOf(?int $technicianId): string
+    {
+        if (! $technicianId) {
+            return '—';
+        }
+
+        $technician = Technician::query()->find($technicianId);
+
+        return $technician ? self::technicianName($technician) : ('تکنسین #'.$technicianId);
     }
 
     /** ثبتِ ردیفِ لاگ + آینه‌کردن در کانال فایلیِ activity. */
