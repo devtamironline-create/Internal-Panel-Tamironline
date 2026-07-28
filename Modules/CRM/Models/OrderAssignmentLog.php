@@ -27,6 +27,7 @@ class OrderAssignmentLog extends Model
         'group' => 'تخصیص گروهی (چند سفارش، یک آدرس)',
         'auto' => 'پخش خودکار سیستم',
         'sticky' => 'چسبیده به تکنسین همان آدرس',
+        'history' => 'تکنسین قبلیِ همان دستگاه',
         'unassign' => 'لغو تخصیص',
     ];
 
@@ -71,6 +72,6 @@ class OrderAssignmentLog extends Model
     /** آیا این ردیف توسط خود سیستم ثبت شده (نه یک اپراتور)؟ */
     public function isAutomatic(): bool
     {
-        return in_array($this->mode, ['auto', 'sticky'], true);
+        return in_array($this->mode, ['auto', 'sticky', 'history'], true);
     }
 }

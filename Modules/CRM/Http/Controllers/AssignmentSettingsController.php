@@ -33,7 +33,11 @@ class AssignmentSettingsController extends Controller
             'assign_min_score' => 'required|integer|min:0|max:100',
             'assign_max_per_run' => 'required|integer|min:1|max:500',
             'assign_max_age_days' => 'required|integer|min:1|max:90',
+            'assign_history_enabled' => 'required|boolean',
+            'assign_history_months' => 'required|integer|min:1|max:60',
         ]);
+
+        $validated['assign_history_enabled'] = $validated['assign_history_enabled'] ? 1 : 0;
 
         AssignmentSettings::save($validated);
 

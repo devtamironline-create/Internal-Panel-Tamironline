@@ -23,6 +23,7 @@ use Modules\CRM\Services\OrderAssigner;
 use Modules\CRM\Services\OrderGroupResolver;
 use Modules\CRM\Services\OrderSmsNotifier;
 use Modules\CRM\Services\TechnicianGroupPlanner;
+use Modules\CRM\Services\TechnicianHistoryService;
 use Modules\CRM\Services\TechnicianSuggestionService;
 
 class OrderController extends Controller
@@ -442,6 +443,7 @@ class OrderController extends Controller
         $suggestions = collect();
         $suggestionDiagnosis = null;
         $groupPlan = null;
+        $previousTechnician = null;
         if (auth()->user()?->can('view-tech-suggestions') && ! $order->technician_id) {
             $svc = app(TechnicianSuggestionService::class);
             $suggestions = $svc->suggestForOrder($order, 5);
@@ -450,6 +452,10 @@ class OrderController extends Controller
                 // برای سفارش‌های عادی نکنیم.
                 $suggestionDiagnosis = $svc->diagnoseForOrder($order);
             }
+
+            // تکنسینِ سابقِ همین دستگاه برای همین مشتری — برای نشان‌دار
+            // کردن در فهرست پیشنهاد.
+            $previousTechnician = app(TechnicianHistoryService::class)->previousTechnicianFor($order);
 
             // نقشهٔ گروهی فقط وقتی معنا دارد که این آدرس بیش از یک سفارشِ
             // بدون تکنسین داشته باشد؛ در غیر این صورت همان پیشنهاد تکی است.
@@ -518,6 +524,7 @@ class OrderController extends Controller
             'suggestions' => $suggestions,
             'suggestionDiagnosis' => $suggestionDiagnosis,
             'groupPlan' => $groupPlan,
+            'previousTechnician' => $previousTechnician,
             'assignmentLogs' => $assignmentLogs,
             'activeInvoice' => $activeInvoice,
             'customerOrders' => $customerOrders,
@@ -843,12 +850,13 @@ class OrderController extends Controller
                 $this->assigner->assign(
                     $target,
                     $step->technician,
-                    $step->sticky ? 'sticky' : 'group',
+                    $step->sticky ? 'sticky' : ($step->history !== null ? 'history' : 'group'),
                     auth()->id(),
                     [
                         'score' => $step->score,
                         'breakdown' => $step->breakdown,
                         'reasons' => $step->reasons,
+                        'history' => $step->history,
                         'group_size' => $groupSize,
                         'covered_count' => $step->orders->count(),
                         'group_order_ids' => $groupIds,
@@ -903,6 +911,13 @@ class OrderController extends Controller
         $context['score'] = $chosen->score;
         $context['breakdown'] = $chosen->breakdown;
         $context['reasons'] = $chosen->reasons;
+
+        // اگر همین نفر تکنسینِ سابقِ این دستگاه برای این مشتری است، در
+        // متنِ دلیل بیاید — حتی وقتی اپراتور دستی انتخابش کرده.
+        $previous = app(TechnicianHistoryService::class)->previousTechnicianFor($order);
+        if ($previous && $previous['technician_id'] === $technician->id) {
+            $context['history'] = $previous;
+        }
         $context['alternatives'] = $ranked
             ->reject(fn ($s) => $s->technician->id === $technician->id)
             ->take(3)

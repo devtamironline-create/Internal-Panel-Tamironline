@@ -91,6 +91,43 @@
             </div>
         </div>
 
+        {{-- ─── تکنسین سابق ─── --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100">تکنسین قبلیِ همان دستگاه</h2>
+
+            <label class="flex items-start gap-3 cursor-pointer">
+                <input type="hidden" name="assign_history_enabled" value="0">
+                <input type="checkbox" name="assign_history_enabled" value="1" class="mt-1"
+                       @checked($settings['assign_history_enabled'])>
+                <div>
+                    <div class="text-sm font-bold">اگر مشتری همان دستگاه را دوباره ثبت کرد، همان تکنسین قبلی</div>
+                    <div class="text-[11px] text-gray-500 leading-5 mt-0.5">
+                        شرط‌ها: سفارش قبلی «انجام کار» شده باشد، تکنسین هنوز فعال باشد، و قیدهای عملیاتی
+                        (ظرفیت، آمادهٔ دریافت بودن، پوشش شهر/برند/دستگاه) برقرار باشد. اگر روی آن دستگاه سابقهٔ
+                        «برگشتی گارانتی» وجود داشته باشد این قاعده اعمال نمی‌شود.
+                    </div>
+                </div>
+            </label>
+
+            <label class="block">
+                <span class="text-xs text-gray-600 dark:text-gray-300">اعتبار سابقه (ماه)</span>
+                <input type="number" name="assign_history_months" min="1" max="60" dir="ltr"
+                       value="{{ old('assign_history_months', $settings['assign_history_months']) }}"
+                       class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                <span class="text-[11px] text-gray-400 leading-5 block mt-1">
+                    سفارش‌های قدیمی‌تر از این بازه دیگر ملاک نیستند.
+                </span>
+            </label>
+
+            <div class="text-[11px] text-gray-500 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5 leading-6">
+                <b>ترتیب اولویت در انتخاب تکنسین:</b>
+                ۱) تکنسینی که همین امروز روی همین آدرس سفارش دارد ←
+                ۲) کم‌کردن تعداد مراجعه (کسی که بیشترین سفارش این آدرس را پوشش دهد) ←
+                ۳) تکنسین قبلیِ همان دستگاه ←
+                ۴) امتیاز کیفی.
+            </div>
+        </div>
+
         {{-- ─── پیش‌نمایش ─── --}}
         <div class="bg-gray-50 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 mb-2">اگر همین حالا اجرا می‌شد</h2>

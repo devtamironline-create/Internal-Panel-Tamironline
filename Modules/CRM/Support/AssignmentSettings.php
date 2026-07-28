@@ -30,6 +30,10 @@ final class AssignmentSettings
         // حداکثر قدمتِ سفارش برای پخش خودکار (روز) — سفارش‌های خیلی قدیمی
         // معمولاً دلیلِ انسانی دارند و نباید ناگهان پخش شوند.
         'assign_max_age_days' => 3,
+        // قاعدهٔ «تکنسینِ سابقهٔ همان دستگاه» فعال باشد؟
+        'assign_history_enabled' => 1,
+        // تا چند ماه عقب سابقه معتبر است.
+        'assign_history_months' => 6,
     ];
 
     public static function mode(): string
@@ -64,6 +68,16 @@ final class AssignmentSettings
         return max(1, self::intValue('assign_max_age_days', 1, 90));
     }
 
+    public static function historyEnabled(): bool
+    {
+        return CrmSetting::get('assign_history_enabled', (string) self::DEFAULTS['assign_history_enabled']) === '1';
+    }
+
+    public static function historyMonths(): int
+    {
+        return max(1, self::intValue('assign_history_months', 1, 60));
+    }
+
     /** @return array<string, string|int> همهٔ مقادیر برای صفحهٔ تنظیمات */
     public static function all(): array
     {
@@ -73,6 +87,8 @@ final class AssignmentSettings
             'assign_min_score' => self::minScore(),
             'assign_max_per_run' => self::maxPerRun(),
             'assign_max_age_days' => self::maxAgeDays(),
+            'assign_history_enabled' => self::historyEnabled() ? 1 : 0,
+            'assign_history_months' => self::historyMonths(),
         ];
     }
 

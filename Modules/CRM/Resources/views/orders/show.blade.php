@@ -1227,6 +1227,12 @@
                                                         {{ trim($s->technician->firstname_tech ?: $s->technician->first_name) ?: '—' }}
                                                     </div>
                                                     <div class="text-[10px] {{ $textColor }} font-medium">{{ $s->label }}</div>
+                                                    @if(! empty($previousTechnician) && $previousTechnician['technician_id'] === $s->technician->id)
+                                                        <div class="mt-0.5 inline-block text-[10px] bg-violet-100 text-violet-700 rounded px-1.5 py-0.5">
+                                                            ⭐ تکنسین قبلی همین دستگاه
+                                                            @if($previousTechnician['order_code']) — {{ $previousTechnician['order_code'] }} @endif
+                                                        </div>
+                                                    @endif
                                                 </div>
                                             </div>
                                             <form action="{{ route('crm.orders.assign', $order) }}" method="POST" class="flex-shrink-0">

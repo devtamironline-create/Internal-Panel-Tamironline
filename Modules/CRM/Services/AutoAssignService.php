@@ -63,10 +63,11 @@ final class AutoAssignService
 
             foreach ($plan->steps as $step) {
                 // امتیاز پایین = سیستم مطمئن نیست؛ تصمیم را به اپراتور
-                // واگذار می‌کنیم. چسبندگی از این قاعده مستثناست چون
-                // «همان تکنسینِ همان خانه» تصمیمِ عملیاتیِ درستی است
-                // حتی اگر امتیازِ کیفی‌اش پایین باشد.
-                if (! $step->sticky && $step->score < $minScore) {
+                // واگذار می‌کنیم. چسبندگی و سابقهٔ همان دستگاه از این قاعده
+                // مستثنا هستند: «همان تکنسینِ همان خانه/همان دستگاه» تصمیمِ
+                // عملیاتیِ درستی است حتی اگر امتیازِ کیفی‌اش پایین باشد.
+                $exempt = $step->sticky || $step->history !== null;
+                if (! $exempt && $step->score < $minScore) {
                     $stats['skipped_low_score'] += $step->orders->count();
 
                     continue;
@@ -83,12 +84,13 @@ final class AutoAssignService
                         $this->assigner->assign(
                             $order,
                             $step->technician,
-                            $step->sticky ? 'sticky' : 'auto',
+                            self::modeFor($step),
                             null,
                             [
                                 'score' => $step->score,
                                 'breakdown' => $step->breakdown,
                                 'reasons' => $step->reasons,
+                                'history' => $step->history,
                                 'group_size' => $groupSize,
                                 'covered_count' => $step->orders->count(),
                                 'group_order_ids' => $groupIds,
@@ -109,6 +111,19 @@ final class AutoAssignService
         }
 
         return $stats;
+    }
+
+    /**
+     * حالتی که در لاگ ثبت می‌شود — به ترتیبِ همان اولویتی که باعثِ
+     * انتخابِ این تکنسین شده.
+     */
+    public static function modeFor(object $step): string
+    {
+        return match (true) {
+            $step->sticky => 'sticky',
+            $step->history !== null => 'history',
+            default => 'auto',
+        };
     }
 
     /**
