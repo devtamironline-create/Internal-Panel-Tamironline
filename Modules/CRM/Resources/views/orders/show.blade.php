@@ -782,6 +782,15 @@
                     <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">تاریخچه وضعیت</h2>
                     <ol class="space-y-3 text-sm">
                         @forelse($order->statusLogs as $log)
+                        @php
+                            $actorName = $log->actorLabel();
+                            $roleBadge = [
+                                'technician' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+                                'operator'   => 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
+                                'customer'   => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+                                'system'     => 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+                            ][$log->actor_role] ?? 'bg-gray-100 text-gray-600';
+                        @endphp
                         <li class="flex items-start gap-3 pb-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
                             <span class="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap" dir="ltr">@jdatetime($log->created_at)</span>
                             <div class="flex-1">
@@ -795,8 +804,16 @@
                                 @if($log->note)
                                 <div class="text-xs text-gray-600 dark:text-gray-300 mt-1">{{ $log->note }}</div>
                                 @endif
-                                @if($log->changer)
-                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">توسط: {{ $log->changer->full_name ?? '—' }}</div>
+                                @if($actorName)
+                                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1.5 flex-wrap">
+                                    @if($log->actorRoleLabel())
+                                        <span class="text-[10px] rounded px-1.5 py-0.5 {{ $roleBadge }}">{{ $log->actorRoleLabel() }}</span>
+                                    @endif
+                                    <span class="font-medium">{{ $actorName }}</span>
+                                    @if($log->isByTechnician() && $log->actor_technician_id && $log->actor_technician_id !== $order->technician_id)
+                                        <span class="text-[10px] text-amber-600">(تکنسین قبلی این سفارش)</span>
+                                    @endif
+                                </div>
                                 @endif
                             </div>
                         </li>
