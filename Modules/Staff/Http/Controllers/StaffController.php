@@ -49,8 +49,8 @@ class StaffController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('mobile', 'like', "%{$search}%");
+                    ->orWhere('last_name', 'like', "%{$search}%")
+                    ->orWhere('mobile', 'like', "%{$search}%");
             });
         }
 
@@ -96,7 +96,7 @@ class StaffController extends Controller
         ];
 
         // Convert Jalali birth_date to Gregorian
-        if (!empty($validated['birth_date'])) {
+        if (! empty($validated['birth_date'])) {
             try {
                 $birthDateStr = $this->persianToLatin($validated['birth_date']);
                 $userData['birth_date'] = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $birthDateStr)->toCarbon();
@@ -120,7 +120,9 @@ class StaffController extends Controller
 
     public function edit(User $staff)
     {
-        if (!$staff->is_staff) abort(404);
+        if (! $staff->is_staff) {
+            abort(404);
+        }
 
         $roles = Role::with('permissions')->get();
         $userRole = $staff->roles->first()?->name ?? 'staff';
@@ -130,13 +132,15 @@ class StaffController extends Controller
 
     public function update(Request $request, User $staff)
     {
-        if (!$staff->is_staff) abort(404);
+        if (! $staff->is_staff) {
+            abort(404);
+        }
 
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'mobile' => 'required|regex:/^09[0-9]{9}$/|unique:users,mobile,' . $staff->id,
-            'email' => 'nullable|email|unique:users,email,' . $staff->id,
+            'mobile' => 'required|regex:/^09[0-9]{9}$/|unique:users,mobile,'.$staff->id,
+            'email' => 'nullable|email|unique:users,email,'.$staff->id,
             'password' => 'nullable|min:8|confirmed',
             'is_active' => 'boolean',
             'can_add_group_members' => 'boolean',
@@ -157,7 +161,7 @@ class StaffController extends Controller
         ];
 
         // Convert Jalali birth_date to Gregorian
-        if (!empty($validated['birth_date'])) {
+        if (! empty($validated['birth_date'])) {
             try {
                 $birthDateStr = $this->persianToLatin($validated['birth_date']);
                 $updateData['birth_date'] = \Morilog\Jalali\Jalalian::fromFormat('Y/m/d', $birthDateStr)->toCarbon();
@@ -179,7 +183,7 @@ class StaffController extends Controller
 
         $staff->update($updateData);
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $staff->update(['password' => Hash::make($validated['password'])]);
         }
 
@@ -191,21 +195,27 @@ class StaffController extends Controller
 
     public function destroy(User $staff)
     {
-        if (!$staff->is_staff) abort(404);
+        if (! $staff->is_staff) {
+            abort(404);
+        }
         if ($staff->id === auth()->id()) {
             return back()->with('error', 'نمی‌توانید حساب خود را حذف کنید');
         }
         $staff->delete();
+
         return redirect()->route('admin.staff.index')->with('success', 'پرسنل حذف شد');
     }
 
     public function toggleStatus(User $staff)
     {
-        if (!$staff->is_staff) abort(404);
+        if (! $staff->is_staff) {
+            abort(404);
+        }
         if ($staff->id === auth()->id()) {
             return back()->with('error', 'نمی‌توانید حساب خود را غیرفعال کنید');
         }
-        $staff->update(['is_active' => !$staff->is_active]);
+        $staff->update(['is_active' => ! $staff->is_active]);
+
         return back()->with('success', 'وضعیت تغییر کرد');
     }
 

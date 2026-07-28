@@ -1204,6 +1204,34 @@
                 @endif
                 @endcan
 
+                <!-- قرارداد من (برای خودِ کارمند) — فقط اگر قراردادی برایش صادر شده باشد -->
+                @php
+                    // sidebarCounts در برابر نبودِ جدول/خطای DB امن است تا سایدبار
+                    // هرگز کلِ پنل را نشکند (مثلاً پیش از اجرای migrate).
+                    $myContracts = \Modules\Staff\Models\StaffContract::sidebarCounts(auth()->id());
+                @endphp
+                @if($myContracts['total'] > 0)
+                <div class="mt-2">
+                    <a href="{{ route('my-contracts.index') }}" class="sidebar-menu-item {{ request()->routeIs('my-contracts.*') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                        قرارداد من
+                        @if($myContracts['todo'] > 0)
+                            <span style="position:absolute; left:12px; background:#ef4444; color:#fff; border-radius:9999px; font-size:10px; padding:1px 6px;">{{ $myContracts['todo'] }}</span>
+                        @endif
+                    </a>
+                </div>
+                @endif
+
+                <!-- قرارداد کارمندان -->
+                @can('manage-staff-contracts')
+                <div class="mt-2">
+                    <a href="{{ route('admin.staff-contracts.index') }}" class="sidebar-menu-item {{ request()->routeIs('admin.staff-contracts.*') ? 'sidebar-menu-item-active' : '' }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        قرارداد کارمندان
+                    </a>
+                </div>
+                @endcan
+
                 <!-- مدیریت سیستم -->
                 @can('manage-permissions')
                 <div class="mt-6" x-data="{ open: {{ request()->routeIs('admin.roles.*') || request()->routeIs('admin.permissions.*') || request()->routeIs('admin.activity-log.*') ? 'true' : 'false' }} }">
