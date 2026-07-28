@@ -66,4 +66,23 @@ enum SmsTrigger: string
             default => null,
         };
     }
+
+    /**
+     * پیامک‌های *اضافه* بر پیامکِ اصلیِ یک وضعیت.
+     *
+     * هر trigger فقط یک قالب دارد و آن قالب یک گیرنده (مشتری یا تکنسین).
+     * پس برای رویدادهایی که هر دو طرف باید خبردار شوند، به‌جای پیچیده‌کردنِ
+     * قالب‌ها، triggerِ دومی را هم صدا می‌زنیم.
+     *
+     * لغو سفارش: مشتری با order_cancelled و تکنسین با tech_order_cancelled.
+     *
+     * @return array<int, self>
+     */
+    public static function companionsForOrderStatus(OrderStatus $status): array
+    {
+        return match ($status) {
+            OrderStatus::Cancelled => [self::TechOrderCancelled],
+            default => [],
+        };
+    }
 }

@@ -18,9 +18,7 @@ use Modules\SMS\Services\KavenegarService;
  */
 class OrderSmsNotifier
 {
-    public function __construct(protected KavenegarService $sms)
-    {
-    }
+    public function __construct(protected KavenegarService $sms) {}
 
     public function notify(Order $order, SmsTrigger $trigger, ?int $sentBy = null, array $extraVars = []): void
     {
@@ -51,12 +49,13 @@ class OrderSmsNotifier
                     'trigger_key' => $trigger->value,
                     'recipient_mobile' => $recipient,
                     'recipient_role' => $role,
-                    'body' => $template->kavenegar_template . ' | ' . json_encode($tokens, JSON_UNESCAPED_UNICODE),
+                    'body' => $template->kavenegar_template.' | '.json_encode($tokens, JSON_UNESCAPED_UNICODE),
                     'status' => $result['success'] ? 'success' : 'failed',
                     'response' => $result['success'] ? null : ($result['message'] ?? null),
                     'sent_by' => $sentBy,
                     'created_at' => now(),
                 ]);
+
                 return;
             }
 
@@ -70,6 +69,34 @@ class OrderSmsNotifier
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * ارسالِ پیامک‌های یک تغییرِ وضعیت — پیامکِ اصلی به‌علاوهٔ پیامک‌های
+     * همراه.
+     *
+     * چرا لازم است: هر trigger یک قالب دارد و هر قالب یک گیرنده. برای
+     * لغو سفارش باید هم مشتری خبردار شود هم تکنسین، پس دو trigger جدا
+     * صدا زده می‌شود. قالب‌های غیرفعال خودشان سایلنت رد می‌شوند، پس
+     * فراخوانی بی‌خطر است.
+     *
+     * @return array<int, string> کلیدِ triggerهایی که تلاش شد
+     */
+    public function notifyStatusChange(Order $order, \Modules\CRM\Enums\OrderStatus $status, ?int $sentBy = null): array
+    {
+        $sent = [];
+
+        if ($primary = SmsTrigger::fromOrderStatus($status)) {
+            $this->notify($order, $primary, $sentBy);
+            $sent[] = $primary->value;
+        }
+
+        foreach (SmsTrigger::companionsForOrderStatus($status) as $companion) {
+            $this->notify($order, $companion, $sentBy);
+            $sent[] = $companion->value;
+        }
+
+        return $sent;
     }
 
     /**
@@ -105,7 +132,7 @@ class OrderSmsNotifier
     {
         $techFullName = $order->technician
             ? trim((string) ($order->technician->firstname_tech
-                ?: ($order->technician->first_name ?? '') . ' ' . ($order->technician->last_name ?? '')))
+                ?: ($order->technician->first_name ?? '').' '.($order->technician->last_name ?? '')))
             : '';
 
         return [
@@ -121,6 +148,7 @@ class OrderSmsNotifier
             'subscription' => (string) ($order->customer?->subscription ?? ''),
             'order_type' => 'تعمیر',
             'amount' => (string) ($order->final_price ?: $order->total_invoice ?: $order->price_customer ?: 0),
+            'cancel_reason' => trim((string) ($order->cancel_reason ?? '')),
             'pay_link' => '',
         ];
     }
