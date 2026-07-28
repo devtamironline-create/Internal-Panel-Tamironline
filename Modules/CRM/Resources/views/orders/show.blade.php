@@ -1095,6 +1095,33 @@
                     <div class="text-xs text-gray-500 mt-1">تخصیص داده شده در <span dir="ltr">@jdatetime($order->assigned_at)</span></div>
                     @endif
                 </div>
+                {{-- ─── چرا این تکنسین؟ — snapshot لحظهٔ تصمیم ─── --}}
+                @php $lastAssignment = ($assignmentLogs ?? collect())->firstWhere('mode', '!=', 'unassign'); @endphp
+                @if($lastAssignment)
+                    <div class="mb-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 p-2.5">
+                        <div class="text-[11px] font-bold text-gray-700 dark:text-gray-200 mb-1">چرا این تکنسین؟</div>
+                        <p class="text-[11px] text-gray-600 dark:text-gray-300 leading-6">{{ $lastAssignment->note }}</p>
+                        <div class="text-[10px] text-gray-400 mt-1">
+                            {{ $lastAssignment->modeLabel() }}
+                            @if($lastAssignment->assigner) · توسط {{ $lastAssignment->assigner->full_name }} @endif
+                            · <span dir="ltr">@jdatetime($lastAssignment->created_at)</span>
+                        </div>
+                        @if(($assignmentLogs ?? collect())->count() > 1)
+                            <details class="mt-1.5">
+                                <summary class="text-[10px] text-brand-600 cursor-pointer">تاریخچهٔ تخصیص ({{ $assignmentLogs->count() }})</summary>
+                                <ul class="mt-1 space-y-1">
+                                    @foreach($assignmentLogs as $al)
+                                        <li class="text-[10px] text-gray-500 leading-5 border-r-2 border-gray-200 pr-2">
+                                            <span dir="ltr">@jdatetime($al->created_at)</span> —
+                                            {{ $al->modeLabel() }}{{ $al->technician ? ' → '.trim($al->technician->firstname_tech ?: $al->technician->first_name) : '' }}
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </details>
+                        @endif
+                    </div>
+                @endif
+
                 @can('assign-crm-technician')
                 <form action="{{ route('crm.orders.unassign', $order) }}" method="POST" onsubmit="return confirm('تکنسین برداشته شود؟');">
                     @csrf
@@ -1103,6 +1130,69 @@
                 @endcan
                 @else
                 <p class="text-sm text-gray-500 mb-3">تکنسینی تخصیص داده نشده.</p>
+
+                {{-- ─── نقشهٔ تخصیص گروهی: چند سفارش، یک آدرس، یک روز ─── --}}
+                @if(! empty($groupPlan) && $groupPlan->steps->isNotEmpty())
+                    <div class="mb-4 rounded-lg border-2 border-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 p-3">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="w-4 h-4 text-indigo-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                            </svg>
+                            <span class="text-xs font-bold text-indigo-800 dark:text-indigo-200">
+                                این مشتری امروز {{ $groupPlan->siblings->count() }} سفارش با همین آدرس دارد
+                            </span>
+                        </div>
+
+                        <p class="text-[11px] text-indigo-700 dark:text-indigo-300 leading-5 mb-2">
+                            برای اینکه مشتری چند مراجعهٔ جدا نداشته باشد، سیستم سفارش‌ها را به کمترین تعداد تکنسین تقسیم کرده است:
+                        </p>
+
+                        <div class="space-y-2">
+                            @foreach($groupPlan->steps as $step)
+                                <div class="bg-white dark:bg-gray-800 rounded-lg p-2.5 border border-indigo-200 dark:border-gray-700">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <div class="flex items-center gap-2 min-w-0">
+                                            <span class="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">{{ $step->score }}</span>
+                                            <div class="min-w-0">
+                                                <div class="text-sm font-bold truncate">
+                                                    {{ trim($step->technician->firstname_tech ?: $step->technician->first_name) ?: '—' }}
+                                                    @if($step->sticky)
+                                                        <span class="text-[10px] bg-emerald-100 text-emerald-700 rounded px-1.5 py-0.5 font-normal">تکنسین همین آدرس</span>
+                                                    @endif
+                                                </div>
+                                                <div class="text-[10px] text-gray-500">{{ $step->label }} · {{ $step->orders->count() }} سفارش</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-1.5 flex flex-wrap gap-1">
+                                        @foreach($step->orders as $go)
+                                            <span class="text-[10px] rounded px-1.5 py-0.5 {{ $go->id === $order->id ? 'bg-indigo-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' }}">
+                                                {{ $go->device?->name ?? $go->order_code }}
+                                            </span>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+
+                            @if($groupPlan->unassignable->isNotEmpty())
+                                <div class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 leading-5">
+                                    برای این سفارش‌ها تکنسینی پیدا نشد:
+                                    {{ $groupPlan->unassignable->map(fn($o) => $o->device?->name ?? $o->order_code)->implode('، ') }}
+                                </div>
+                            @endif
+                        </div>
+
+                        @can('assign-crm-technician')
+                            <form action="{{ route('crm.orders.assign-group', $order) }}" method="POST" class="mt-2"
+                                  onsubmit="return confirm('نقشهٔ بالا روی همهٔ سفارش‌های این آدرس اعمال شود؟');">
+                                @csrf
+                                <button class="w-full px-3 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-bold">
+                                    اعمال نقشه روی هر {{ $groupPlan->siblings->count() }} سفارش
+                                </button>
+                            </form>
+                        @endcan
+                    </div>
+                @endif
 
                 {{-- ─── پنل پیشنهاد هوشمند تکنسین (فاز ۱) ─── --}}
                 @can('view-tech-suggestions')
@@ -1142,6 +1232,7 @@
                                             <form action="{{ route('crm.orders.assign', $order) }}" method="POST" class="flex-shrink-0">
                                                 @csrf
                                                 <input type="hidden" name="technician_id" value="{{ $s->technician->id }}">
+                                                <input type="hidden" name="mode" value="suggestion">
                                                 <button class="px-3 py-1.5 bg-brand-700 text-white rounded-lg hover:bg-brand-800 text-xs font-bold">تخصیص</button>
                                             </form>
                                         </div>

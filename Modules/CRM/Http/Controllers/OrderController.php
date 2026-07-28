@@ -19,7 +19,11 @@ use Modules\CRM\Models\Province;
 use Modules\CRM\Models\Technician;
 use Modules\CRM\Services\InvoiceService;
 use Modules\CRM\Services\LegacyCloseService;
+use Modules\CRM\Services\OrderAssigner;
+use Modules\CRM\Services\OrderGroupResolver;
 use Modules\CRM\Services\OrderSmsNotifier;
+use Modules\CRM\Services\TechnicianGroupPlanner;
+use Modules\CRM\Services\TechnicianSuggestionService;
 
 class OrderController extends Controller
 {
@@ -28,6 +32,7 @@ class OrderController extends Controller
     public function __construct(
         protected OrderSmsNotifier $smsNotifier,
         protected InvoiceService $invoiceService,
+        protected OrderAssigner $assigner,
     ) {}
 
     public function index(Request $request)
@@ -436,15 +441,33 @@ class OrderController extends Controller
 
         $suggestions = collect();
         $suggestionDiagnosis = null;
+        $groupPlan = null;
         if (auth()->user()?->can('view-tech-suggestions') && ! $order->technician_id) {
-            $svc = app(\Modules\CRM\Services\TechnicianSuggestionService::class);
+            $svc = app(TechnicianSuggestionService::class);
             $suggestions = $svc->suggestForOrder($order, 5);
             if ($suggestions->isEmpty()) {
                 // فقط وقتی پیشنهادی نیست diagnose را اجرا کن تا خرج اضافی
                 // برای سفارش‌های عادی نکنیم.
                 $suggestionDiagnosis = $svc->diagnoseForOrder($order);
             }
+
+            // نقشهٔ گروهی فقط وقتی معنا دارد که این آدرس بیش از یک سفارشِ
+            // بدون تکنسین داشته باشد؛ در غیر این صورت همان پیشنهاد تکی است.
+            $siblings = app(OrderGroupResolver::class)->siblingsOf($order);
+            if ($siblings->count() > 1) {
+                $groupPlan = app(TechnicianGroupPlanner::class)
+                    ->plan($siblings, app(OrderGroupResolver::class)->assignedSiblingTechnicianIds($order));
+                $groupPlan->siblings = $siblings;
+            }
         }
+
+        // تاریخچهٔ تصمیم‌های تخصیص روی این سفارش — «چرا این تکنسین؟»
+        $assignmentLogs = \Modules\CRM\Models\OrderAssignmentLog::query()
+            ->where('order_id', $order->id)
+            ->with(['technician:id,first_name,firstname_tech', 'assigner:id,first_name,last_name'])
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get();
 
         // فاکتور فعال این سفارش (اگر وجود دارد) — برای نمایش دکمه «صدور فاکتور»
         // در حالت‌هایی که سفارش Completed است ولی فاکتور ندارد.
@@ -494,6 +517,8 @@ class OrderController extends Controller
             'statuses' => OrderStatus::options(),
             'suggestions' => $suggestions,
             'suggestionDiagnosis' => $suggestionDiagnosis,
+            'groupPlan' => $groupPlan,
+            'assignmentLogs' => $assignmentLogs,
             'activeInvoice' => $activeInvoice,
             'customerOrders' => $customerOrders,
             'supersededInvoices' => $supersededInvoices,
@@ -773,50 +798,123 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'technician_id' => 'required|exists:crm_technicians,id',
+            'mode' => 'nullable|in:manual,suggestion',
         ]);
 
-        $previousStatusEnum = $order->status instanceof OrderStatus
-            ? $order->status
-            : OrderStatus::tryFrom((string) $order->status);
-        $previousStatus = $previousStatusEnum?->value ?? (string) $order->status;
+        $technician = Technician::findOrFail($validated['technician_id']);
 
-        // اگر سفارش در وضعیت نهایی است (مثل Declined که تکنسین قبلی رد
-        // کرده، یا Cancelled/Completed/Returned/Transit)، تخصیص مجدد یعنی
-        // ادمین می‌خواهد سفارش را با تکنسین جدید از سر بگیرد. وضعیت را
-        // به New برمی‌گردانیم تا در پنل تکنسین جدید قابل دیدن باشد.
-        $shouldResetStatus = $previousStatusEnum?->isFinal() ?? false;
-        $newStatus = $shouldResetStatus ? OrderStatus::New->value : $previousStatus;
-
-        // technician_wp_id را هم همگام‌سازی می‌کنیم تا inbound resolution
-        // بعدی روی wp_id تکنسین جدید عمل کند.
-        $newTech = \Modules\CRM\Models\Technician::find($validated['technician_id']);
-        $newTechWpId = $newTech?->wp_id;
-
-        $order->update([
-            'technician_id' => $validated['technician_id'],
-            'technician_wp_id' => $newTechWpId,
-            'assigned_at' => now(),
-            'status' => $newStatus,
-        ]);
-
-        OrderStatusLog::create([
-            'order_id' => $order->id,
-            'from_status' => $previousStatus,
-            'to_status' => $newStatus,
-            'note' => $shouldResetStatus
-                ? 'تخصیص مجدد — وضعیت از '.($previousStatusEnum?->label() ?? $previousStatus).' به جدید بازگردانده شد'
-                : 'تخصیص تکنسین (وضعیت تغییر نکرد — منتظر تماس تکنسین با مشتری)',
-            'changed_by' => auth()->id(),
-            'created_at' => now(),
-        ]);
-
-        // فقط به تکنسین اطلاع بده تا با مشتری تماس بگیرد.
-        // پیامک «هماهنگی» به مشتری بعد از تغییر دستی تکنسین به Coordinated
-        // ارسال خواهد شد.
-        $order->refresh()->load('technician');
-        $this->smsNotifier->notify($order, SmsTrigger::OrderAssignedTech);
+        $this->assigner->assign(
+            $order,
+            $technician,
+            $validated['mode'] ?? 'manual',
+            auth()->id(),
+            $this->assignmentContext($order, $technician),
+        );
 
         return back()->with('success', 'تکنسین تخصیص داده شد. منتظر تماس تکنسین با مشتری بمانید.');
+    }
+
+    /**
+     * تخصیص گروهی — همهٔ سفارش‌های بدون تکنسینِ همان مشتری در همان آدرس
+     * و همان روز، طبق نقشهٔ برنامه‌ریز به کمترین تعداد تکنسین.
+     *
+     * نقشه سمت سرور دوباره محاسبه می‌شود (نه از روی ورودیِ فرم) تا کسی
+     * نتواند با دست‌کاری فرم سفارش دیگری را به تکنسین دلخواه بچسباند.
+     */
+    public function assignGroup(Order $order, TechnicianGroupPlanner $planner, OrderGroupResolver $groups)
+    {
+        $plan = $planner->planForOrder($order, reserve: true);
+
+        if ($plan->steps->isEmpty()) {
+            return back()->with('error', 'هیچ تکنسینی برای این گروه سفارش پیدا نشد.');
+        }
+
+        $groupIds = $groups->siblingsOf($order)->pluck('id')->all();
+        $groupSize = count($groupIds);
+        $assigned = 0;
+        $summary = [];
+
+        foreach ($plan->steps as $step) {
+            $names = [];
+            foreach ($step->orders as $target) {
+                if ($target->technician_id) {
+                    continue;
+                }
+                $this->assigner->assign(
+                    $target,
+                    $step->technician,
+                    $step->sticky ? 'sticky' : 'group',
+                    auth()->id(),
+                    [
+                        'score' => $step->score,
+                        'breakdown' => $step->breakdown,
+                        'reasons' => $step->reasons,
+                        'group_size' => $groupSize,
+                        'covered_count' => $step->orders->count(),
+                        'group_order_ids' => $groupIds,
+                    ],
+                );
+                $assigned++;
+                $names[] = $target->order_code;
+            }
+            if ($names) {
+                $summary[] = OrderAssigner::technicianName($step->technician).': '.implode('، ', $names);
+            }
+        }
+
+        $message = "{$assigned} سفارش تخصیص داده شد — ".implode(' | ', $summary);
+        if ($plan->unassignable->isNotEmpty()) {
+            $message .= ' — بدون تکنسین ماند: '.$plan->unassignable->pluck('order_code')->implode('، ');
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * زمینهٔ تصمیم برای لاگ: امتیاز تکنسینِ انتخاب‌شده، رقبای نزدیک، و
+     * اندازهٔ گروهِ همان آدرس. اگر تکنسینِ انتخابی اصلاً در فهرست پیشنهاد
+     * نبوده (انتخاب کاملاً دستی)، همین را صریح در متن می‌نویسیم.
+     */
+    private function assignmentContext(Order $order, Technician $technician): array
+    {
+        $groups = app(OrderGroupResolver::class);
+        $groupIds = $groups->siblingsOf($order)->pluck('id')->all();
+
+        $context = [
+            'group_size' => count($groupIds),
+            'covered_count' => 1,
+            'group_order_ids' => $groupIds,
+        ];
+
+        try {
+            $ranked = app(TechnicianSuggestionService::class)->suggestForOrder($order, 6);
+        } catch (\Throwable $e) {
+            return $context;
+        }
+
+        $chosen = $ranked->firstWhere(fn ($s) => $s->technician->id === $technician->id);
+
+        if (! $chosen) {
+            $context['note'] = 'انتخاب دستی اپراتور — این تکنسین در فهرست پیشنهاد هوشمند نبود.';
+
+            return $context;
+        }
+
+        $context['score'] = $chosen->score;
+        $context['breakdown'] = $chosen->breakdown;
+        $context['reasons'] = $chosen->reasons;
+        $context['alternatives'] = $ranked
+            ->reject(fn ($s) => $s->technician->id === $technician->id)
+            ->take(3)
+            ->map(fn ($s) => [
+                'id' => $s->technician->id,
+                'name' => OrderAssigner::technicianName($s->technician),
+                'score' => $s->score,
+            ])
+            ->values()
+            ->all();
+
+        return $context;
     }
 
     /**
@@ -873,22 +971,7 @@ class OrderController extends Controller
             return back();
         }
 
-        $previousStatus = $order->status instanceof OrderStatus ? $order->status->value : $order->status;
-
-        $order->update([
-            'technician_id' => null,
-            'status' => OrderStatus::New->value,
-            'assigned_at' => null,
-        ]);
-
-        OrderStatusLog::create([
-            'order_id' => $order->id,
-            'from_status' => $previousStatus,
-            'to_status' => OrderStatus::New->value,
-            'note' => 'لغو تخصیص تکنسین',
-            'changed_by' => auth()->id(),
-            'created_at' => now(),
-        ]);
+        $this->assigner->unassign($order, auth()->id());
 
         return back()->with('success', 'تکنسین از این سفارش برداشته شد.');
     }

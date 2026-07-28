@@ -104,6 +104,7 @@ class CrmServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
+                \Modules\CRM\Console\Commands\AutoAssignTechnicians::class,
                 BackfillInvoices::class,
                 FixNonEnglishSlugs::class,
                 RecomputeInvoices::class,
