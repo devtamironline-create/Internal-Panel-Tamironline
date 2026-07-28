@@ -1166,8 +1166,10 @@ class OrderController extends Controller
         // تکمیل مجدد سفارش بازگشتی (return_type != null)؛ در این حالت
         // مشتری قبلاً اطلاع داشته و نباید دوباره پیامک فاکتور بگیرد.
         $skipForReturned = $newStatus === OrderStatus::Completed && ! is_null($order->return_type);
-        if (! $skipForReturned && $trigger = SmsTrigger::fromOrderStatus($newStatus)) {
-            $this->smsNotifier->notify($order->refresh(), $trigger);
+        if (! $skipForReturned) {
+            // notifyStatusChange علاوه بر پیامکِ مشتری، پیامک‌های همراه را
+            // هم می‌فرستد — مثلاً لغو سفارش که تکنسین هم باید بداند.
+            $this->smsNotifier->notifyStatusChange($order->refresh(), $newStatus, auth()->id());
         }
 
         return back()->with('success', 'وضعیت به "'.$newStatus->label().'" تغییر کرد.');
