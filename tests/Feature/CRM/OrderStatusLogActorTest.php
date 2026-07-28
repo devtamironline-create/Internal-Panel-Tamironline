@@ -111,6 +111,66 @@ class OrderStatusLogActorTest extends TestCase
         $this->assertSame('تکنسین', $log->actorRoleLabel());
     }
 
+    public function test_someone_who_is_both_operator_and_technician_is_labelled_operator(): void
+    {
+        $user = User::create([
+            'first_name' => 'سعید', 'last_name' => 'نوری',
+            'mobile' => '09120000004', 'password' => bcrypt('x'),
+            'is_staff' => true,
+        ]);
+        Technician::forceCreate([
+            'user_id' => $user->id, 'first_name' => 'سعید تکنسین',
+            'firstname_tech' => 'سعید تکنسین', 'status' => 'active',
+        ]);
+
+        $log = $this->log($this->order(), $user->id);
+
+        $this->assertSame('operator', $log->actor_role);
+        $this->assertSame('اپراتور', $log->actorRoleLabel());
+        // نامِ کاربر باید بیاید، نه نامِ پروفایلِ تکنسین.
+        $this->assertSame('سعید نوری', $log->actor_name);
+        // در نقشِ اپراتور عمل کرده، پس به رکوردِ تکنسین نسبت داده نمی‌شود.
+        $this->assertNull($log->actor_technician_id);
+        $this->assertFalse($log->isByTechnician());
+    }
+
+    public function test_pure_technician_is_still_labelled_technician(): void
+    {
+        $user = User::create([
+            'first_name' => 'رضا', 'last_name' => 'احمدی',
+            'mobile' => '09120000005', 'password' => bcrypt('x'),
+            'is_staff' => false,
+        ]);
+        $tech = Technician::forceCreate([
+            'user_id' => $user->id, 'first_name' => 'رضا احمدی',
+            'firstname_tech' => 'رضا احمدی', 'status' => 'active',
+        ]);
+
+        $log = $this->log($this->order(), $user->id);
+
+        $this->assertSame('technician', $log->actor_role);
+        $this->assertSame($tech->id, $log->actor_technician_id);
+    }
+
+    public function test_staff_acting_from_the_technician_guard_is_still_operator(): void
+    {
+        $user = User::create([
+            'first_name' => 'نازنین', 'last_name' => 'شریفی',
+            'mobile' => '09120000006', 'password' => bcrypt('x'),
+            'is_staff' => true,
+        ]);
+        $tech = Technician::forceCreate([
+            'user_id' => $user->id, 'first_name' => 'نازنین تکنسین',
+            'firstname_tech' => 'نازنین تکنسین', 'status' => 'active',
+        ]);
+        Auth::guard('tech')->setUser($tech);
+
+        $log = $this->log($this->order(), null);
+
+        $this->assertSame('operator', $log->actor_role);
+        $this->assertSame('نازنین شریفی', $log->actor_name);
+    }
+
     public function test_operator_action_stores_the_user_name(): void
     {
         $user = User::create([

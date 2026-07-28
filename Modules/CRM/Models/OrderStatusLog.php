@@ -135,6 +135,14 @@ class OrderStatusLog extends Model
     private static function resolveActor(?int $changedBy): array
     {
         if ($changedBy) {
+            $user = User::query()->find($changedBy);
+
+            // اپراتور مقدم است: بعضی اپراتورها حسابِ تکنسین هم دارند و
+            // نباید کارشان در پنل به نامِ تکنسین ثبت شود.
+            if ($user && $user->is_staff) {
+                return self::operatorEntry($user, $changedBy);
+            }
+
             $technician = self::technicianOfUser($changedBy);
             if ($technician) {
                 return [
@@ -144,19 +152,17 @@ class OrderStatusLog extends Model
                 ];
             }
 
-            $user = User::query()->find($changedBy);
-            $name = $user ? trim((string) $user->full_name) : '';
-
-            return [
-                'name' => $name !== '' ? $name : 'کاربر #'.$changedBy,
-                'role' => 'operator',
-                'technician_id' => null,
-            ];
+            return self::operatorEntry($user, $changedBy);
         }
 
         // بدون changed_by — ممکن است از پنل/اپ تکنسین آمده باشد.
         $technician = self::currentTechnician();
         if ($technician) {
+            $linkedUser = $technician->user_id ? User::query()->find($technician->user_id) : null;
+            if ($linkedUser && $linkedUser->is_staff) {
+                return self::operatorEntry($linkedUser, (int) $linkedUser->id);
+            }
+
             return [
                 'name' => self::technicianName($technician),
                 'role' => 'technician',
@@ -166,17 +172,29 @@ class OrderStatusLog extends Model
 
         $user = self::currentUser();
         if ($user) {
-            $name = trim((string) $user->full_name);
-
-            return [
-                'name' => $name !== '' ? $name : 'کاربر #'.$user->id,
-                'role' => 'operator',
-                'technician_id' => null,
-            ];
+            return self::operatorEntry($user, (int) $user->id);
         }
 
         // سینک ووکامرس/وردپرس، کران، کامندها و پخشِ خودکار.
         return ['name' => 'سیستم', 'role' => 'system', 'technician_id' => null];
+    }
+
+    /**
+     * ردیفِ عاملِ «اپراتور». technician_id عمداً خالی می‌ماند: این اقدام
+     * در نقشِ اپراتور انجام شده، پس نباید به رکوردِ تکنسینِ همان شخص
+     * نسبت داده شود.
+     *
+     * @return array{name:string, role:string, technician_id:?int}
+     */
+    private static function operatorEntry(?User $user, int $userId): array
+    {
+        $name = $user ? trim((string) $user->full_name) : '';
+
+        return [
+            'name' => $name !== '' ? $name : 'کاربر #'.$userId,
+            'role' => 'operator',
+            'technician_id' => null,
+        ];
     }
 
     private static function technicianOfUser(int $userId): ?Technician
