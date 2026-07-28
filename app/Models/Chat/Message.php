@@ -3,13 +3,13 @@
 namespace App\Models\Chat;
 
 use App\Models\User;
-use Modules\Task\Models\Task;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Modules\Task\Models\Task;
 
 class Message extends Model
 {
@@ -59,7 +59,7 @@ class Message extends Model
 
     public function isForwarded(): bool
     {
-        return !is_null($this->forwarded_from);
+        return ! is_null($this->forwarded_from);
     }
 
     public function reactions(): HasMany
@@ -106,13 +106,13 @@ class Message extends Model
         }
 
         $this->readBy()->syncWithoutDetaching([
-            $userId => ['read_at' => now()]
+            $userId => ['read_at' => now()],
         ]);
     }
 
     public function getFileSizeFormatted(): string
     {
-        if (!$this->file_size) {
+        if (! $this->file_size) {
             return '';
         }
 
@@ -125,10 +125,42 @@ class Message extends Model
             $unit++;
         }
 
-        return round($size, 2) . ' ' . $units[$unit];
+        return round($size, 2).' '.$units[$unit];
     }
 
     // Static methods
+    /**
+     * مجموعِ پیام‌های خوانده‌نشدهٔ یک کاربر در همهٔ گفتگوهایش — یک کوئریِ
+     * تجمیعی، نه یکی به‌ازای هر گفتگو.
+     *
+     * سایدبار روی هر صفحه این را صدا می‌زند، پس در برابر نبودِ جدول
+     * (پیش از migration) امن است تا کلِ پنل نشکند.
+     */
+    public static function unreadCountFor(?int $userId): int
+    {
+        if (! $userId) {
+            return 0;
+        }
+
+        try {
+            return (int) static::query()
+                ->join('conversation_participants as p', function ($join) use ($userId) {
+                    $join->on('p.conversation_id', '=', 'messages.conversation_id')
+                        ->where('p.user_id', '=', $userId)
+                        ->whereNull('p.left_at');
+                })
+                ->whereNull('messages.deleted_at')
+                ->where('messages.user_id', '!=', $userId)
+                ->where(function ($q) {
+                    $q->whereNull('p.last_read_at')
+                        ->orWhereColumn('messages.created_at', '>', 'p.last_read_at');
+                })
+                ->count();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
     public static function createText(int $conversationId, int $userId, string $body, ?int $replyToId = null): self
     {
         return self::create([

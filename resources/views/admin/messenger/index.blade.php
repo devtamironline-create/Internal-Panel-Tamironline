@@ -1364,26 +1364,110 @@ function messenger() {
             // Request notification permission
             this.requestNotificationPermission();
 
-            // Poll for updates — کاهش از ۲ به ۱۰ ثانیه. در این مدت ۳
-            // endpoint (loadConversations + loadMessages + checkIncomingCalls)
-            // فراخوانی می‌شد که با چند اپراتور باز، بار سرور را به شدت
-            // بالا می‌برد.
-            setInterval(async () => {
-                const oldUnread = this.getTotalUnread();
-                await this.loadConversations();
-
-                // اعلان/صدای پیام توسط نوتیفایرِ سراسریِ layout مدیریت می‌شود
-                // (روی همهٔ صفحات، به‌ازای هر پیام) تا این‌جا تکراری نشود.
-
-                if (this.currentConversation) {
-                    this.loadMessages(this.currentConversation.id);
-                }
-                this.checkIncomingCalls();
-            }, 10000);
+            // ─── بلادرنگ: ضربانِ سبک به‌جای بارگذاریِ دوره‌ایِ سنگین ───
+            // قبلاً هر ۱۰ ثانیه سه endpointِ سنگین صدا زده می‌شد؛ هم کند بود
+            // هم پرهزینه. حالا هر ۳ ثانیه فقط /admin/chat/tick صدا زده
+            // می‌شود (دو کوئریِ تجمیعی) و بارگذاریِ سنگین فقط وقتی انجام
+            // می‌شود که واقعاً چیزی عوض شده باشد.
+            this.startRealtime();
 
             setInterval(() => {
                 this.heartbeat();
             }, 30000);
+        },
+
+        // ───────────────────────── بلادرنگ
+
+        // آخرین شناسه‌هایی که دیده‌ایم — مبنای تشخیصِ «چیزی عوض شد؟»
+        tickMaxId: 0,
+        tickConversationId: 0,
+        tickConversationMaxId: 0,
+        tickTimer: null,
+        tickBusy: false,
+        lastCallCheck: 0,
+
+        /** فاصلهٔ ضربان: تبِ فعال ۳ ثانیه، تبِ پنهان ۲۰ ثانیه. */
+        tickDelay() {
+            return document.hidden ? 20000 : 3000;
+        },
+
+        startRealtime() {
+            const schedule = () => {
+                clearTimeout(this.tickTimer);
+                this.tickTimer = setTimeout(run, this.tickDelay());
+            };
+
+            const run = async () => {
+                await this.tick();
+                schedule();
+            };
+
+            // برگشتن به تب = بلافاصله یک ضربان، نه انتظار تا نوبتِ بعدی.
+            document.addEventListener('visibilitychange', () => {
+                if (! document.hidden) run();
+            });
+            window.addEventListener('online', run);
+            window.addEventListener('focus', () => { if (! document.hidden) run(); });
+
+            run();
+        },
+
+        async tick() {
+            if (this.tickBusy) return;
+            this.tickBusy = true;
+            try {
+                const convId = this.currentConversation?.id || 0;
+                const res = await fetch(`/admin/chat/tick?conversation_id=${convId}`, {
+                    cache: 'no-store',
+                    headers: { 'Accept': 'application/json' },
+                });
+                if (! res.ok) return;
+                const t = await res.json();
+
+                // بجِ منوی کناری — روی همهٔ صفحات با همین عدد به‌روز می‌شود.
+                if (typeof window.__setChatBadge === 'function') {
+                    window.__setChatBadge(t.unread || 0);
+                }
+
+                const firstRun = this.tickMaxId === 0;
+                const somethingNew = (t.max_id || 0) > this.tickMaxId;
+
+                // اگر گفتگوی باز عوض شده، فقط مبنا را به‌روز می‌کنیم؛ خودِ
+                // انتخابِ گفتگو پیام‌ها را از قبل لود کرده.
+                let openConversationChanged = false;
+                if (this.tickConversationId !== convId) {
+                    this.tickConversationId = convId;
+                } else if (convId) {
+                    openConversationChanged = (t.conversation_max_id || 0) > this.tickConversationMaxId;
+                }
+
+                this.tickMaxId = Math.max(this.tickMaxId, t.max_id || 0);
+                this.tickConversationMaxId = t.conversation_max_id || 0;
+
+                if (firstRun) return;
+
+                // پیامِ گفتگوی باز زودتر از لیست به‌روز شود (حسِ بلادرنگ).
+                if (openConversationChanged) {
+                    await this.loadMessages(this.currentConversation.id);
+                }
+                if (somethingNew) {
+                    await this.loadConversations();
+                }
+
+                // اعلان/صدای پیام توسط نوتیفایرِ سراسریِ layout مدیریت می‌شود
+                // (روی همهٔ صفحات، به‌ازای هر پیام) تا این‌جا تکراری نشود.
+
+                // بررسیِ تماسِ ورودی نباید به سرعتِ ضربان بچسبد؛ حداکثر هر ۶ ثانیه.
+                const now = Date.now();
+                if (now - this.lastCallCheck > 6000) {
+                    this.lastCallCheck = now;
+                    this.checkIncomingCalls();
+                }
+            } catch (e) {
+                // شبکه قطع است — ضربانِ بعدی دوباره تلاش می‌کند.
+            } finally {
+                this.tickBusy = false;
+            }
         },
 
         getTotalUnread() {

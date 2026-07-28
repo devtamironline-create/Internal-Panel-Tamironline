@@ -605,9 +605,16 @@
 
                 <!-- پیام‌رسان -->
                 @canany(['use-messenger', 'manage-permissions'])
-                <a href="{{ route('admin.messenger') }}" class="sidebar-menu-item mb-2 {{ request()->routeIs('admin.messenger') ? 'sidebar-menu-item-active' : '' }}">
+                @php
+                    // شمارشِ اولیه برای رنگِ درستِ بج در همان اولین رندر؛
+                    // بعد از آن نوتیفایرِ سراسری هر ۵ ثانیه به‌روزش می‌کند.
+                    $chatUnread = \App\Models\Chat\Message::unreadCountFor(auth()->id());
+                @endphp
+                <a href="{{ route('admin.messenger') }}" class="sidebar-menu-item mb-2 {{ request()->routeIs('admin.messenger') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                     پیام‌رسان
+                    <span id="chat-unread-badge"
+                          style="position:absolute; left:12px; background:#ef4444; color:#fff; border-radius:9999px; font-size:10px; padding:1px 6px; {{ $chatUnread > 0 ? '' : 'display:none;' }}">{{ $chatUnread > 99 ? '99+' : $chatUnread }}</span>
                 </a>
                 @endcanany
 
@@ -2276,6 +2283,20 @@
         var LS_KEY = 'chat_last_notified_{{ auth()->id() }}';
         var lastId = parseInt(localStorage.getItem(LS_KEY) || '0', 10) || null;
 
+        // بجِ «پیام‌رسان» در منوی کناری. هم این نوتیفایر و هم صفحهٔ
+        // پیام‌رسان از همین تابع استفاده می‌کنند تا عدد همیشه یکی باشد.
+        window.__setChatBadge = function (count) {
+            var el = document.getElementById('chat-unread-badge');
+            if (! el) return;
+            count = parseInt(count, 10) || 0;
+            if (count > 0) {
+                el.textContent = count > 99 ? '99+' : String(count);
+                el.style.display = '';
+            } else {
+                el.style.display = 'none';
+            }
+        };
+
         // زنگِ ملایمِ دو‌نتی با Web Audio (بدونِ فایلِ صوتی؛ خیلی خوش‌صداتر از بوق).
         var audioCtx = null;
         function playChime() {
@@ -2333,8 +2354,31 @@
             } catch (e) {}
         }
 
+        // شمارندهٔ بج — سبک‌تر از poll و مستقل از منطقِ اعلان، تا حتی وقتی
+        // پیامِ جدیدی نیست هم بعد از خواندنِ پیام‌ها عدد درست شود.
+        async function refreshBadge() {
+            try {
+                var r = await fetch('/admin/chat/tick', { cache: 'no-store', headers: { 'Accept': 'application/json' } });
+                if (! r.ok) return;
+                var j = await r.json();
+                window.__setChatBadge(j.unread || 0);
+            } catch (e) {}
+        }
+
         poll();
+        refreshBadge();
         setInterval(poll, 5000);
+
+        // روی صفحهٔ پیام‌رسان، خودِ صفحه بج را با ضربانِ ۳ ثانیه‌ای به‌روز
+        // می‌کند؛ اینجا دوباره‌کاری لازم نیست.
+        if (! location.pathname.startsWith('/admin/messenger')) {
+            setInterval(refreshBadge, 15000);
+        }
+
+        // برگشتن به تب = عددِ تازه، بدون انتظار.
+        document.addEventListener('visibilitychange', function () {
+            if (! document.hidden) { poll(); refreshBadge(); }
+        });
     })();
     </script>
     @endauth
