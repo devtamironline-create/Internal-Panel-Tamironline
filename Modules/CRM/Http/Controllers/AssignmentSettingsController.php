@@ -20,6 +20,8 @@ class AssignmentSettingsController extends Controller
 
         return view('crm::assignment-settings.index', [
             'settings' => AssignmentSettings::all(),
+            'weightLabels' => AssignmentSettings::WEIGHT_LABELS,
+            'weightDefaults' => \Modules\CRM\Services\TechnicianSuggestionService::WEIGHTS,
             'preview' => $preview,
             'pendingCount' => $service->pendingOrders()->count(),
         ]);
@@ -35,11 +37,14 @@ class AssignmentSettingsController extends Controller
             'assign_max_age_days' => 'required|integer|min:1|max:90',
             'assign_history_enabled' => 'required|boolean',
             'assign_history_months' => 'required|integer|min:1|max:60',
+            'weights' => 'required|array',
+            'weights.*' => 'required|integer|min:0|max:100',
         ]);
 
         $validated['assign_history_enabled'] = $validated['assign_history_enabled'] ? 1 : 0;
 
         AssignmentSettings::save($validated);
+        AssignmentSettings::saveWeights($validated['weights']);
 
         return back()->with('success', $validated['assign_mode'] === AssignmentSettings::MODE_AUTO
             ? 'پخش خودکار روشن شد. سفارش‌های واجد شرایط هر ۵ دقیقه تخصیص داده می‌شوند.'

@@ -3,6 +3,7 @@
 namespace Modules\CRM\Support;
 
 use Modules\CRM\Models\CrmSetting;
+use Modules\CRM\Services\TechnicianSuggestionService;
 
 /**
  * تنظیماتِ پخشِ سفارش بین تکنسین‌ها — روی جدولِ key-value موجود
@@ -78,6 +79,100 @@ final class AssignmentSettings
         return max(1, self::intValue('assign_history_months', 1, 60));
     }
 
+    /** برچسبِ فارسیِ هر بُعدِ امتیازدهی — برای صفحهٔ تنظیمات و توضیح در پنل. */
+    public const WEIGHT_LABELS = [
+        'open_orders' => 'سفارش‌های باز (کمتر = بهتر)',
+        'debt' => 'بدهی کیف‌پول (کمتر = بهتر)',
+        'satisfaction' => 'رضایت مشتری (بیشتر = بهتر)',
+        'cancel_rate' => 'نرخ کنسلی (کمتر = بهتر)',
+        'recent_activity' => 'فعالیت اخیر (تازه‌تر = بهتر)',
+        'response_speed' => 'سرعت پاسخگویی (سریع‌تر = بهتر)',
+    ];
+
+    /**
+     * وزن‌هایی که مدیر وارد کرده — خام و بدون نرمال‌سازی. اگر کلیدی ثبت
+     * نشده باشد مقدار پیش‌فرضِ سرویس امتیازدهی برمی‌گردد.
+     *
+     * @return array<string, int>
+     */
+    public static function rawWeights(): array
+    {
+        $defaults = TechnicianSuggestionService::WEIGHTS;
+        $stored = CrmSetting::getJson('assign_weights', []);
+        if (! is_array($stored)) {
+            $stored = [];
+        }
+
+        $out = [];
+        foreach ($defaults as $key => $default) {
+            $value = array_key_exists($key, $stored) ? $stored[$key] : $default;
+            $out[$key] = max(0, min(100, (int) $value));
+        }
+
+        return $out;
+    }
+
+    /**
+     * وزن‌های مؤثر — همیشه جمعشان دقیقاً ۱۰۰ است.
+     *
+     * چرا نرمال‌سازی: آستانه‌های سطح‌بندی (۸۰ پیشنهاد ویژه، ۶۰ مناسب، …)
+     * روی مقیاسِ ۰..۱۰۰ تعریف شده‌اند. اگر مدیر مجموعِ ۱۵۰ وارد کند و
+     * نرمال نکنیم، همهٔ تکنسین‌ها «پیشنهاد ویژه» می‌شوند و سطح‌بندی
+     * بی‌معنا می‌شود. با نرمال‌سازی، مدیر می‌تواند نسبت‌ها را آزادانه
+     * تغییر دهد و مقیاس سالم بماند.
+     *
+     * روشِ توزیعِ باقیمانده «بزرگ‌ترین باقی‌مانده» است تا جمع دقیقاً ۱۰۰
+     * شود و هیچ وزنی منفی نشود.
+     *
+     * @return array<string, int>
+     */
+    public static function weights(): array
+    {
+        $raw = self::rawWeights();
+        $sum = array_sum($raw);
+
+        // همهٔ وزن‌ها صفر = پیکربندیِ بی‌معنا؛ به پیش‌فرض برمی‌گردیم.
+        if ($sum <= 0) {
+            return TechnicianSuggestionService::WEIGHTS;
+        }
+
+        $exact = [];
+        $out = [];
+        foreach ($raw as $key => $value) {
+            $exact[$key] = $value / $sum * 100;
+            $out[$key] = (int) floor($exact[$key]);
+        }
+
+        $remainder = 100 - array_sum($out);
+        if ($remainder > 0) {
+            $fractions = [];
+            foreach ($exact as $key => $value) {
+                $fractions[$key] = $value - floor($value);
+            }
+            arsort($fractions);
+            foreach (array_keys($fractions) as $key) {
+                if ($remainder <= 0) {
+                    break;
+                }
+                $out[$key]++;
+                $remainder--;
+            }
+        }
+
+        return $out;
+    }
+
+    /** @param  array<string, mixed>  $values */
+    public static function saveWeights(array $values): void
+    {
+        $clean = [];
+        foreach (array_keys(TechnicianSuggestionService::WEIGHTS) as $key) {
+            $clean[$key] = max(0, min(100, (int) ($values[$key] ?? 0)));
+        }
+
+        CrmSetting::setJson('assign_weights', $clean);
+    }
+
     /** @return array<string, string|int> همهٔ مقادیر برای صفحهٔ تنظیمات */
     public static function all(): array
     {
@@ -89,6 +184,8 @@ final class AssignmentSettings
             'assign_max_age_days' => self::maxAgeDays(),
             'assign_history_enabled' => self::historyEnabled() ? 1 : 0,
             'assign_history_months' => self::historyMonths(),
+            'weights_raw' => self::rawWeights(),
+            'weights_effective' => self::weights(),
         ];
     }
 

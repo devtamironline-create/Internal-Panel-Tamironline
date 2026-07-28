@@ -128,6 +128,65 @@
             </div>
         </div>
 
+        {{-- ─── وزن‌های امتیازدهی ─── --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3"
+             x-data="{
+                 w: {{ Illuminate\Support\Js::from($settings['weights_raw']) }},
+                 defaults: {{ Illuminate\Support\Js::from($weightDefaults) }},
+                 get total() { return Object.values(this.w).reduce((a, b) => a + (Number(b) || 0), 0) },
+                 share(key) {
+                     const t = this.total
+                     return t > 0 ? Math.round((Number(this.w[key]) || 0) / t * 100) : 0
+                 },
+                 reset() { this.w = Object.assign({}, this.defaults) }
+             }">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100">وزن معیارهای انتخاب تکنسین</h2>
+                <button type="button" @click="reset()"
+                        class="text-[11px] px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-300">
+                    بازگردانی به پیش‌فرض
+                </button>
+            </div>
+
+            <p class="text-[11px] text-gray-500 leading-6">
+                این‌ها تعیین می‌کنند امتیاز ۰ تا ۱۰۰ هر تکنسین چطور ساخته شود. لازم نیست جمعشان ۱۰۰ باشد —
+                سیستم نسبت‌ها را خودش به ۱۰۰ تبدیل می‌کند و «سهم مؤثر» را همین‌جا نشان می‌دهد.
+                اگر همه را صفر بگذارید، پیش‌فرض‌ها اعمال می‌شوند.
+            </p>
+
+            <div class="space-y-2">
+                @foreach($weightLabels as $key => $label)
+                    <div class="flex items-center gap-3">
+                        <div class="flex-1 min-w-0">
+                            <div class="text-xs text-gray-700 dark:text-gray-200">{{ $label }}</div>
+                            <div class="h-1.5 mt-1 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                <div class="h-full bg-brand-500 transition-all"
+                                     :style="`width: ${share('{{ $key }}')}%`"></div>
+                            </div>
+                        </div>
+                        <input type="number" name="weights[{{ $key }}]" min="0" max="100" dir="ltr"
+                               x-model.number="w['{{ $key }}']"
+                               class="w-20 px-2 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm text-center">
+                        <span class="w-16 text-[11px] text-gray-500 text-left" dir="ltr">
+                            <span x-text="share('{{ $key }}')"></span>٪
+                        </span>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="text-[11px] text-gray-500 border-t border-gray-100 dark:border-gray-700 pt-2">
+                مجموع واردشده: <b x-text="total"></b>
+                <span x-show="total !== 100" class="text-amber-600">
+                    — به نسبت به ۱۰۰ تبدیل می‌شود
+                </span>
+            </div>
+
+            <div class="text-[11px] text-gray-500 bg-gray-50 dark:bg-gray-900/40 rounded-lg p-2.5 leading-6">
+                <b>سطح‌بندی امتیاز:</b> ۸۰ به بالا «پیشنهاد ویژه» · ۶۰ به بالا «مناسب» · ۴۰ به بالا «قابل بررسی» ·
+                ۲۰ به بالا «احتیاط» · کمتر «غیرقابل توصیه». همین امتیاز است که با «حداقل امتیاز برای تخصیص خودکار» سنجیده می‌شود.
+            </div>
+        </div>
+
         {{-- ─── پیش‌نمایش ─── --}}
         <div class="bg-gray-50 dark:bg-gray-800/60 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 mb-2">اگر همین حالا اجرا می‌شد</h2>

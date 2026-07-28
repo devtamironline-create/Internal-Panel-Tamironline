@@ -1266,8 +1266,19 @@
                                     </div>
                                 @endforeach
                             </div>
+                            @php
+                                $activeWeights = \Modules\CRM\Support\AssignmentSettings::weights();
+                                $weightShortLabels = [
+                                    'open_orders' => 'سفارش‌باز', 'debt' => 'بدهی', 'satisfaction' => 'رضایت',
+                                    'cancel_rate' => 'کنسلی', 'recent_activity' => 'فعالیت', 'response_speed' => 'پاسخ',
+                                ];
+                            @endphp
                             <p class="text-[10px] text-gray-400 mt-2 leading-5">
-                                پیشنهادها بر اساس وزن‌های: سفارش‌باز ۳۰٪، بدهی ۲۵٪، رضایت ۲۰٪، کنسلی ۱۰٪، فعالیت ۱۰٪، پاسخ ۵٪.
+                                پیشنهادها بر اساس وزن‌های:
+                                {{ collect($activeWeights)->map(fn($v, $k) => ($weightShortLabels[$k] ?? $k).' '.$v.'٪')->implode('، ') }}.
+                                @can('manage-crm-settings')
+                                    <a href="{{ route('crm.assignment-settings.index') }}" class="text-brand-600 hover:underline">تغییر وزن‌ها</a>
+                                @endcan
                             </p>
                         </div>
                     @elseif($order->city_id || $order->brand_id || $order->device_id)

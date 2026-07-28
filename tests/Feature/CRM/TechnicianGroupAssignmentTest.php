@@ -138,7 +138,7 @@ class TechnicianGroupAssignmentTest extends TestCase
 
     private function technician(string $name, array $attributes = []): Technician
     {
-        return Technician::create(array_merge([
+        return Technician::forceCreate(array_merge([
             'first_name' => $name,
             'firstname_tech' => $name,
             'status' => 'active',
@@ -385,6 +385,68 @@ class TechnicianGroupAssignmentTest extends TestCase
         $this->assertSame($limited->id, $orders[0]->fresh()->technician_id);
         $this->assertSame($limited->id, $orders[1]->fresh()->technician_id);
         $this->assertNull($orders[2]->fresh()->technician_id);
+    }
+
+    // ───────────────────────── وزن‌های داینامیک
+
+    public function test_weights_are_normalised_to_one_hundred(): void
+    {
+        AssignmentSettings::saveWeights([
+            'open_orders' => 60,
+            'debt' => 60,
+            'satisfaction' => 30,
+            'cancel_rate' => 0,
+            'recent_activity' => 0,
+            'response_speed' => 0,
+        ]);
+
+        $weights = AssignmentSettings::weights();
+
+        $this->assertSame(100, array_sum($weights));
+        $this->assertSame(0, $weights['cancel_rate']);
+        $this->assertGreaterThan($weights['satisfaction'], $weights['open_orders']);
+    }
+
+    public function test_all_zero_weights_fall_back_to_defaults(): void
+    {
+        AssignmentSettings::saveWeights(array_fill_keys(
+            array_keys(\Modules\CRM\Services\TechnicianSuggestionService::WEIGHTS), 0
+        ));
+
+        $this->assertSame(
+            \Modules\CRM\Services\TechnicianSuggestionService::WEIGHTS,
+            AssignmentSettings::weights()
+        );
+    }
+
+    public function test_changing_weights_changes_who_is_suggested(): void
+    {
+        // «بدهکارِ خلوت» بدهی دارد ولی سفارش باز ندارد.
+        // «بی‌بدهیِ شلوغ» بدهی ندارد ولی ۸ سفارش باز دارد.
+        $indebted = $this->technician('بدهکار خلوت', ['wallet_balance' => -4_000_000]);
+        $this->coverDevices($indebted, [1]);
+
+        $busy = $this->technician('بی‌بدهی شلوغ');
+        $this->coverDevices($busy, [1]);
+        for ($i = 0; $i < 8; $i++) {
+            $this->order(1, ['technician_id' => $busy->id, 'status' => 'coordinated']);
+        }
+
+        // وزن همه روی «سفارش باز» → بدهکارِ خلوت باید برنده شود.
+        AssignmentSettings::saveWeights([
+            'open_orders' => 100, 'debt' => 0, 'satisfaction' => 0,
+            'cancel_rate' => 0, 'recent_activity' => 0, 'response_speed' => 0,
+        ]);
+        $winner = app(TechnicianGroupPlanner::class)->plan(collect([$this->order(1)]))->steps->first();
+        $this->assertSame($indebted->id, $winner->technician->id);
+
+        // وزن همه روی «بدهی» → بی‌بدهیِ شلوغ باید برنده شود.
+        AssignmentSettings::saveWeights([
+            'open_orders' => 0, 'debt' => 100, 'satisfaction' => 0,
+            'cancel_rate' => 0, 'recent_activity' => 0, 'response_speed' => 0,
+        ]);
+        $winner = app(TechnicianGroupPlanner::class)->plan(collect([$this->order(1)]))->steps->first();
+        $this->assertSame($busy->id, $winner->technician->id);
     }
 
     // ───────────────────────── لاگ دلیل
