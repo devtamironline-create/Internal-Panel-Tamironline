@@ -2280,6 +2280,19 @@
         if (window.__chatGlobalNotifier) return;
         window.__chatGlobalNotifier = true;
 
+        // ─── خنثی‌سازیِ Service Workerِ کهنه ───────────────────────────
+        // SW پنل تکنسین با scope='/' ثبت می‌شود و روی پنل ادمین هم می‌نشیند.
+        // نسخهٔ قدیمی‌اش پاسخ‌های JSONِ چت را cache-first سرو می‌کرد و پیام
+        // جدید تا پاک‌کردنِ دستیِ کش دیده نمی‌شد. یک update() اجباری باعث
+        // می‌شود نسخهٔ اصلاح‌شده نصب و کش‌های آلوده در activate پاک شوند —
+        // بدون اینکه کاربر کاری بکند.
+        if ('serviceWorker' in navigator && ! sessionStorage.getItem('sw_refreshed')) {
+            sessionStorage.setItem('sw_refreshed', '1');
+            navigator.serviceWorker.getRegistrations()
+                .then(function (regs) { regs.forEach(function (r) { try { r.update(); } catch (e) {} }); })
+                .catch(function () {});
+        }
+
         var LS_KEY = 'chat_last_notified_{{ auth()->id() }}';
         var lastId = parseInt(localStorage.getItem(LS_KEY) || '0', 10) || null;
 
