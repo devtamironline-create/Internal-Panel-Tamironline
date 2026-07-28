@@ -1594,7 +1594,7 @@ class OrderController extends Controller
 
         // فیلدهای مشترک edit + create که از فرم می‌آیند
         $rules['introduction'] = 'nullable|string|max:255';
-        $rules['order_type'] = 'nullable|string|in:repair,service,install';
+        $rules['order_type'] = ['nullable', 'string', Rule::in(\Modules\CRM\Support\ServiceTypeOptions::slugs())];
         $rules['technician_id'] = 'nullable|integer|exists:crm_technicians,id';
         $rules['subscription'] = 'nullable|integer|min:0';
 

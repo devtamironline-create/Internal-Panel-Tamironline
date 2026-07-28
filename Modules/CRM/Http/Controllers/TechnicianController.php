@@ -8,6 +8,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Modules\CRM\Concerns\ExportsListToFile;
 use Modules\CRM\Enums\WalletTxType;
 use Modules\CRM\Models\Technician;
@@ -454,7 +455,9 @@ class TechnicianController extends Controller
             'specialty' => 'nullable|string|max:255',
             'type_tech' => 'nullable|string|max:30',
             'service_types' => 'nullable|array',
-            'service_types.*' => 'in:repair,service,install',
+            // فهرست از crm_service_types خوانده می‌شود تا نوعِ تازه‌ای که
+            // ادمین اضافه می‌کند هم قابل انتخاب باشد.
+            'service_types.*' => ['string', Rule::in(\Modules\CRM\Support\ServiceTypeOptions::slugs())],
             'description' => 'nullable|string|max:5000',
 
             // تصاویر

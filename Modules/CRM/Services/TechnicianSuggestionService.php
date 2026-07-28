@@ -193,12 +193,16 @@ class TechnicianSuggestionService
                 return 'device';
             }
         }
-        if ($order->order_type) {
-            $techTypes = $t->service_types;
-            if (is_array($techTypes) && ! empty($techTypes)
-                && ! in_array($order->order_type, $techTypes, true)) {
-                return 'service_type';
-            }
+        // نوع خدمت — برخلافِ تگ‌های شهر/برند/دستگاه، اینجا «خالی» به معنای
+        // «همه‌کاره» نیست: تکنسینی که نوع خدماتش تعیین نشده کنار گذاشته
+        // می‌شود تا سفارشِ نصب به کسی که فقط تعمیر می‌کند نرسد. پروفایل
+        // باید پُر شود.
+        $techTypes = $t->service_types;
+        if (! is_array($techTypes) || empty($techTypes)) {
+            return 'no_service_types';
+        }
+        if ($order->order_type && ! in_array($order->order_type, $techTypes, true)) {
+            return 'service_type';
         }
 
         return null;

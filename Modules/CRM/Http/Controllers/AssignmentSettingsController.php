@@ -18,8 +18,21 @@ class AssignmentSettingsController extends Controller
         // پیش‌نمایشِ خشک: اگر همین حالا اجرا می‌شد، چند سفارش پخش می‌شد.
         $preview = $service->run(dryRun: true);
 
+        // تکنسین‌های فعالی که «نوع خدمات»شان تعیین نشده — این‌ها از پیشنهاد
+        // و پخش کنار گذاشته می‌شوند و مدیر باید بداند چند نفرند.
+        $activeTechnicians = \Modules\CRM\Models\Technician::query()
+            ->where('status', 'active')
+            ->where('exclude_from_suggestions', false)
+            ->get(['id', 'first_name', 'firstname_tech', 'service_types']);
+
+        $withoutServiceTypes = $activeTechnicians->filter(
+            fn ($t) => ! is_array($t->service_types) || empty($t->service_types)
+        )->values();
+
         return view('crm::assignment-settings.index', [
             'settings' => AssignmentSettings::all(),
+            'activeTechnicianCount' => $activeTechnicians->count(),
+            'withoutServiceTypes' => $withoutServiceTypes,
             'weightLabels' => AssignmentSettings::WEIGHT_LABELS,
             'weightDefaults' => \Modules\CRM\Services\TechnicianSuggestionService::WEIGHTS,
             'preview' => $preview,

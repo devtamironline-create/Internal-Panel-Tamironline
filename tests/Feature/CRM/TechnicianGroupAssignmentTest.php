@@ -148,6 +148,8 @@ class TechnicianGroupAssignmentTest extends TestCase
             'ready_for_delivery' => true,
             'exclude_from_suggestions' => false,
             'wallet_balance' => 0,
+            // نوع خدمات باید پر باشد؛ پروفایل ناقص از پیشنهاد و پخش کنار می‌رود.
+            'service_types' => ['repair'],
         ], $attributes));
     }
 
@@ -162,6 +164,7 @@ class TechnicianGroupAssignmentTest extends TestCase
             'device_id' => $deviceId,
             'city_id' => 1,
             'address' => 'تهران خیابان ولیعصر پلاک ۱۲',
+            'order_type' => 'repair',
             'status' => 'new',
             'is_lead' => false,
         ], $attributes));
@@ -388,6 +391,61 @@ class TechnicianGroupAssignmentTest extends TestCase
         $this->assertSame($limited->id, $orders[0]->fresh()->technician_id);
         $this->assertSame($limited->id, $orders[1]->fresh()->technician_id);
         $this->assertNull($orders[2]->fresh()->technician_id);
+    }
+
+    // ───────────────────────── نوع خدمت
+
+    public function test_technician_without_service_types_is_excluded(): void
+    {
+        $incomplete = $this->technician('پروفایل ناقص', ['service_types' => null]);
+        $this->coverDevices($incomplete, [1]);
+
+        $plan = app(TechnicianGroupPlanner::class)->plan(collect([$this->order(1)]));
+
+        $this->assertCount(0, $plan->steps);
+        $this->assertCount(1, $plan->unassignable);
+    }
+
+    public function test_technician_who_does_not_offer_that_service_type_is_excluded(): void
+    {
+        $installer = $this->technician('فقط نصاب', ['service_types' => ['install']]);
+        $this->coverDevices($installer, [1]);
+        $repairer = $this->technician('تعمیرکار', ['service_types' => ['repair']]);
+        $this->coverDevices($repairer, [1]);
+
+        $plan = app(TechnicianGroupPlanner::class)->plan(collect([$this->order(1, ['order_type' => 'repair'])]));
+
+        $this->assertCount(1, $plan->steps);
+        $this->assertSame($repairer->id, $plan->steps->first()->technician->id);
+    }
+
+    public function test_diagnosis_explains_the_missing_service_types(): void
+    {
+        $incomplete = $this->technician('پروفایل ناقص', ['service_types' => []]);
+        $this->coverDevices($incomplete, [1]);
+
+        $diagnosis = app(\Modules\CRM\Services\TechnicianSuggestionService::class)
+            ->diagnoseForOrder($this->order(1));
+
+        $this->assertSame(0, $diagnosis['accepted']);
+        $this->assertSame(1, $diagnosis['rejections']['no_service_types'] ?? 0);
+    }
+
+    public function test_auto_assign_skips_orders_without_a_service_type(): void
+    {
+        AssignmentSettings::save(['assign_mode' => 'auto', 'assign_min_score' => 0]);
+
+        $t = $this->technician('آماده');
+        $this->coverDevices($t, [1]);
+
+        $untyped = $this->order(1, ['order_type' => null]);
+        $untyped->forceFill(['created_at' => now()->subHour()])->save();
+
+        $stats = app(AutoAssignService::class)->run();
+
+        $this->assertSame(0, $stats['assigned']);
+        $this->assertSame(1, $stats['skipped_no_type']);
+        $this->assertNull($untyped->fresh()->technician_id);
     }
 
     // ───────────────────────── وزن‌های داینامیک

@@ -61,14 +61,17 @@
                 <dt class="text-gray-500 dark:text-gray-400">نوع خدمات</dt>
                 <dd class="text-gray-900 dark:text-gray-100">
                     @php
-                        $serviceLabels = ['repair' => 'تعمیر', 'service' => 'سرویس', 'install' => 'نصب'];
                         $techServices = is_array($technician->service_types) ? $technician->service_types : [];
                     @endphp
                     @if(empty($techServices))
-                        <span class="text-gray-400 text-xs">— (همه نوع)</span>
+                        <span class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5">
+                            ⚠ تعیین نشده — در پیشنهاد و پخش سفارش در نظر گرفته نمی‌شود
+                        </span>
                     @else
                         @foreach($techServices as $st)
-                            <span class="inline-block px-2 py-0.5 text-xs rounded bg-indigo-50 text-indigo-700 me-1">{{ $serviceLabels[$st] ?? $st }}</span>
+                            <span class="inline-block px-2 py-0.5 text-xs rounded bg-indigo-50 text-indigo-700 me-1">
+                                {{ \Modules\CRM\Support\ServiceTypeOptions::label($st) }}
+                            </span>
                         @endforeach
                     @endif
                 </dd>

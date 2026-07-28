@@ -31,13 +31,18 @@ class AutoAssignTechnicians extends Command
         $stats = $service->run($dry);
 
         $this->info(sprintf(
-            '%s گروه بررسی شد · %d سفارش تخصیص %s · %d به‌دلیل امتیاز پایین رها شد · %d بدون تکنسین ماند',
+            '%d گروه بررسی شد · %d سفارش تخصیص %s · %d به‌دلیل امتیاز پایین رها شد · %d بدون تکنسین ماند · %d بدون نوع خدمت رد شد',
             $stats['groups'],
             $stats['assigned'],
             $dry ? 'می‌شد' : 'داده شد',
             $stats['skipped_low_score'],
             $stats['unassignable'],
+            $stats['skipped_no_type'],
         ));
+
+        if ($stats['skipped_no_type'] > 0) {
+            $this->warn('سفارش‌های بدون «نوع خدمت» خودکار پخش نمی‌شوند — نوعشان را در پنل تعیین کنید.');
+        }
 
         return self::SUCCESS;
     }

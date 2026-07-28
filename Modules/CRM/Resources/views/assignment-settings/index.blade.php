@@ -13,6 +13,30 @@
         </p>
     </div>
 
+    {{-- ─── هشدار آمادگی: تکنسین بدون «نوع خدمات» کنار گذاشته می‌شود ─── --}}
+    @if($withoutServiceTypes->isNotEmpty())
+        <div class="bg-amber-50 border border-amber-300 rounded-xl p-4">
+            <div class="font-bold text-sm text-amber-800">
+                ⚠ {{ number_format($withoutServiceTypes->count()) }} تکنسین از {{ number_format($activeTechnicianCount) }} تکنسین فعال، «نوع خدمات قابل ارائه» ندارند
+            </div>
+            <p class="text-[11px] text-amber-700 leading-6 mt-1">
+                این‌ها نه در پیشنهاد هوشمند دیده می‌شوند و نه سفارش خودکار می‌گیرند، چون معلوم نیست تعمیر انجام می‌دهند یا نصب.
+                برای هرکدام وارد پروفایلش شوید و نوع خدماتش را تیک بزنید.
+            </p>
+            <div class="flex flex-wrap gap-1.5 mt-2">
+                @foreach($withoutServiceTypes->take(30) as $t)
+                    <a href="{{ route('crm.technicians.edit', $t) }}"
+                       class="text-[11px] bg-white border border-amber-300 rounded px-2 py-1 text-amber-800 hover:bg-amber-100">
+                        {{ trim($t->firstname_tech ?: $t->first_name) ?: 'تکنسین #'.$t->id }}
+                    </a>
+                @endforeach
+                @if($withoutServiceTypes->count() > 30)
+                    <span class="text-[11px] text-amber-700 self-center">و {{ $withoutServiceTypes->count() - 30 }} نفر دیگر…</span>
+                @endif
+            </div>
+        </div>
+    @endif
+
     <form method="POST" action="{{ route('crm.assignment-settings.update') }}" class="space-y-4"
           x-data="{ mode: '{{ $settings['assign_mode'] }}' }">
         @csrf
@@ -208,6 +232,12 @@
                     <div class="text-lg font-bold text-amber-600">{{ number_format($preview['unassignable'] + $preview['skipped_low_score']) }}</div>
                 </div>
             </div>
+            @if($preview['skipped_no_type'] > 0)
+                <div class="mt-2 text-[11px] text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-2 leading-6">
+                    {{ number_format($preview['skipped_no_type']) }} سفارش «نوع خدمت» ندارند و اصلاً وارد پخش خودکار نمی‌شوند —
+                    بدون آن نمی‌شود فهمید تعمیر است یا نصب. نوعشان را در صفحهٔ سفارش تعیین کنید.
+                </div>
+            @endif
             <p class="text-[11px] text-gray-400 mt-2 leading-5">
                 این محاسبه فقط شبیه‌سازی است و هیچ سفارشی را تخصیص نداده.
             </p>
