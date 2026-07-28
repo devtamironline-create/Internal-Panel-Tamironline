@@ -186,6 +186,14 @@ final class OrderAssigner
             $parts[] = "پوشش {$covered} سفارش از {$groupSize} سفارشِ همین آدرس";
         }
 
+        if (! empty($context['history'])) {
+            $h = $context['history'];
+            $months = (int) ($h['months'] ?? 0);
+            $when = $months <= 0 ? 'کمتر از یک ماه پیش' : "{$months} ماه پیش";
+            $parts[] = 'همین دستگاه را قبلاً برای این مشتری تعمیر کرده — سفارش '
+                .($h['order_code'] ?? '#'.($h['order_id'] ?? '—')).'، '.$when;
+        }
+
         foreach (($context['reasons'] ?? []) as $reason) {
             $parts[] = (string) $reason;
         }

@@ -44,6 +44,7 @@ final class TechnicianGroupPlanner
     public function __construct(
         private readonly TechnicianSuggestionService $suggestions,
         private readonly OrderGroupResolver $groups,
+        private readonly TechnicianHistoryService $history,
     ) {}
 
     /**
@@ -89,6 +90,9 @@ final class TechnicianGroupPlanner
 
         $preferred = array_flip(array_map('intval', $preferredTechnicianIds));
 
+        // «تکنسینِ سابقهٔ همان دستگاه» — نگاشتِ سفارش ← تکنسین.
+        $historyMap = $this->history->mapFor($orders);
+
         /** @var Collection<int, Order> $remaining */
         $remaining = $orders->keyBy('id');
         $steps = collect();
@@ -113,9 +117,17 @@ final class TechnicianGroupPlanner
                 // بریدن به ظرفیت باقی‌مانده
                 $coverage = $coverage->take($capacity[$tech->id]);
 
+                // چند تا از سفارش‌های تحتِ پوشش را قبلاً برای همین مشتری
+                // تعمیر کرده؟ بعد از «تعدادِ پوشش» می‌آید تا کم‌کردنِ
+                // تعدادِ مراجعه همچنان اولویتِ اول بماند.
+                $historyHits = $coverage->filter(
+                    fn (Order $o) => ($historyMap[$o->id]['technician_id'] ?? null) === $tech->id
+                )->count();
+
                 $rank = [
                     isset($preferred[$tech->id]) ? 1 : 0,
                     $coverage->count(),
+                    $historyHits,
                     (int) ($scored[$tech->id]->score ?? 0),
                     -$tech->id,
                 ];
@@ -133,6 +145,11 @@ final class TechnicianGroupPlanner
             $tech = $best['tech'];
             $entry = $scored[$tech->id] ?? null;
 
+            // سابقه‌ای که باعثِ انتخابِ این نفر شده (برای متنِ لاگ و UI).
+            $historyHit = $best['coverage']
+                ->map(fn (Order $o) => $historyMap[$o->id] ?? null)
+                ->first(fn (?array $h) => $h !== null && $h['technician_id'] === $tech->id);
+
             $steps->push((object) [
                 'technician' => $tech,
                 'orders' => $best['coverage']->values(),
@@ -146,6 +163,7 @@ final class TechnicianGroupPlanner
                 'debt' => (int) ($entry->debt ?? 0),
                 'cancel_rate_pct' => (int) ($entry->cancel_rate_pct ?? 0),
                 'sticky' => isset($preferred[$tech->id]),
+                'history' => $historyHit,
             ]);
 
             $used[$tech->id] = true;
