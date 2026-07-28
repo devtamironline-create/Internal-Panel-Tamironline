@@ -86,6 +86,9 @@ class TechnicianHistoryAssignmentTest extends TestCase
             $t->string('to_status', 40)->nullable();
             $t->text('note')->nullable();
             $t->unsignedBigInteger('changed_by')->nullable();
+            $t->string('actor_name', 120)->nullable();
+            $t->string('actor_role', 20)->nullable();
+            $t->unsignedBigInteger('actor_technician_id')->nullable();
             $t->timestamp('created_at')->nullable();
         });
 
