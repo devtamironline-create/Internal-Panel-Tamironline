@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\Technician;
+use Modules\CRM\Support\AssignmentSettings;
 
 /**
  * فاز ۱ سیستم پیشنهاد هوشمند تخصیص تکنسین — Smart Suggestion.
@@ -26,7 +27,12 @@ use Modules\CRM\Models\Technician;
  */
 class TechnicianSuggestionService
 {
-    /** وزن‌های ثابت — هم‌سو با Roadmap محصولی فاز ۱. */
+    /**
+     * وزن‌های پیش‌فرض — هم‌سو با Roadmap محصولی فاز ۱.
+     *
+     * مقدارِ مؤثر از تنظیمات پنل خوانده می‌شود (AssignmentSettings::weights)
+     * و همیشه نرمال‌شده به جمعِ ۱۰۰ است؛ این ثابت فقط نقطهٔ شروع است.
+     */
     public const WEIGHTS = [
         'open_orders' => 30,  // سفارش باز کمتر = بهتر
         'debt' => 25,  // بدهی کمتر = بهتر
@@ -237,9 +243,19 @@ class TechnicianSuggestionService
         ];
     }
 
-    /** امتیاز هر تکنسین — جمع ۶ بُعد با وزن‌های ثابت، خروجی int 0..100. */
+    /** وزن‌های مؤثرِ این درخواست — یک‌بار از تنظیمات خوانده می‌شود. */
+    private ?array $activeWeights = null;
+
+    /** @return array<string, int> */
+    public function weights(): array
+    {
+        return $this->activeWeights ??= AssignmentSettings::weights();
+    }
+
+    /** امتیاز هر تکنسین — جمع ۶ بُعد با وزن‌های تنظیمات، خروجی int 0..100. */
     protected function scoreTechnician(Technician $t, array $stats, ?float $avgResponseMin): object
     {
+        $weights = $this->weights();
         $breakdown = [];
         $reasons = [];
 
@@ -252,7 +268,7 @@ class TechnicianSuggestionService
             // بدون سقف: ۰ سفارش = ۱، ۱۰+ سفارش = ۰
             $openRatio = max(0, 1 - $now / 10);
         }
-        $breakdown['open_orders'] = (int) round($openRatio * self::WEIGHTS['open_orders']);
+        $breakdown['open_orders'] = (int) round($openRatio * $weights['open_orders']);
         if ($now === 0) {
             $reasons[] = 'بدون سفارش باز';
         } elseif ($max > 0 && $now >= $max * 0.8) {
@@ -271,7 +287,7 @@ class TechnicianSuggestionService
             // heuristic: ۵ میلیون آستانه
             $debtScore = max(0, 1 - $debt / 5_000_000);
         }
-        $breakdown['debt'] = (int) round($debtScore * self::WEIGHTS['debt']);
+        $breakdown['debt'] = (int) round($debtScore * $weights['debt']);
         if ($debt === 0) {
             $reasons[] = 'بدون بدهی';
         } elseif ($maxDebt > 0 && $debt >= $maxDebt) {
@@ -286,7 +302,7 @@ class TechnicianSuggestionService
             // ست نشده — neutral midpoint
             $satScore = 0.5;
         }
-        $breakdown['satisfaction'] = (int) round($satScore * self::WEIGHTS['satisfaction']);
+        $breakdown['satisfaction'] = (int) round($satScore * $weights['satisfaction']);
         if ($sat !== null && $sat >= 4.5) {
             $reasons[] = 'رضایت عالی';
         }
@@ -297,7 +313,7 @@ class TechnicianSuggestionService
         } else {
             $cancelRate = 0; // تکنسین جدید — مزیت شک
         }
-        $breakdown['cancel_rate'] = (int) round((1 - $cancelRate) * self::WEIGHTS['cancel_rate']);
+        $breakdown['cancel_rate'] = (int) round((1 - $cancelRate) * $weights['cancel_rate']);
         if ($cancelRate > 0.3) {
             $reasons[] = '⚠ نرخ کنسلی بالا';
         }
@@ -307,7 +323,7 @@ class TechnicianSuggestionService
             ? Carbon::parse($stats['last_assigned_at'])->diffInDays(now())
             : 999;
         $activityRatio = max(0, 1 - $lastDays / 14); // افول در ۲ هفته
-        $breakdown['recent_activity'] = (int) round($activityRatio * self::WEIGHTS['recent_activity']);
+        $breakdown['recent_activity'] = (int) round($activityRatio * $weights['recent_activity']);
         if ($lastDays > 14) {
             $reasons[] = '⚠ بدون فعالیت اخیر';
         }
@@ -325,7 +341,7 @@ class TechnicianSuggestionService
         } else {
             $respScore = 0;
         }
-        $breakdown['response_speed'] = (int) round($respScore * self::WEIGHTS['response_speed']);
+        $breakdown['response_speed'] = (int) round($respScore * $weights['response_speed']);
 
         $score = array_sum($breakdown);
 

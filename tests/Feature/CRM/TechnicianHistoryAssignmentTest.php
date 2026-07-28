@@ -131,7 +131,7 @@ class TechnicianHistoryAssignmentTest extends TestCase
 
     private function technician(string $name, array $devices, array $attributes = []): Technician
     {
-        $t = Technician::create(array_merge([
+        $t = Technician::forceCreate(array_merge([
             'first_name' => $name,
             'firstname_tech' => $name,
             'status' => 'active',
