@@ -113,10 +113,11 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     Route::post('/notifications/{id}/read', [App\Http\Controllers\Admin\NotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('/notifications/read-all', [App\Http\Controllers\Admin\NotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
 
-    // Messenger
+    // Messenger — no.cache: خودِ صفحه هم نباید توسطِ مرورگر/LiteSpeed کش
+    // شود؛ نسخهٔ کهنه یعنی توکنِ CSRF کهنه و وضعیتِ اولیهٔ غلط.
     Route::get('/messenger', function () {
         return view('admin.messenger.index');
-    })->name('messenger');
+    })->middleware('no.cache')->name('messenger');
 
     // Staff Management
     Route::resource('staff', StaffController::class)->except(['show']);
@@ -165,6 +166,8 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     // Chat System — no.cache: پاسخ‌های بلادرنگ نباید توسطِ مرورگر/LiteSpeed کش شوند
     Route::prefix('chat')->name('chat.')->middleware('no.cache')->group(function () {
         Route::get('/users', [ChatController::class, 'users'])->name('users');
+        // ضربانِ سبک: فقط می‌گوید چیزی عوض شده یا نه + تعدادِ خوانده‌نشده‌ها.
+        Route::get('/tick', [ChatController::class, 'tick'])->name('tick');
         // اعلانِ سراسریِ پیام‌های جدید (روی همهٔ صفحات پنل) — پیام‌های طرفِ مقابل بعد از یک id.
         Route::get('/unread-recent', [ChatController::class, 'recentUnread'])->name('unread-recent');
         Route::get('/conversations', [ChatController::class, 'conversations'])->name('conversations');

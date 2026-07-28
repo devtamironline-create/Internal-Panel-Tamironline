@@ -165,6 +165,58 @@ class ChatController extends Controller
     }
 
     /**
+     * ضربانِ سبکِ بلادرنگ — «آیا چیزی عوض شده؟»
+     *
+     * صفحهٔ پیام‌رسان قبلاً هر ۱۰ ثانیه سه endpointِ سنگین را صدا می‌زد
+     * (لیست گفتگوها + پیام‌های گفتگوی باز + تماس‌ها) تا بفهمد پیام جدیدی
+     * آمده یا نه. حالا این ضربانِ ارزان هر چند ثانیه صدا زده می‌شود و
+     * فقط وقتی عددی تغییر کرده، بارگذاریِ سنگین انجام می‌شود.
+     *
+     * دو کوئریِ تجمیعی می‌زند، نه یکی به‌ازای هر گفتگو:
+     *   - max_id: بزرگ‌ترین شناسهٔ پیامِ دیگران در گفتگوهای کاربر
+     *   - unread: مجموعِ پیام‌های خوانده‌نشده (برای بجِ منو)
+     */
+    public function tick(Request $request): JsonResponse
+    {
+        $userId = auth()->id();
+
+        $base = Message::query()
+            ->join('conversation_participants as p', function ($join) use ($userId) {
+                $join->on('p.conversation_id', '=', 'messages.conversation_id')
+                    ->where('p.user_id', '=', $userId)
+                    ->whereNull('p.left_at');
+            })
+            ->whereNull('messages.deleted_at')
+            ->where('messages.user_id', '!=', $userId);
+
+        $maxId = (int) (clone $base)->max('messages.id');
+
+        $unread = (int) (clone $base)
+            ->where(function ($q) {
+                $q->whereNull('p.last_read_at')
+                    ->orWhereColumn('messages.created_at', '>', 'p.last_read_at');
+            })
+            ->count();
+
+        // شناسهٔ آخرین پیامِ گفتگوی باز — تا صفحه بفهمد همان گفتگو
+        // پیام تازه گرفته یا گفتگوی دیگری.
+        $conversationMaxId = 0;
+        if ($conversationId = (int) $request->query('conversation_id', 0)) {
+            $conversationMaxId = (int) Message::query()
+                ->where('conversation_id', $conversationId)
+                ->whereNull('deleted_at')
+                ->max('id');
+        }
+
+        return response()->json([
+            'max_id' => $maxId,
+            'unread' => $unread,
+            'conversation_max_id' => $conversationMaxId,
+            'server_time' => now()->timestamp,
+        ]);
+    }
+
+    /**
      * پیام‌های جدیدِ طرفِ مقابل برای اعلانِ سراسری (روی همهٔ صفحات پنل).
      *
      * کلاینت آخرین id اعلان‌شده را در `after` می‌فرستد؛ سرور پیام‌های بعد از آن را
