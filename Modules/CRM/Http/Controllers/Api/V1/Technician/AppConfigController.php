@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Modules\CRM\Support\AppMessages;
 use Modules\CRM\Support\SlaPolicy;
+use Modules\CRM\Support\UploadLimits;
 
 /**
  * GET /v1/technician/app-config
@@ -26,6 +27,13 @@ class AppConfigController extends Controller
                 'sla_hours' => SlaPolicy::hours(),
                 'max_estimate_days' => SlaPolicy::MAX_ESTIMATE_DAYS,
                 'messages' => AppMessages::all(),
+                // سقفِ واقعیِ آپلود تا اپ بتواند *پیش از* ارسال فشرده کند.
+                // بدونِ این، عکسِ بزرگ به سرور می‌رود و آن‌جا رد می‌شود —
+                // هم ترافیکِ تکنسین هدر می‌رود هم پیامِ خطا دیر می‌رسد.
+                'upload' => [
+                    'max_image_kb' => UploadLimits::maxFileKb(),
+                    'max_image_label' => UploadLimits::humanMax(),
+                ],
             ],
         ]);
     }

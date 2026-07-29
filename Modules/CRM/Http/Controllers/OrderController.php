@@ -1070,7 +1070,7 @@ class OrderController extends Controller
                 'discount' => 'nullable|integer|min:0',
                 'invoice_descripotion' => 'required|string|min:5|max:2000',
                 'save_as_draft' => 'nullable|boolean',
-                'device_img1' => 'nullable|image|max:10240',
+                'device_img1' => \Modules\CRM\Support\UploadLimits::imageRule(),
             ];
         }
 

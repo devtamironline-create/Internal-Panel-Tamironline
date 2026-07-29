@@ -60,7 +60,10 @@ class OrderActionController extends Controller
             'pieces.*.customer_price' => 'nullable|integer|min:0',
             'invoice_descripotion' => 'nullable|string|max:2000',
             'save_as_draft' => 'nullable|boolean',
-            'device_img1' => 'nullable|image|max:30720',
+            // سقف را از خودِ PHP می‌گیریم، نه عددِ ثابت: اگر
+            // upload_max_filesize سرور کوچک‌تر باشد، فایل پیش از رسیدن به
+            // لاراول دور انداخته می‌شود و پیامِ خطا بی‌فایده می‌شود.
+            'device_img1' => \Modules\CRM\Support\UploadLimits::imageRule(),
             // تخمینِ آماده‌شدن دستگاه — برای «انتقال به تعمیرگاه» الزامی،
             // برای «در انتظار قطعه» اختیاری. سقفِ ۱۴ روز همان قاعدهٔ فریزِ
             // پنل است و سرور هم آن را enforce می‌کند، نه فقط اپ.
@@ -76,6 +79,9 @@ class OrderActionController extends Controller
             'estimated_ready_at.required' => 'تاریخ تخمینی آماده‌شدن دستگاه را انتخاب کنید.',
             'estimated_ready_at.after_or_equal' => 'تاریخ تخمینی نمی‌تواند در گذشته باشد.',
             'estimated_ready_at.before_or_equal' => 'تاریخ تخمینی حداکثر می‌تواند ۱۴ روز آینده باشد.',
+            'device_img1.max' => \Modules\CRM\Support\UploadLimits::tooLargeMessage(),
+            'device_img1.uploaded' => \Modules\CRM\Support\UploadLimits::failedMessage(),
+            'device_img1.image' => 'فایل انتخابی عکس نیست. یک عکس (JPG یا PNG) انتخاب کنید.',
         ]);
 
         $newStatus = OrderStatus::tryFrom($validated['status']);

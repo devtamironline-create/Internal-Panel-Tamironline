@@ -40,7 +40,7 @@ Route::prefix('v1/technician')->group(function () {
         ->middleware('throttle:otp-verify')->name('api.tech.auth.verify-otp');
 
     // ─── Private — auth:sanctum + tech guard + rolling token ─────
-    Route::middleware(['auth:sanctum', EnsureTechnician::class, TechRollingToken::class])->group(function () {
+    Route::middleware(['upload.size', 'auth:sanctum', EnsureTechnician::class, TechRollingToken::class])->group(function () {
         Route::get('/me', [AuthController::class, 'me'])->name('api.tech.me');
         // مهلت‌ها و متنِ پیام‌های سیستم SLA — اپ هر ۳۰ دقیقه refresh می‌کند.
         Route::get('/app-config', \Modules\CRM\Http\Controllers\Api\V1\Technician\AppConfigController::class)
