@@ -30,7 +30,9 @@ class LogSlowRequests
 
     public function handle(Request $request, Closure $next): Response
     {
-        $threshold = (int) env('SLOW_REQUEST_MS', 0);
+        // از config و نه env(): بعد از `config:cache` تابعِ env() روی
+        // پروداکشن null می‌دهد و پروفایلر بی‌صدا خاموش می‌شد.
+        $threshold = (int) config('logging.slow_request_ms', 0);
 
         if ($threshold <= 0) {
             return $next($request);

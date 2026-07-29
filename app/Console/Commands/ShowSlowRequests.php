@@ -26,8 +26,13 @@ class ShowSlowRequests extends Command
         if (empty($entries)) {
             $this->warn('چیزی ثبت نشده.');
             $this->newLine();
-            $this->line('برای فعال‌کردن، این را در .env بگذارید و config:clear بزنید:');
+            $this->line('برای فعال‌کردن، این را در .env بگذارید:');
             $this->line('  <fg=cyan>SLOW_REQUEST_MS=800</>');
+            $this->line('و بعد کشِ config را دوباره بسازید (نه پاک کنید):');
+            $this->line('  <fg=cyan>php artisan config:cache</>');
+            $this->newLine();
+            $this->line('  آستانهٔ فعلی: '.((int) config('logging.slow_request_ms', 0)).'ms'
+                .((int) config('logging.slow_request_ms', 0) > 0 ? '' : '  <fg=red>(خاموش)</>'));
             $this->line('بعد چند دقیقه با پنل کار کنید و دوباره این دستور را بزنید.');
 
             return self::SUCCESS;

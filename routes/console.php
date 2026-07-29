@@ -54,8 +54,13 @@ Schedule::command('activity-log:purge')
 // اگر حالت روی «فقط پیشنهاد» باشد یا نوبت نرسیده باشد، کامند بلافاصله
 // خارج می‌شود. مهلتِ انتظار (پیش‌فرض ۱۰ دقیقه) داخل خود سرویس اعمال
 // می‌شود تا سفارش‌های هم‌گروهِ یک مشتری فرصت ثبت‌شدن پیدا کنند.
+// when() در همین پروسهٔ زمان‌بند اجرا می‌شود، پیش از spawn شدنِ کامند.
+// بدونِ آن، هر دقیقه یک پروسهٔ PHP کامل بالا می‌آمد فقط برای اینکه بگوید
+// «نوبتم نرسیده» — روی سروری که CPU‌اش اشباع است این هدررفتِ محض است.
 Schedule::command('crm:orders:auto-assign')
     ->everyMinute()
+    ->when(fn () => \Modules\CRM\Support\AssignmentSettings::isAuto()
+        && \Modules\CRM\Support\AssignmentSettings::isDueToRun())
     ->onOneServer()
     ->withoutOverlapping();
 

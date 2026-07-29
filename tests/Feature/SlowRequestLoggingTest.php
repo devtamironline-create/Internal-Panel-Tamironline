@@ -33,7 +33,7 @@ class SlowRequestLoggingTest extends TestCase
 
     public function test_nothing_is_logged_when_the_profiler_is_off(): void
     {
-        putenv('SLOW_REQUEST_MS');
+        config(['logging.slow_request_ms' => 0]);
 
         Log::shouldReceive('channel')->never();
 
@@ -43,19 +43,20 @@ class SlowRequestLoggingTest extends TestCase
     public function test_a_fast_request_is_not_logged(): void
     {
         // آستانهٔ بالا — این درخواست زیرِ آن است.
-        putenv('SLOW_REQUEST_MS=5000');
+        config(['logging.slow_request_ms' => 5000]);
 
         Log::shouldReceive('channel')->never();
 
         $this->get('/__perf-probe')->assertOk();
-
-        putenv('SLOW_REQUEST_MS');
     }
 
     public function test_a_slow_request_is_logged_with_query_details(): void
     {
         // آستانهٔ ۱ میلی‌ثانیه — هر درخواستی کند حساب می‌شود.
-        putenv('SLOW_REQUEST_MS=1');
+        //
+        // عمداً از config و نه putenv: میان‌افزار بعد از `config:cache`
+        // باید همچنان کار کند، و تنها راهش خواندن از config است.
+        config(['logging.slow_request_ms' => 1]);
 
         $captured = null;
         Log::shouldReceive('channel')->with('slow')->andReturnSelf();
@@ -64,8 +65,6 @@ class SlowRequestLoggingTest extends TestCase
         });
 
         $this->get('/__perf-probe')->assertOk();
-
-        putenv('SLOW_REQUEST_MS');
 
         $this->assertNotNull($captured, 'درخواستِ کند باید ثبت شود');
         $this->assertSame('/__perf-probe', $captured['path']);
@@ -79,5 +78,8 @@ class SlowRequestLoggingTest extends TestCase
         // مشکل کوئری است یا رندر.
         $this->assertArrayHasKey('php_ms', $captured);
         $this->assertArrayHasKey('query_ms', $captured);
+
+        // زمانِ بوت — همان عددی که می‌گوید مشکل پیش از صفحه است یا داخلش.
+        $this->assertArrayHasKey('boot_ms', $captured);
     }
 }
