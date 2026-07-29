@@ -55,7 +55,7 @@ class ShowSlowRequests extends Command
         $this->newLine();
         $this->line('<fg=cyan>── کندترین مسیرها ('.count($entries).' درخواستِ ثبت‌شده) ──</>');
         $this->table(
-            ['مسیر', 'تعداد', 'بیشینه', 'میانگین', 'کوئری (میانگین)', 'زمانِ کوئری', 'زمانِ PHP'],
+            ['مسیر', 'تعداد', 'بیشینه', 'میانگین', 'بوت', 'کوئری', 'زمانِ کوئری', 'زمانِ PHP'],
             array_map(function ($key, $rows) {
                 $totals = array_column($rows, 'total_ms');
 
@@ -64,6 +64,7 @@ class ShowSlowRequests extends Command
                     count($rows),
                     round(max($totals)).'ms',
                     round(array_sum($totals) / count($rows)).'ms',
+                    round($this->avg($rows, 'boot_ms')).'ms',
                     round($this->avg($rows, 'query_count')),
                     round($this->avg($rows, 'query_ms')).'ms',
                     round($this->avg($rows, 'php_ms')).'ms',
@@ -73,6 +74,7 @@ class ShowSlowRequests extends Command
 
         $this->newLine();
         $this->line('  «زمانِ PHP» بزرگ‌تر از «زمانِ کوئری» یعنی مشکل در دیتابیس نیست — رندر یا حلقهٔ PHP است.');
+        $this->line('  «بوت» بزرگ (بیش از ۲۰۰ms) یعنی مشکل پیش از خودِ صفحه است: کشِ config/route یا OPcache خاموش، یا کمبودِ CPU.');
 
         if ($this->option('detail')) {
             $this->detail($groups);

@@ -37,6 +37,12 @@ class LogSlowRequests
         }
 
         $started = microtime(true);
+
+        // زمانِ بوتِ فریم‌ورک: از لحظهٔ ورود به index.php تا رسیدن به این
+        // میان‌افزار. اگر این عدد بزرگ باشد، مشکل در منطقِ صفحه نیست —
+        // بوت (config/route بدونِ کش، OPcache خاموش) یا کمبودِ CPU است.
+        $bootMs = defined('LARAVEL_START') ? ($started - LARAVEL_START) * 1000 : null;
+
         $queries = [];
 
         DB::listen(function ($query) use (&$queries) {
@@ -50,7 +56,7 @@ class LogSlowRequests
             return $response;
         }
 
-        $this->report($request, $response, $elapsed, $queries);
+        $this->report($request, $response, $elapsed, $queries, $bootMs);
 
         return $response;
     }
@@ -58,8 +64,13 @@ class LogSlowRequests
     /**
      * @param  array<int, array{sql:string, time:float}>  $queries
      */
-    private function report(Request $request, Response $response, float $elapsed, array $queries): void
-    {
+    private function report(
+        Request $request,
+        Response $response,
+        float $elapsed,
+        array $queries,
+        ?float $bootMs
+    ): void {
         $queryMs = array_sum(array_column($queries, 'time'));
 
         // کندترین‌ها اول — معمولاً یکی‌دو تا کلِ داستان‌اند.
@@ -85,6 +96,7 @@ class LogSlowRequests
                 'route' => optional($request->route())->getName(),
                 'user_id' => optional($request->user())->id,
                 'status' => $response->getStatusCode(),
+                'boot_ms' => $bootMs === null ? null : round($bootMs, 1),
                 'total_ms' => round($elapsed, 1),
                 'query_ms' => round($queryMs, 1),
                 // اختلافِ این دو یعنی وقت صرفِ PHP/رندر شده، نه دیتابیس.

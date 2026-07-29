@@ -231,4 +231,47 @@ class ChatTickTest extends TestCase
         // این است که کوئریِ سنگینِ join روی messages اجرا نشود.
         $this->assertLessThanOrEqual(1, $queries);
     }
+
+    /**
+     * endpointِ unread-count قبلاً روی گفتگوها حلقه می‌زد و برای هرکدام دو
+     * کوئری می‌ساخت (۴۸ کوئری با ۲۳ گفتگو). حالا از همان کوئریِ تجمیعیِ
+     * بج استفاده می‌کند — این تست تضمین می‌کند عددش عوض نشده.
+     */
+    public function test_the_aggregate_count_matches_the_per_conversation_sum(): void
+    {
+        // گفتگوی دوم با تاریخِ خواندهٔ متفاوت، تا جمعِ ساده کافی نباشد.
+        $second = Conversation::create(['type' => 'private', 'created_by' => $this->me->id]);
+        foreach ([$this->me->id, $this->other->id] as $id) {
+            DB::table('conversation_participants')->insert([
+                'conversation_id' => $second->id,
+                'user_id' => $id,
+                'joined_at' => now(),
+                'last_read_at' => $id === $this->me->id ? now() : null,
+            ]);
+        }
+
+        $this->message($this->other, 'اولی');
+        $this->message($this->other, 'دومی');
+        Message::create([
+            'conversation_id' => $second->id,
+            'user_id' => $this->other->id,
+            'body' => 'در گفتگوی دوم',
+            'type' => 'text',
+            'created_at' => now()->addMinute(),
+            'updated_at' => now()->addMinute(),
+        ]);
+        // پیامِ خودم نباید شمرده شود.
+        $this->message($this->me, 'پیامِ خودم');
+
+        $perConversation = Conversation::whereHas('participants', function ($q) {
+            $q->where('user_id', $this->me->id)->whereNull('left_at');
+        })->get()->sum(fn ($c) => $c->getUnreadCount($this->me->id));
+
+        $this->assertSame($perConversation, Message::countUnreadFor($this->me->id));
+
+        $this->actingAs($this->me)
+            ->getJson('/admin/chat/unread-count')
+            ->assertOk()
+            ->assertJson(['unread_count' => $perConversation]);
+    }
 }
