@@ -986,14 +986,12 @@ class ChatController extends Controller
     {
         $userId = auth()->id();
 
-        $totalUnread = 0;
-        $conversations = \App\Models\Chat\Conversation::whereHas('participants', function ($q) use ($userId) {
-            $q->where('user_id', $userId)->whereNull('left_at');
-        })->get();
+        // قبلاً روی گفتگوها حلقه می‌زد و برای هرکدام دو کوئری می‌ساخت —
+        // با ۲۳ گفتگو یعنی ۴۸ کوئری، آن هم روی endpointی که مدام صدا زده
+        // می‌شود. همان عدد با یک کوئریِ تجمیعی درمی‌آید.
+        $totalUnread = Message::countUnreadFor($userId);
 
-        foreach ($conversations as $conv) {
-            $totalUnread += $conv->getUnreadCount($userId);
-        }
+        Message::rememberUnreadCount($userId, $totalUnread);
 
         return response()->json([
             'unread_count' => $totalUnread,
