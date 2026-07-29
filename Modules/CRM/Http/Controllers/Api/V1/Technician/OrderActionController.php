@@ -121,6 +121,7 @@ class OrderActionController extends Controller
             'to_status' => $newStatus->value,
             'note' => $description !== '' ? $description : null,
             'changed_by' => $tech->user_id,
+            ...OrderStatusLog::technicianActor($tech),
             'created_at' => now(),
         ]);
 
@@ -182,7 +183,8 @@ class OrderActionController extends Controller
             OrderStatusLog::create([
                 'order_id' => $order->id, 'from_status' => $order->status->value,
                 'to_status' => $order->status->value, 'note' => 'پاک کردن زمان مراجعه',
-                'changed_by' => $tech->user_id, 'created_at' => now(),
+                'changed_by' => $tech->user_id,
+                ...OrderStatusLog::technicianActor($tech), 'created_at' => now(),
             ]);
 
             return response()->json(['success' => true, 'message' => 'زمان مراجعه پاک شد.']);
@@ -211,7 +213,8 @@ class OrderActionController extends Controller
             'order_id' => $order->id, 'from_status' => $previous->value,
             'to_status' => ($autoCoordinated ? OrderStatus::Coordinated : $previous)->value,
             'note' => ($autoCoordinated ? 'هماهنگی با مشتری: ' : 'به‌روزرسانی زمان مراجعه: ').$jalali.' — '.$slot['label'],
-            'changed_by' => $tech->user_id, 'created_at' => now(),
+            'changed_by' => $tech->user_id,
+            ...OrderStatusLog::technicianActor($tech), 'created_at' => now(),
         ]);
 
         if ($autoCoordinated && ($trigger = SmsTrigger::fromOrderStatus(OrderStatus::Coordinated))) {
@@ -291,6 +294,7 @@ class OrderActionController extends Controller
                 'to_status' => $coordinationPhase ? OrderStatus::NoAnswer->value : $previous->value,
                 'note' => 'نتیجهٔ تماس تلفنی: مشتری پاسخگو نبود'.($reason !== '' ? ' — '.$reason : '').'.',
                 'changed_by' => $tech->user_id,
+                ...OrderStatusLog::technicianActor($tech),
                 'created_at' => now(),
             ]);
 
@@ -307,6 +311,7 @@ class OrderActionController extends Controller
             'to_status' => $previous->value,
             'note' => 'نتیجهٔ تماس تلفنی: با مشتری هماهنگ شد — در انتظار ثبت زمان مراجعه.',
             'changed_by' => $tech->user_id,
+            ...OrderStatusLog::technicianActor($tech),
             'created_at' => now(),
         ]);
 

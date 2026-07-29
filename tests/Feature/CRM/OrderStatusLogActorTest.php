@@ -10,6 +10,7 @@ use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\Technician;
 use Modules\CRM\Services\OrderAssigner;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
@@ -25,6 +26,10 @@ class OrderStatusLogActorTest extends TestCase
 
         Artisan::call('migrate', [
             '--path' => 'database/migrations/0001_01_01_000000_create_users_table.php',
+            '--force' => true,
+        ]);
+        Artisan::call('migrate', [
+            '--path' => 'database/migrations/2025_12_19_195120_create_permission_tables.php',
             '--force' => true,
         ]);
         Artisan::call('migrate', [
@@ -79,6 +84,23 @@ class OrderStatusLogActorTest extends TestCase
         OrderStatusLog::flushActorCache();
     }
 
+    /**
+     * کاربر با نقش‌های مشخص.
+     *
+     * ملاکِ «اپراتور بودن» نقش است نه is_staff — حسابِ هر تکنسین هم
+     * is_staff می‌گیرد، پس آن پرچم چیزی را از هم جدا نمی‌کند.
+     */
+    private function user(array $attributes, array $roles = []): User
+    {
+        $user = User::create(array_merge(['password' => bcrypt('x')], $attributes));
+
+        foreach ($roles as $role) {
+            $user->assignRole(Role::findOrCreate($role, 'web'));
+        }
+
+        return $user->fresh();
+    }
+
     private function order(): Order
     {
         return Order::create(['order_code' => 'A-1', 'status' => 'new', 'is_lead' => false]);
@@ -117,11 +139,11 @@ class OrderStatusLogActorTest extends TestCase
 
     public function test_someone_who_is_both_operator_and_technician_is_labelled_operator(): void
     {
-        $user = User::create([
+        // هم نقشِ تکنسین دارد هم نقشِ ادمین ⇒ در نقشِ اپراتور کار می‌کند.
+        $user = $this->user([
             'first_name' => 'سعید', 'last_name' => 'نوری',
-            'mobile' => '09120000004', 'password' => bcrypt('x'),
-            'is_staff' => true,
-        ]);
+            'mobile' => '09120000004', 'is_staff' => true,
+        ], ['crm-technician', 'admin']);
         Technician::forceCreate([
             'user_id' => $user->id, 'first_name' => 'سعید تکنسین',
             'firstname_tech' => 'سعید تکنسین', 'status' => 'active',
@@ -140,11 +162,12 @@ class OrderStatusLogActorTest extends TestCase
 
     public function test_pure_technician_is_still_labelled_technician(): void
     {
-        $user = User::create([
+        // حالتِ واقعیِ سامانه: هر دو مسیرِ ساختِ حسابِ تکنسین is_staff را
+        // true می‌گذارند. این نباید او را «اپراتور» کند.
+        $user = $this->user([
             'first_name' => 'رضا', 'last_name' => 'احمدی',
-            'mobile' => '09120000005', 'password' => bcrypt('x'),
-            'is_staff' => false,
-        ]);
+            'mobile' => '09120000005', 'is_staff' => true,
+        ], ['crm-technician']);
         $tech = Technician::forceCreate([
             'user_id' => $user->id, 'first_name' => 'رضا احمدی',
             'firstname_tech' => 'رضا احمدی', 'status' => 'active',
@@ -158,11 +181,10 @@ class OrderStatusLogActorTest extends TestCase
 
     public function test_staff_acting_from_the_technician_guard_is_still_operator(): void
     {
-        $user = User::create([
+        $user = $this->user([
             'first_name' => 'نازنین', 'last_name' => 'شریفی',
-            'mobile' => '09120000006', 'password' => bcrypt('x'),
-            'is_staff' => true,
-        ]);
+            'mobile' => '09120000006', 'is_staff' => true,
+        ], ['crm-technician', 'admin']);
         $tech = Technician::forceCreate([
             'user_id' => $user->id, 'first_name' => 'نازنین تکنسین',
             'firstname_tech' => 'نازنین تکنسین', 'status' => 'active',
@@ -173,6 +195,46 @@ class OrderStatusLogActorTest extends TestCase
 
         $this->assertSame('operator', $log->actor_role);
         $this->assertSame('نازنین شریفی', $log->actor_name);
+    }
+
+    /**
+     * حالتِ گزارش‌شده: دو تکنسین به یک حسابِ کاربری وصل‌اند.
+     *
+     * استنتاج از روی changed_by نمی‌تواند بگوید کدامشان بوده و به نامِ
+     * نفرِ اول می‌رسد. مسیرهای تکنسین (پنل و اپ) خودشان رکوردِ تکنسین را
+     * در دست دارند، پس عامل را صریح اعلام می‌کنند و حدس زدن لازم نیست.
+     */
+    public function test_a_shared_account_does_not_steal_another_technicians_name(): void
+    {
+        $user = $this->user([
+            'first_name' => 'فرامرز', 'last_name' => 'لاریجانی',
+            'mobile' => '09120000009', 'is_staff' => true,
+        ], ['crm-technician']);
+
+        $old = Technician::forceCreate([
+            'user_id' => $user->id, 'first_name' => 'فرامرز لاریجانی',
+            'firstname_tech' => 'فرامرز لاریجانی', 'status' => 'active',
+        ]);
+        $actual = Technician::forceCreate([
+            'user_id' => $user->id, 'first_name' => 'سینا اسدی',
+            'firstname_tech' => 'سینا اسدی', 'status' => 'active',
+        ]);
+
+        // بدونِ اعلامِ صریح، استنتاج به قدیمی‌ترین رکورد می‌رسد.
+        $guessed = $this->log($this->order(), $user->id);
+        $this->assertSame('فرامرز لاریجانی', $guessed->actor_name);
+        $this->assertSame($old->id, $guessed->actor_technician_id);
+
+        // با اعلامِ صریحِ مسیرِ تکنسین، نامِ درست ثبت می‌شود.
+        $declared = $this->log(
+            $this->order(),
+            $user->id,
+            OrderStatusLog::technicianActor($actual)
+        );
+
+        $this->assertSame('سینا اسدی', $declared->actor_name);
+        $this->assertSame('technician', $declared->actor_role);
+        $this->assertSame($actual->id, $declared->actor_technician_id);
     }
 
     public function test_operator_action_stores_the_user_name(): void

@@ -435,6 +435,7 @@ class DashboardController extends Controller
             'to_status' => $newStatus->value,
             'note' => $description !== '' ? $description : null,
             'changed_by' => $tech->user_id,
+            ...OrderStatusLog::technicianActor($tech),
             'created_at' => now(),
         ]);
 
@@ -606,6 +607,7 @@ class DashboardController extends Controller
                 'to_status' => $order->status->value,
                 'note' => 'پاک کردن زمان مراجعه'.($previous ? ' (قبلاً: '.$previous.')' : ''),
                 'changed_by' => $tech->user_id,
+                ...OrderStatusLog::technicianActor($tech),
                 'created_at' => now(),
             ]);
 
@@ -649,6 +651,7 @@ class DashboardController extends Controller
                 ? 'هماهنگی با مشتری: '.$jalaliDate.' — '.$slot['label']
                 : 'به‌روزرسانی زمان مراجعه: '.$jalaliDate.' — '.$slot['label'],
             'changed_by' => $tech->user_id,
+            ...OrderStatusLog::technicianActor($tech),
             'created_at' => now(),
         ]);
 
@@ -719,6 +722,7 @@ class DashboardController extends Controller
                 'to_status' => $coordinationPhase ? OrderStatus::NoAnswer->value : $previous->value,
                 'note' => 'نتیجهٔ تماس تلفنی: مشتری پاسخگو نبود'.($reason !== '' ? ' — '.$reason : '').'.',
                 'changed_by' => $tech->user_id,
+                ...OrderStatusLog::technicianActor($tech),
                 'created_at' => now(),
             ]);
 
@@ -744,6 +748,7 @@ class DashboardController extends Controller
             'to_status' => $previous->value,
             'note' => 'نتیجهٔ تماس تلفنی: با مشتری هماهنگ شد — در انتظار ثبت زمان مراجعه.',
             'changed_by' => $tech->user_id,
+            ...OrderStatusLog::technicianActor($tech),
             'created_at' => now(),
         ]);
 
