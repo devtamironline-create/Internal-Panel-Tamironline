@@ -51,6 +51,7 @@ class AssignmentSettingsController extends Controller
             'assign_history_enabled' => 'required|boolean',
             'assign_history_months' => 'required|integer|min:1|max:60',
             'assign_balance_cap' => 'required|integer|min:1|max:50',
+            'assign_run_every_minutes' => 'required|integer|min:1|max:60',
             'weights' => 'required|array',
             'weights.*' => 'required|integer|min:0|max:100',
         ]);
