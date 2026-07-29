@@ -87,6 +87,40 @@
     </div>
     @endif
 
+    {{-- مغایرت با سفارش — همان هشدارِ صفحهٔ سفارش، از این طرف. --}}
+    @php
+        $mismatch = $invoice->order
+            ? \Modules\CRM\Support\InvoiceMismatch::check($invoice->order)
+            : null;
+    @endphp
+    @if($mismatch && $mismatch['invoice_code'] === $invoice->invoice_code)
+    <div class="p-4 rounded-xl border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20">
+        <div class="flex items-start gap-3">
+            <span class="text-red-600 dark:text-red-400 text-xl leading-none">⚠</span>
+            <div class="flex-1">
+                <div class="font-bold text-red-800 dark:text-red-300 text-sm mb-1">
+                    این فاکتور با مبلغ سفارش یکی نیست
+                </div>
+                <div class="text-xs text-red-700 dark:text-red-300 mb-2">{{ $mismatch['reason_label'] }}</div>
+                <div class="text-xs text-red-900 dark:text-red-200">
+                    مبلغ این فاکتور <b>{{ number_format($mismatch['invoice_total']) }}</b> تومان است،
+                    ولی سفارش
+                    <a href="{{ route('crm.orders.show', $invoice->order_id) }}" class="underline font-medium">
+                        {{ $invoice->order->order_code }}
+                    </a>
+                    الان روی <b>{{ number_format($mismatch['order_total']) }}</b> تومان است
+                    (اختلاف {{ number_format(abs($mismatch['difference'])) }} تومان).
+                </div>
+                <div class="text-xs text-red-700 dark:text-red-300 mt-2">
+                    آنچه به مشتری داده شده و در کیف‌پول تکنسین نشسته، همین فاکتور است. اگر عدد سفارش
+                    درست است، سفارش را دوباره تکمیل کنید تا فاکتور بازصادر شود — این کار سهم شرکت را
+                    دوباره روی بدهی تکنسین می‌نشاند.
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-2 space-y-6">
 

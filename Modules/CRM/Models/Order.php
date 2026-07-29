@@ -704,9 +704,28 @@ class Order extends Model
             || ! empty($this->piece_list);
 
         $tech = $this->technician;
-        $percent = $tech ? (int) ($tech->percent ?? 0) : 0;
-        $techPerOfAll = $tech ? (int) ($tech->tech_per_of_all ?? 0) : 0;
-        $calcType = $tech ? (string) ($tech->type_of_calc_tech ?? '') : '';
+
+        // ─── منبعِ درصد ────────────────────────────────────────────
+        // اگر فاکتوری صادر شده، *همان* مرجع است: عددی که به مشتری داده
+        // شده و در کیف‌پول تکنسین نشسته از روی آن snapshot ساخته شده.
+        // قبلاً این‌جا $tech->percent (درصدِ امروز) خوانده می‌شد و نتیجه‌اش
+        // این بود که تغییرِ درصدِ تکنسین، کارت و فاکتور را بدونِ هیچ
+        // اتفاقِ واقعی از هم جدا می‌کرد.
+        //
+        // بدونِ فاکتور، پروفایلِ درصد در لحظهٔ تکمیل — همان چیزی که
+        // CommissionCalculator موقعِ صدور خواهد خواند.
+        $snapshot = \Modules\CRM\Support\InvoiceMismatch::activeInvoiceOf($this);
+
+        if ($snapshot) {
+            $percent = (int) $snapshot->commission_percent;
+            $techPerOfAll = $percent;
+            $calcType = (string) ($snapshot->calc_type ?? '');
+        } else {
+            $profile = $tech ? $tech->percentProfileAt($this->completed_at ?? now()) : null;
+            $percent = $profile ? (int) $profile['percent'] : 0;
+            $techPerOfAll = $profile ? (int) $profile['tech_per_of_all'] : 0;
+            $calcType = $tech ? (string) ($tech->type_of_calc_tech ?? '') : '';
+        }
 
         $statusValue = $this->status instanceof OrderStatus
             ? $this->status->value

@@ -1158,8 +1158,20 @@ class OrderController extends Controller
         ]);
 
         // تولید خودکار فاکتور در تکمیل سفارش (idempotent) — مگر اینکه پیش‌نویس باشد
+        $draftWarning = null;
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
             $this->invoiceService->generateForOrder($order->refresh(), auth()->id(), true);
+        } elseif ($newStatus === OrderStatus::Completed) {
+            // تکمیلِ پیش‌نویس عمداً فاکتور نمی‌سازد. ولی اگر سفارش از قبل
+            // فاکتور دارد و مبلغش همین حالا عوض شد، آن فاکتور دیگر با
+            // سفارش نمی‌خواند و اپراتور باید همان لحظه بداند.
+            $existing = \Modules\CRM\Models\Invoice::where('order_id', $order->id)->first();
+            if ($existing && (int) $existing->total_amount !== (int) ($updates['price_customer'] ?? $order->price_customer ?? 0)) {
+                $draftWarning = '⚠ سفارش به‌صورت «پیش‌نویس» تکمیل شد، پس فاکتور '
+                    .$existing->invoice_code.' بازصادر نشد و همچنان روی '
+                    .number_format((int) $existing->total_amount).' تومان است — نه مبلغ جدید. '
+                    .'برای یکی‌کردن، سفارش را بدون تیک پیش‌نویس تکمیل کنید.';
+            }
         }
 
         // اگر این وضعیت جدید قالب SMS دارد، خودکار ارسال کن — مگر
@@ -1172,7 +1184,13 @@ class OrderController extends Controller
             $this->smsNotifier->notifyStatusChange($order->refresh(), $newStatus, auth()->id());
         }
 
-        return back()->with('success', 'وضعیت به "'.$newStatus->label().'" تغییر کرد.');
+        $response = back()->with('success', 'وضعیت به "'.$newStatus->label().'" تغییر کرد.');
+
+        if ($draftWarning) {
+            $response->with('error', $draftWarning);
+        }
+
+        return $response;
     }
 
     /**

@@ -66,6 +66,13 @@
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td class="px-6 py-3">
                         <a href="{{ route('crm.invoices.show', $invoice) }}" class="font-medium text-brand-600 hover:underline" dir="ltr">{{ $invoice->invoice_code }}</a>
+                        {{-- بجِ مغایرت — مبلغ این فاکتور با مبلغ سفارش یکی نیست. --}}
+                        @if($invoice->order && \Modules\CRM\Support\InvoiceMismatch::exists($invoice->order))
+                            <span class="block mt-1 text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-700 border border-red-200 w-fit"
+                                  title="مبلغ این فاکتور با مبلغ سفارش یکی نیست — برای جزئیات وارد فاکتور شوید">
+                                ⚠ مغایرت با سفارش
+                            </span>
+                        @endif
                     </td>
                     <td class="px-6 py-3 text-sm">
                         @if($invoice->order)
