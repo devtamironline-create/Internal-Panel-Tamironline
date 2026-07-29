@@ -99,6 +99,10 @@ class LogSlowRequests
                 'user_id' => optional($request->user())->id,
                 'status' => $response->getStatusCode(),
                 'boot_ms' => $bootMs === null ? null : round($bootMs, 1),
+                // درایورِ session: با درایورِ file، لاراول برای خواندن
+                // LOCK_SH و برای نوشتن LOCK_EX می‌گیرد و هر دو مسدودکننده‌اند،
+                // پس درخواست‌های همزمانِ یک مرورگر پشتِ هم صف می‌کشند.
+                'session_driver' => config('session.driver'),
                 'total_ms' => round($elapsed, 1),
                 'query_ms' => round($queryMs, 1),
                 // اختلافِ این دو یعنی وقت صرفِ PHP/رندر شده، نه دیتابیس.
