@@ -38,7 +38,15 @@ final class AssignmentSettings
         // سقفِ توازن: هر تکنسین در یک «دور» حداکثر چند کارِ فعال بگیرد.
         // وقتی همهٔ واجدین شرایط به این عدد رسیدند، دور بعدی شروع می‌شود.
         'assign_balance_cap' => 3,
+        // هر چند دقیقه یک‌بار پخشِ خودکار اجرا شود. زمان‌بند هر دقیقه
+        // کامند را صدا می‌زند و خودِ کامند تصمیم می‌گیرد نوبتش رسیده یا
+        // نه — وگرنه این عدد در فایلِ زمان‌بندی ثابت می‌ماند و تغییرش از
+        // پنل بی‌اثر است.
+        'assign_run_every_minutes' => 5,
     ];
+
+    /** کلیدِ آخرین اجرای واقعیِ پخش — مبنای فاصلهٔ اجراها. */
+    public const LAST_RUN_KEY = 'assign_last_run_at';
 
     public static function mode(): string
     {
@@ -85,6 +93,54 @@ final class AssignmentSettings
     public static function balanceCap(): int
     {
         return max(1, self::intValue('assign_balance_cap', 1, 50));
+    }
+
+    public static function runEveryMinutes(): int
+    {
+        return max(1, self::intValue('assign_run_every_minutes', 1, 60));
+    }
+
+    /**
+     * آیا از آخرین اجرا به‌اندازهٔ فاصلهٔ تنظیم‌شده گذشته است؟
+     *
+     * یک دقیقه ارفاق داده می‌شود: زمان‌بند دقیقاً سرِ ثانیهٔ صفر اجرا
+     * نمی‌شود و بدونِ آن، فاصلهٔ ۵ دقیقه عملاً به ۶ دقیقه کش می‌آمد.
+     */
+    public static function isDueToRun(?\Carbon\CarbonImmutable $now = null): bool
+    {
+        $last = CrmSetting::get(self::LAST_RUN_KEY, null);
+        if (blank($last)) {
+            return true;
+        }
+
+        try {
+            $lastAt = \Carbon\CarbonImmutable::parse($last);
+        } catch (\Throwable) {
+            return true;
+        }
+
+        $now ??= \Carbon\CarbonImmutable::now();
+
+        return $lastAt->addSeconds(self::runEveryMinutes() * 60 - 30)->lessThanOrEqualTo($now);
+    }
+
+    public static function markRun(?\Carbon\CarbonImmutable $at = null): void
+    {
+        CrmSetting::set(self::LAST_RUN_KEY, ($at ?? \Carbon\CarbonImmutable::now())->toDateTimeString());
+    }
+
+    public static function lastRunAt(): ?\Carbon\CarbonImmutable
+    {
+        $last = CrmSetting::get(self::LAST_RUN_KEY, null);
+        if (blank($last)) {
+            return null;
+        }
+
+        try {
+            return \Carbon\CarbonImmutable::parse($last);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /** برچسبِ فارسیِ هر بُعدِ امتیازدهی — برای صفحهٔ تنظیمات و توضیح در پنل. */
@@ -193,6 +249,8 @@ final class AssignmentSettings
             'assign_history_enabled' => self::historyEnabled() ? 1 : 0,
             'assign_history_months' => self::historyMonths(),
             'assign_balance_cap' => self::balanceCap(),
+            'assign_run_every_minutes' => self::runEveryMinutes(),
+            'assign_last_run_at' => self::lastRunAt()?->format('Y-m-d H:i:s'),
             'weights_raw' => self::rawWeights(),
             'weights_effective' => self::weights(),
         ];
