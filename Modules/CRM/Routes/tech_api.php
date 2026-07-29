@@ -10,6 +10,7 @@ use Modules\CRM\Http\Controllers\Api\V1\Technician\OrderActionController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\OrderController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\ProfileController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\ProformaController;
+use Modules\CRM\Http\Controllers\Api\V1\Technician\PushTokenController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\TicketController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\TrainingController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\TransferReceiptController;
@@ -45,6 +46,10 @@ Route::prefix('v1/technician')->group(function () {
         Route::get('/app-config', \Modules\CRM\Http\Controllers\Api\V1\Technician\AppConfigController::class)
             ->name('api.tech.app-config');
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.tech.auth.logout');
+
+        // توکنِ پوش — امروز فقط ذخیره می‌شود؛ ارسالی در کار نیست.
+        Route::post('/me/push-token', [PushTokenController::class, 'store'])->name('api.tech.push-token.store');
+        Route::delete('/me/push-token', [PushTokenController::class, 'destroy'])->name('api.tech.push-token.destroy');
 
         // سفارش‌ها
         Route::get('/orders', [OrderController::class, 'index'])->name('api.tech.orders.index');
@@ -96,6 +101,11 @@ Route::prefix('v1/technician')->group(function () {
         // چت با اپراتور + اعلانات — no.cache: پاسخ‌های بلادرنگ نباید توسطِ
         // کشِ مرورگر/پروکسی/LiteSpeed ذخیره شوند (باگِ «پیام بعد از پاک‌کردنِ کش»).
         Route::middleware('no.cache')->group(function () {
+            // نبضِ سبکِ همگام‌سازیِ پس‌زمینه — زیرِ no.cache چون کلِ فایده‌اش
+            // «تازه بودن» است.
+            Route::get('/me/sync', \Modules\CRM\Http\Controllers\Api\V1\Technician\SyncController::class)
+                ->name('api.tech.sync');
+
             Route::get('/messages', [ChatController::class, 'index'])->name('api.tech.messages.index');
             Route::post('/messages', [ChatController::class, 'send'])->name('api.tech.messages.send');
             Route::get('/messages/unread', [ChatController::class, 'unread'])->name('api.tech.messages.unread');
