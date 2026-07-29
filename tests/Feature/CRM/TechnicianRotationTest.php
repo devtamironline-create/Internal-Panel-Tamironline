@@ -97,9 +97,13 @@ class TechnicianRotationTest extends TestCase
         });
 
         foreach (['crm_technician_cities' => 'city_id', 'crm_technician_brands' => 'brand_id', 'crm_technician_devices' => 'device_id'] as $table => $column) {
-            Schema::create($table, function ($t) use ($column) {
+            Schema::create($table, function ($t) use ($column, $table) {
                 $t->unsignedBigInteger('technician_id');
                 $t->unsignedBigInteger($column);
+                // اولویتِ تخصص — فقط روی جدولِ دستگاه‌ها.
+                if ($table === 'crm_technician_devices') {
+                    $t->unsignedTinyInteger('priority')->default(0);
+                }
             });
         }
         Schema::create('crm_technician_districts', function ($t) {
@@ -154,12 +158,14 @@ class TechnicianRotationTest extends TestCase
         ], $attributes));
     }
 
-    private function coverDevices(Technician $t, array $deviceIds): void
+    /** @param  array<int, int>  $deviceIds  دستگاه ⇒ اولویت (یا فقط دستگاه) */
+    private function coverDevices(Technician $t, array $deviceIds, array $priorities = []): void
     {
         foreach ($deviceIds as $id) {
             DB::table('crm_technician_devices')->insert([
                 'technician_id' => $t->id,
                 'device_id' => $id,
+                'priority' => (int) ($priorities[$id] ?? 0),
             ]);
         }
     }
@@ -367,5 +373,105 @@ class TechnicianRotationTest extends TestCase
         app(AutoAssignService::class)->run();
 
         $this->assertNotNull($t->fresh()->last_assigned_at);
+    }
+
+    // ───────────────────────── اولویتِ تخصص
+
+    public function test_the_device_specialist_wins_a_tie(): void
+    {
+        $this->auto();
+
+        // هر دو هم‌بار و هم‌نوبت‌اند؛ فقط یکی این دستگاه را تخصصِ
+        // اولویت‌دارش اعلام کرده.
+        $generalist = $this->technician('همه‌کاره');
+        $this->coverDevices($generalist, [1, 2]);
+
+        $specialist = $this->technician('متخصص جاروبرقی');
+        $this->coverDevices($specialist, [1, 2], [1 => 5]);
+
+        $order = $this->order(1, 1);
+        app(AutoAssignService::class)->run();
+
+        $this->assertSame($specialist->id, $order->fresh()->technician_id);
+    }
+
+    public function test_specialty_priority_does_not_break_the_rotation(): void
+    {
+        $this->auto();
+
+        $generalist = $this->technician('همه‌کاره');
+        $this->coverDevices($generalist, [1]);
+
+        $specialist = $this->technician('متخصص');
+        $this->coverDevices($specialist, [1], [1 => 9]);
+
+        // دو سفارشِ جدا از دو مشتری ⇒ دو گروه. با اینکه اولویتِ متخصص
+        // بالاست، سفارشِ دوم باید به نفرِ بعدی برسد.
+        $orders = [$this->order(1, 1), $this->order(2, 1)];
+
+        app(AutoAssignService::class)->run();
+
+        $this->assertSame(1, $this->assignedTo($specialist, $orders));
+        $this->assertSame(1, $this->assignedTo($generalist, $orders));
+    }
+
+    public function test_zero_priority_keeps_the_previous_behaviour(): void
+    {
+        $this->auto();
+
+        $first = $this->technician('اول');
+        $this->coverDevices($first, [1], [1 => 0]);
+        $second = $this->technician('دوم');
+        $this->coverDevices($second, [1], [1 => 0]);
+
+        $orders = [$this->order(1, 1), $this->order(2, 1)];
+        app(AutoAssignService::class)->run();
+
+        $this->assertSame(1, $this->assignedTo($first, $orders));
+        $this->assertSame(1, $this->assignedTo($second, $orders));
+    }
+
+    // ───────────────────────── فاصلهٔ اجرا
+
+    public function test_the_run_interval_comes_from_settings_not_from_the_scheduler(): void
+    {
+        $this->auto(['assign_run_every_minutes' => 3]);
+
+        $t = $this->technician('تنها');
+        $this->coverDevices($t, [1]);
+
+        // اجرای اول همیشه انجام می‌شود (هنوز اجرایی ثبت نشده).
+        $first = $this->order(1, 1);
+        Artisan::call('crm:orders:auto-assign');
+        $this->assertNotNull($first->fresh()->technician_id);
+
+        // دو دقیقه بعد هنوز نوبت نرسیده.
+        $this->travelTo(now()->addMinutes(2));
+        $second = $this->order(2, 1);
+        Artisan::call('crm:orders:auto-assign');
+        $this->assertNull($second->fresh()->technician_id);
+
+        // دقیقهٔ سوم نوبت رسیده.
+        $this->travelTo(now()->addMinutes(2));
+        Artisan::call('crm:orders:auto-assign');
+        $this->assertNotNull($second->fresh()->technician_id);
+    }
+
+    public function test_a_longer_interval_holds_the_run_back(): void
+    {
+        $this->auto(['assign_run_every_minutes' => 30]);
+
+        $t = $this->technician('تنها');
+        $this->coverDevices($t, [1]);
+
+        AssignmentSettings::markRun();
+
+        $order = $this->order(1, 1);
+        Artisan::call('crm:orders:auto-assign');
+        $this->assertNull($order->fresh()->technician_id);
+
+        // با --force بدونِ انتظار اجرا می‌شود.
+        Artisan::call('crm:orders:auto-assign', ['--force' => true]);
+        $this->assertNotNull($order->fresh()->technician_id);
     }
 }

@@ -75,6 +75,22 @@
             <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100">تنظیمات پخش خودکار</h2>
 
             <label class="block">
+                <span class="text-xs text-gray-600 dark:text-gray-300">فاصله اجرای پخش خودکار (دقیقه)</span>
+                <input type="number" name="assign_run_every_minutes" min="1" max="60" dir="ltr"
+                       value="{{ old('assign_run_every_minutes', $settings['assign_run_every_minutes']) }}"
+                       class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                <span class="text-[11px] text-gray-400 leading-5 block mt-1">
+                    هر چند دقیقه یک‌بار سفارش‌های واجد شرایط پخش شوند. این عدد بلافاصله اثر می‌کند و
+                    نیازی به تغییر cron یا پاک‌کردن کش ندارد.
+                    @if($settings['assign_last_run_at'])
+                        <span class="block mt-1">آخرین اجرا: <span dir="ltr">{{ $settings['assign_last_run_at'] }}</span></span>
+                    @else
+                        <span class="block mt-1">هنوز اجرایی ثبت نشده.</span>
+                    @endif
+                </span>
+            </label>
+
+            <label class="block">
                 <span class="text-xs text-gray-600 dark:text-gray-300">مهلت انتظار پیش از پخش (دقیقه)</span>
                 <input type="number" name="assign_grace_minutes" min="0" max="1440" dir="ltr"
                        value="{{ old('assign_grace_minutes', $settings['assign_grace_minutes']) }}"

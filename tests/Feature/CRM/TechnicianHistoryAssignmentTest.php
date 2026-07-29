@@ -97,9 +97,13 @@ class TechnicianHistoryAssignmentTest extends TestCase
         });
 
         foreach (['crm_technician_cities' => 'city_id', 'crm_technician_brands' => 'brand_id', 'crm_technician_devices' => 'device_id'] as $table => $column) {
-            Schema::create($table, function ($t) use ($column) {
+            Schema::create($table, function ($t) use ($column, $table) {
                 $t->unsignedBigInteger('technician_id');
                 $t->unsignedBigInteger($column);
+                // اولویتِ تخصص — فقط روی جدولِ دستگاه‌ها.
+                if ($table === 'crm_technician_devices') {
+                    $t->unsignedTinyInteger('priority')->default(0);
+                }
             });
         }
         Schema::create('crm_technician_districts', function ($t) {
