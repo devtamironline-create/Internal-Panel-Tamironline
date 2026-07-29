@@ -133,6 +133,7 @@
                         <th class="p-3 w-10">#</th>
                         <th class="p-3 text-right">تکنسین</th>
                         <th class="p-3">کل سفارش</th>
+                        <th class="p-3 bg-indigo-50/70 dark:bg-indigo-900/20">کار فعال</th>
                         <th class="p-3">در جریان</th>
                         <th class="p-3">در انتظار</th>
                         <th class="p-3">انجام کار</th>
@@ -179,6 +180,12 @@
                             </td>
                             <td class="p-3 text-center">
                                 <span class="text-lg font-black text-gray-800 dark:text-gray-100">{{ number_format($row['total']) }}</span>
+                            </td>
+                            {{-- کار فعال = در انتظار + در جریان — مبنای مرتب‌سازی پیش‌فرض --}}
+                            <td class="p-3 text-center bg-indigo-50/70 dark:bg-indigo-900/20">
+                                <span @class(['text-lg font-black', 'text-indigo-700 dark:text-indigo-300' => $row['open'] > 0, 'text-gray-300 dark:text-gray-600' => $row['open'] === 0])>
+                                    {{ number_format($row['open']) }}
+                                </span>
                             </td>
                             <td class="p-3 text-center">
                                 <span @class(['font-bold', 'text-purple-600' => $row['groups']['in_progress'] > 0, 'text-gray-300 dark:text-gray-600' => $row['groups']['in_progress'] === 0])>
@@ -242,7 +249,7 @@
                         {{-- ردیف جزئیات: چه سفارش‌هایی و در چه وضعیتی --}}
                         <tr x-show="open" x-cloak class="bg-gray-50/70 dark:bg-gray-700/20">
                             <td></td>
-                            <td colspan="11" class="px-3 pb-4">
+                            <td colspan="12" class="px-3 pb-4">
                                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                     <div class="lg:col-span-2">
                                         <div class="text-[11px] font-bold text-gray-600 dark:text-gray-300 mb-2">سفارش‌های این تکنسین به تفکیک وضعیت</div>
@@ -288,7 +295,7 @@
                 @empty
                     <tbody>
                         <tr>
-                            <td colspan="12" class="text-center py-12 text-gray-400">
+                            <td colspan="13" class="text-center py-12 text-gray-400">
                                 <div class="text-3xl mb-2">🧰</div>
                                 <p class="text-sm">تکنسینی با این فیلترها پیدا نشد.</p>
                             </td>
@@ -300,6 +307,7 @@
     </div>
 
     <p class="text-[11px] text-gray-400">
+        «کار فعال» = در انتظار + در جریان (هر سفارشی که هنوز تمام نشده) و مبنای مرتب‌سازی پیش‌فرض این جدول است ·
         «در جریان» = هماهنگ‌شده و شروع تعمیر · «در انتظار» = جدید، در انتظار هماهنگی، معلق، انتظار قطعه و مشابه ·
         گردش مالی بر اساس همان اولویت محاسبات کمیسیون (مبلغ مشتری ← فاکتور ← مبلغ نهایی) محاسبه می‌شود.
     </p>

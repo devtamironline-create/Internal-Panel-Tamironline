@@ -86,7 +86,7 @@ class TechnicianDashboardTest extends TestCase
         $this->orders($busy, OrderStatus::Completed, 5);
         $this->orders($quiet, OrderStatus::Completed, 2);
 
-        $rows = app(TechnicianDashboardService::class)->build()['rows'];
+        $rows = app(TechnicianDashboardService::class)->build(['sort' => 'orders'])['rows'];
 
         $this->assertSame(
             [$busy->id, $quiet->id, $idle->id],
@@ -95,6 +95,40 @@ class TechnicianDashboardTest extends TestCase
         );
         $this->assertSame(5, $rows[0]['total']);
         $this->assertSame(0, $rows[2]['total']);
+    }
+
+    public function test_default_order_is_by_active_load_not_by_total_orders(): void
+    {
+        // «پرسابقه» سفارش بیشتری دارد ولی همه تمام شده‌اند؛
+        // «پرمشغله» کمتر دارد ولی همه‌شان روی دستش مانده.
+        $veteran = $this->technician('پرسابقه', '09120000111');
+        $busyNow = $this->technician('پرمشغله', '09120000112');
+
+        $this->orders($veteran, OrderStatus::Completed, 20);
+        $this->orders($busyNow, OrderStatus::AwaitingPart, 3);   // waiting
+        $this->orders($busyNow, OrderStatus::RepairStarted, 2);  // in_progress
+
+        $rows = app(TechnicianDashboardService::class)->build()['rows'];
+
+        $this->assertSame($busyNow->id, $rows[0]['technician']->id, 'کارِ فعالِ بیشتر باید اول بیاید.');
+        $this->assertSame(5, $rows[0]['open'], 'کار فعال = در انتظار + در جریان');
+        $this->assertSame(0, $rows[1]['open']);
+    }
+
+    public function test_active_load_ties_are_broken_by_in_progress_work(): void
+    {
+        $waiting = $this->technician('همه در انتظار', '09120000113');
+        $working = $this->technician('در حال کار', '09120000114');
+
+        $this->orders($waiting, OrderStatus::AwaitingPart, 4);
+        $this->orders($working, OrderStatus::AwaitingPart, 1);
+        $this->orders($working, OrderStatus::RepairStarted, 3);
+
+        $rows = app(TechnicianDashboardService::class)->build()['rows'];
+
+        $this->assertSame(4, $rows[0]['open']);
+        $this->assertSame(4, $rows[1]['open']);
+        $this->assertSame($working->id, $rows[0]['technician']->id, 'در تساوی، کارِ در جریانِ بیشتر جلوتر.');
     }
 
     public function test_orders_are_grouped_by_status_correctly(): void

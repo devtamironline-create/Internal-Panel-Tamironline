@@ -19,7 +19,7 @@ class TechnicianDashboardController extends Controller
             'status' => $request->string('status')->toString(),
             'province' => $request->string('province')->toString(),
             'q' => trim($request->string('q')->toString()),
-            'sort' => $request->string('sort')->toString() ?: 'orders',
+            'sort' => $request->string('sort')->toString() ?: 'open',
             'only_with_orders' => $request->boolean('only_with_orders'),
         ];
 
