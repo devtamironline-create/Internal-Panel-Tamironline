@@ -24,6 +24,9 @@ class OrderStatusLog extends Model
     // Log is append-only; only created_at is tracked
     public $timestamps = false;
 
+    /** نقشِ Spatie که به حسابِ هر تکنسین داده می‌شود. */
+    public const TECHNICIAN_ROLE = 'crm-technician';
+
     /** برچسبِ فارسیِ نقشِ عامل. */
     public const ROLE_LABELS = [
         'technician' => 'تکنسین',
@@ -67,6 +70,26 @@ class OrderStatusLog extends Model
             $log->actor_role = $actor['role'];
             $log->actor_technician_id = $actor['technician_id'];
         });
+    }
+
+    /**
+     * فیلدهای عاملِ یک اقدامِ تکنسین — برای مسیرهایی که خودِ رکوردِ
+     * تکنسین را در دست دارند (پنل و اپِ تکنسین).
+     *
+     * چرا لازم است: استنتاج از روی `changed_by` یک مرحلهٔ اضافه است و
+     * `crm_technicians.user_id` قید یکتایی ندارد. اگر دو تکنسین به یک
+     * حساب وصل باشند، استنتاج می‌تواند به نامِ نفرِ دیگری برسد. وقتی
+     * فراخواننده خودش می‌داند چه کسی است، حدس زدن اشتباه است.
+     *
+     * @return array{actor_name:string, actor_role:string, actor_technician_id:int}
+     */
+    public static function technicianActor(Technician $technician): array
+    {
+        return [
+            'actor_name' => self::technicianName($technician),
+            'actor_role' => 'technician',
+            'actor_technician_id' => (int) $technician->id,
+        ];
     }
 
     public function order(): BelongsTo
@@ -139,7 +162,7 @@ class OrderStatusLog extends Model
 
             // اپراتور مقدم است: بعضی اپراتورها حسابِ تکنسین هم دارند و
             // نباید کارشان در پنل به نامِ تکنسین ثبت شود.
-            if ($user && $user->is_staff) {
+            if ($user && self::isOperator($user)) {
                 return self::operatorEntry($user, $changedBy);
             }
 
@@ -159,7 +182,7 @@ class OrderStatusLog extends Model
         $technician = self::currentTechnician();
         if ($technician) {
             $linkedUser = $technician->user_id ? User::query()->find($technician->user_id) : null;
-            if ($linkedUser && $linkedUser->is_staff) {
+            if ($linkedUser && self::isOperator($linkedUser)) {
                 return self::operatorEntry($linkedUser, (int) $linkedUser->id);
             }
 
@@ -177,6 +200,39 @@ class OrderStatusLog extends Model
 
         // سینک ووکامرس/وردپرس، کران، کامندها و پخشِ خودکار.
         return ['name' => 'سیستم', 'role' => 'system', 'technician_id' => null];
+    }
+
+    /**
+     * آیا این کاربر «اپراتور» است؟
+     *
+     * `is_staff` معیارِ درستی نیست: هر دو مسیرِ ساختِ حسابِ تکنسین
+     * (provisionUser در CRM و تأییدِ ثبت‌نام در ماژول Technician) آن را
+     * روی true می‌گذارند، پس با آن معیار *همهٔ* تکنسین‌ها «اپراتور»
+     * برچسب می‌خوردند.
+     *
+     * معیارِ درست نقش است: تکنسین فقط نقشِ crm-technician را دارد. کسی
+     * که نقشِ دیگری هم دارد (admin، اپراتورِ پنل و…) در آن نقش کار
+     * می‌کند و طبقِ قاعدهٔ مصوب باید «اپراتور» ثبت شود. کاربرِ بی‌نقشی که
+     * تکنسین هم نیست، اپراتور فرض می‌شود.
+     */
+    private static function isOperator(User $user): bool
+    {
+        try {
+            $roles = $user->getRoleNames();
+        } catch (\Throwable) {
+            // Spatie در دسترس نیست (تست/کانتکستِ حداقلی) — به قاعدهٔ
+            // «تکنسین بودن» برمی‌گردیم.
+            return self::technicianOfUser((int) $user->id) === null;
+        }
+
+        if ($roles->contains(self::TECHNICIAN_ROLE)) {
+            // هم تکنسین است هم چیزِ دیگر ⇒ اپراتور.
+            return $roles->count() > 1;
+        }
+
+        // بدونِ نقشِ تکنسین: اگر رکوردِ تکنسین دارد (لینکِ دستی بدونِ
+        // نقش) تکنسین است، وگرنه اپراتور.
+        return self::technicianOfUser((int) $user->id) === null;
     }
 
     /**
