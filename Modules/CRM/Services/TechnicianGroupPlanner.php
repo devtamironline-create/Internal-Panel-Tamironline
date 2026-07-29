@@ -5,6 +5,7 @@ namespace Modules\CRM\Services;
 use Illuminate\Support\Collection;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\Technician;
+use Modules\CRM\Support\AssignmentSettings;
 
 /**
  * نقشهٔ تخصیصِ یک گروه سفارش (همان مشتری، همان آدرس، همان روز) به
@@ -18,17 +19,25 @@ use Modules\CRM\Models\Technician;
  *
  * الگوریتم: حریصانهٔ بیشینه‌پوشش (greedy max-coverage). در هر دور،
  * تکنسینی انتخاب می‌شود که بیشترین تعداد از سفارش‌های باقی‌مانده را
- * پوشش دهد؛ در تساوی، امتیازِ بالاتر و بعد id کوچک‌تر (برای قطعی‌بودنِ
- * خروجی). ترتیبِ اولویت:
+ * پوشش دهد؛ در تساوی، ترتیبِ اولویت:
  *
  *   ۱) چسبندگی — تکنسینی که از قبل روی هم‌گروهِ دیگری از همین آدرس
  *      نشسته، اولویتِ مطلق دارد تا سفارشِ بعدیِ همان خانه به نفر جدید
  *      نرود.
  *   ۲) تعدادِ پوشش (هدفِ اصلی: کمتر کردنِ تعداد مراجعه)
- *   ۳) امتیازِ کیفیِ تکنسین (همان امتیاز ۰..۱۰۰ سرویس پیشنهاد)
+ *   ۳) سابقهٔ همان دستگاه برای همان مشتری
+ *   ۴) کمترین کارِ فعال — همین قید پخشِ «یکی‌یکی» را می‌سازد
+ *   ۵) دیرترین نوبت (`last_assigned_at`) — تساوی‌شکنِ چرخش
+ *   ۶) امتیازِ کیفیِ تکنسین (همان امتیاز ۰..۱۰۰ سرویس پیشنهاد)
+ *   ۷) id کوچک‌تر — فقط برای قطعی‌بودنِ خروجی
  *
- * سقفِ ظرفیت (`max_order`) رعایت می‌شود: اگر تکنسین فقط جای دو سفارش
- * دیگر دارد، پوششش به دو تا بریده می‌شود و بقیه به نفر بعدی می‌رسد.
+ * دو سقفِ متفاوت در کارند:
+ *   • `max_order` — سقفِ سختِ اختصاصیِ هر تکنسین. اگر فقط جای دو سفارش
+ *     دیگر دارد، پوششش به دو تا بریده می‌شود و بقیه به نفر بعدی می‌رسد.
+ *   • «سقفِ کارِ فعال در هر دور» (`assign_balance_cap`) — مرزِ نرمِ
+ *     چرخش. تا وقتی کسی زیرِ سقف است، رسیده‌ها نوبت نمی‌گیرند؛ وقتی همه
+ *     رسیدند، دور از نو شروع می‌شود. چسبندگی از این سقف مستثناست تا
+ *     گروهِ یک مشتری نشکند.
  */
 final class TechnicianGroupPlanner
 {
@@ -93,6 +102,18 @@ final class TechnicianGroupPlanner
         // «تکنسینِ سابقهٔ همان دستگاه» — نگاشتِ سفارش ← تکنسین.
         $historyMap = $this->history->mapFor($orders);
 
+        // سقفِ توازن: مرزِ «یک دور». تا وقتی کسی زیرِ سقف هست، تکنسینی که
+        // به سقف رسیده نوبت نمی‌گیرد؛ وقتی همه رسیدند، دور بعدی از اول
+        // شروع می‌شود. این با max_order فرق دارد: max_order سقفِ سختِ
+        // اختصاصیِ هر تکنسین است و هرگز شکسته نمی‌شود.
+        $balanceCap = AssignmentSettings::balanceCap();
+
+        // نوبتِ چرخش: هرکه دیرتر سفارش گرفته، جلوتر. هرگز-نگرفته اول.
+        $turn = [];
+        foreach ($pool as $t) {
+            $turn[$t->id] = $t->last_assigned_at?->getTimestamp() ?? 0;
+        }
+
         /** @var Collection<int, Order> $remaining */
         $remaining = $orders->keyBy('id');
         $steps = collect();
@@ -101,8 +122,30 @@ final class TechnicianGroupPlanner
         while ($remaining->isNotEmpty()) {
             $best = null;
 
+            // آیا هنوز کسی زیرِ سقفِ دور هست؟ اگر آری، رسیده‌ها را رد کن؛
+            // اگر همه پر شده‌اند، دور تمام شده و همه دوباره وارد نوبت
+            // می‌شوند.
+            $someoneBelowCap = false;
             foreach ($pool as $tech) {
                 if (isset($used[$tech->id]) || ($capacity[$tech->id] ?? 0) <= 0) {
+                    continue;
+                }
+                if ((int) ($openCounts[$tech->id] ?? 0) < $balanceCap) {
+                    $someoneBelowCap = true;
+                    break;
+                }
+            }
+
+            foreach ($pool as $tech) {
+                if (isset($used[$tech->id]) || ($capacity[$tech->id] ?? 0) <= 0) {
+                    continue;
+                }
+                // چسبندگی از سقفِ دور مستثناست: سفارشِ دومِ همان مشتری و
+                // همان آدرس نباید فقط به خاطرِ نوبت‌بندی به نفر دیگری برود.
+                // یکپارچگیِ گروه بر توازنِ بار مقدم است.
+                if ($someoneBelowCap
+                    && ! isset($preferred[$tech->id])
+                    && (int) ($openCounts[$tech->id] ?? 0) >= $balanceCap) {
                     continue;
                 }
 
@@ -124,10 +167,19 @@ final class TechnicianGroupPlanner
                     fn (Order $o) => ($historyMap[$o->id]['technician_id'] ?? null) === $tech->id
                 )->count();
 
+                $load = (int) ($openCounts[$tech->id] ?? 0);
+
                 $rank = [
                     isset($preferred[$tech->id]) ? 1 : 0,
                     $coverage->count(),
                     $historyHits,
+                    // ── چرخش: کمترین کارِ فعال جلوتر. همین یک قید، پخشِ
+                    //    یکی‌یکی را می‌سازد: هرکه سفارش گرفت بارش بالا
+                    //    می‌رود و نوبت خودبه‌خود به نفر بعدی می‌رسد.
+                    -$load,
+                    // در تساویِ بار، هرکه دیرتر سفارش گرفته جلوتر است.
+                    -$turn[$tech->id],
+                    // امتیازِ کیفی فقط تساوی‌شکنِ آخر است، نه معیارِ اصلی.
                     (int) ($scored[$tech->id]->score ?? 0),
                     -$tech->id,
                 ];

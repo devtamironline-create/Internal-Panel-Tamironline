@@ -71,6 +71,19 @@ final class OrderAssigner
             'created_at' => now(),
         ]);
 
+        // نوبتِ چرخش — تخصیصِ دستی هم حساب می‌شود، وگرنه تکنسینی که
+        // اپراتور همین حالا دستی بارش کرده، در پخشِ بعدی باز هم «تازه‌نفس»
+        // دیده می‌شد.
+        //
+        // عمداً از save() روی نمونهٔ مدل استفاده نمی‌کنیم: سرویسِ امتیازدهی
+        // روی همین نمونه یک صفتِ موقتِ `_now_orders` می‌گذارد که ستون
+        // نیست، و ذخیرهٔ مدل تلاش می‌کند آن را هم بنویسد و کوئری می‌شکند.
+        Technician::query()->whereKey($technician->id)->update(['last_assigned_at' => now()]);
+        $technician->setRawAttributes(
+            ['last_assigned_at' => now()->toDateTimeString()] + $technician->getRawOriginal(),
+            true
+        );
+
         $this->record($order, $technician, $mode, $byUserId, $previousTechnicianId, $context);
 
         // فقط به تکنسین اطلاع بده تا با مشتری تماس بگیرد.
