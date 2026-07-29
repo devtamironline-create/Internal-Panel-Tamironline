@@ -925,6 +925,54 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
                 <h2 class="text-base font-bold text-gray-900 dark:text-gray-100 mb-4">فاکتور سفارش</h2>
 
+                {{-- مغایرت با فاکتور صادرشده — سیستم خودش اصلاح نمی‌کند،
+                     چون اصلاح یعنی دست‌بردن در کیف‌پول و بدهی تکنسین. --}}
+                @php $mismatch = \Modules\CRM\Support\InvoiceMismatch::check($order); @endphp
+                @if($mismatch)
+                <div class="mb-4 p-3 rounded-lg border border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900/20">
+                    <div class="flex items-start gap-2">
+                        <span class="text-red-600 dark:text-red-400 text-lg leading-none">⚠</span>
+                        <div class="flex-1 text-xs leading-6">
+                            <div class="font-bold text-red-800 dark:text-red-300 mb-1">
+                                این اعداد با فاکتور صادرشده یکی نیستند
+                            </div>
+                            <div class="text-red-700 dark:text-red-300">{{ $mismatch['reason_label'] }}</div>
+                            <table class="w-full mt-2 text-[11px]">
+                                <thead class="text-red-700 dark:text-red-300">
+                                    <tr>
+                                        <th class="text-right font-medium py-1">&nbsp;</th>
+                                        <th class="text-right font-medium py-1">این صفحه</th>
+                                        <th class="text-right font-medium py-1">فاکتور {{ $mismatch['invoice_code'] }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="text-red-900 dark:text-red-200">
+                                    <tr>
+                                        <td class="py-0.5">جمع کل</td>
+                                        <td class="py-0.5">{{ number_format($mismatch['order_total']) }}</td>
+                                        <td class="py-0.5">{{ number_format($mismatch['invoice_total']) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-0.5">سهم تکنسین</td>
+                                        <td class="py-0.5">{{ number_format($mismatch['order_tech']) }}</td>
+                                        <td class="py-0.5">{{ number_format($mismatch['invoice_tech']) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-0.5">سهم شرکت</td>
+                                        <td class="py-0.5">{{ number_format($mismatch['order_company']) }}</td>
+                                        <td class="py-0.5">{{ number_format($mismatch['invoice_company']) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="mt-2 text-red-700 dark:text-red-300">
+                                آنچه به مشتری داده شده و در کیف‌پول تکنسین نشسته، عددِ <b>فاکتور</b> است.
+                                برای یکی‌کردن باید فاکتور را دوباره صادر کنید — این کار سهم شرکت را دوباره
+                                روی بدهی تکنسین می‌نشاند، پس آگاهانه انجامش دهید.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
                 {{-- لیست قطعات / خدمات --}}
                 @php
                     $pieces = is_array($order->piece_list) ? $order->piece_list : [];

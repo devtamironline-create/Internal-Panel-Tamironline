@@ -22,7 +22,9 @@ class InvoiceController extends Controller
         $status = $request->string('status')->toString();
         $search = $request->string('q')->toString();
 
-        $invoices = Invoice::with(['order', 'customer', 'technician'])
+        // order.technician و order.invoices را هم لود می‌کنیم چون بجِ
+        // «مغایرت با سفارش» روی هر ردیف به هر دو نیاز دارد.
+        $invoices = Invoice::with(['order.technician', 'order.invoices', 'customer', 'technician'])
             ->when($status, fn ($q) => $q->where('status', $status))
             ->when($search, fn ($q, $s) => $q->where(function ($sub) use ($s) {
                 $sub->where('invoice_code', 'like', "%{$s}%")
@@ -316,14 +318,30 @@ class InvoiceController extends Controller
      */
     public function generate(Order $order)
     {
+        // صدورِ زودهنگام مجاز است ولی ساکت نمی‌ماند: فاکتور یک snapshot
+        // است و اگر مبلغِ سفارش بعداً نهایی شود، این فاکتور به‌خودیِ‌خود
+        // به‌روز نمی‌شود و دو عددِ متفاوت در پنل می‌ماند.
+        $statusValue = $order->status instanceof \Modules\CRM\Enums\OrderStatus
+            ? $order->status->value
+            : (string) $order->status;
+        $early = $statusValue !== \Modules\CRM\Enums\OrderStatus::Completed->value;
+
         $invoice = $this->invoices->generateForOrder($order, auth()->id());
 
         if (! $invoice) {
             return back()->with('error', 'امکان صدور فاکتور نیست.');
         }
 
-        return redirect()->route('crm.invoices.show', $invoice)
+        $redirect = redirect()->route('crm.invoices.show', $invoice)
             ->with('success', 'فاکتور صادر شد: '.$invoice->invoice_code);
+
+        if ($early) {
+            $redirect->with('error', '⚠ این فاکتور پیش از تکمیل سفارش صادر شد. مبلغ فاکتور از همین '
+                .'لحظه ثابت می‌ماند؛ اگر بعداً مبلغ سفارش تغییر کند، فاکتور خودبه‌خود به‌روز '
+                .'نمی‌شود و در پنل مغایرت نشان داده خواهد شد.');
+        }
+
+        return $redirect;
     }
 
     public function markPaid(Invoice $invoice)

@@ -6,6 +6,7 @@ use Illuminate\Console\Command;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\WalletTransaction;
+use Modules\CRM\Support\InvoiceMismatch;
 
 /**
  * چرا عددِ «فاکتور سفارش» با فاکتورِ صادرشده نمی‌خواند؟
@@ -54,7 +55,7 @@ class DiagnoseInvoiceMismatch extends Command
             ->chunkById(200, function ($orders) use (&$rows, &$scanned, $limit) {
                 foreach ($orders as $order) {
                     $scanned++;
-                    $diff = self::mismatchOf($order);
+                    $diff = InvoiceMismatch::check($order);
                     if ($diff === null) {
                         continue;
                     }
@@ -85,7 +86,7 @@ class DiagnoseInvoiceMismatch extends Command
                 number_format($r['invoice_total']),
                 number_format($r['order_total'] - $r['invoice_total']),
                 number_format($r['order_tech']).' / '.number_format($r['invoice_tech']),
-                $r['reason'],
+                $r['reason_label'],
             ], $rows)
         );
 
@@ -204,75 +205,14 @@ class DiagnoseInvoiceMismatch extends Command
             ])->all()
         );
 
-        $diff = self::mismatchOf($order);
+        $diff = InvoiceMismatch::check($order);
         $this->newLine();
         if ($diff === null) {
             $this->info('✓ مغایرتی نیست.');
         } else {
-            $this->error('⚠ علتِ محتمل: '.$diff['reason']);
+            $this->error('⚠ علتِ محتمل: '.$diff['reason_label']);
         }
 
         return self::SUCCESS;
-    }
-
-    /**
-     * مغایرتِ یک سفارش، یا null اگر نبود.
-     *
-     * @return array{order_total:int, invoice_total:int, order_tech:int, invoice_tech:int, reason:string}|null
-     */
-    public static function mismatchOf(Order $order): ?array
-    {
-        $invoice = $order->invoices->firstWhere('superseded_at', null)
-            ?? $order->invoices->last();
-
-        if (! $invoice) {
-            return null;
-        }
-
-        $fin = $order->financialSummary();
-
-        $orderTotal = (int) $fin['customer_total'];
-        $invoiceTotal = (int) $invoice->total_amount;
-        $orderTech = (int) $fin['tech_share'];
-        $invoiceTech = (int) $invoice->tech_share;
-
-        if ($orderTotal === $invoiceTotal && $orderTech === $invoiceTech) {
-            return null;
-        }
-
-        return [
-            'order_total' => $orderTotal,
-            'invoice_total' => $invoiceTotal,
-            'order_tech' => $orderTech,
-            'invoice_tech' => $invoiceTech,
-            'reason' => self::reasonFor($order, $invoice, $orderTotal, $invoiceTotal),
-        ];
-    }
-
-    private static function reasonFor(Order $order, Invoice $invoice, int $orderTotal, int $invoiceTotal): string
-    {
-        if ($order->is_legacy_closed) {
-            return 'سفارشِ legacy — اعداد از لاگ WP خوانده می‌شوند';
-        }
-
-        if ($orderTotal !== $invoiceTotal) {
-            if ($order->save_as_draft) {
-                return 'تکمیل به‌صورت «پیش‌نویس» — فاکتور بازصادر نشد';
-            }
-
-            if ($invoice->issued_at && $order->updated_at
-                && $invoice->issued_at->lessThan($order->updated_at)) {
-                return 'مبلغِ سفارش بعد از صدورِ فاکتور تغییر کرده';
-            }
-
-            return 'مبلغِ سفارش با مبلغِ فاکتور یکی نیست';
-        }
-
-        $tech = $order->technician;
-        if ($tech && (int) ($tech->percent ?? 0) !== (int) $invoice->commission_percent) {
-            return 'درصدِ تکنسین بعد از صدورِ فاکتور عوض شده';
-        }
-
-        return 'سهم‌ها با هم نمی‌خوانند';
     }
 }
