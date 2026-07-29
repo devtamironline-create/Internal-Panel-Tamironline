@@ -31,6 +31,9 @@ class SmsManagementController extends Controller
             'otp_sms_template' => CrmSetting::get('otp_sms_template', ''),
         ];
 
+        // پنجرهٔ مجازِ ارسالِ اعلان‌های اپِ تکنسین.
+        $settings += \Modules\CRM\Support\TechSmsPolicy::window();
+
         return view('crm::sms-management.index', [
             'templates' => $templates,
             'settings' => $settings,
@@ -46,6 +49,8 @@ class SmsManagementController extends Controller
             'sms_proxy_url' => 'nullable|string|max:255|url',
             'sms_proxy_secret' => 'nullable|string|max:255',
             'otp_sms_template' => 'nullable|string|max:100',
+            'tech_sms_quiet_start' => 'required|integer|min:0|max:23',
+            'tech_sms_quiet_end' => 'required|integer|min:0|max:23',
         ]);
 
         CrmSetting::set('kavenegar_api_key', (string) ($validated['kavenegar_api_key'] ?? ''));
@@ -53,6 +58,10 @@ class SmsManagementController extends Controller
         CrmSetting::set('sms_proxy_url', (string) ($validated['sms_proxy_url'] ?? ''));
         CrmSetting::set('sms_proxy_secret', (string) ($validated['sms_proxy_secret'] ?? ''));
         CrmSetting::set('otp_sms_template', trim((string) ($validated['otp_sms_template'] ?? '')));
+        \Modules\CRM\Support\TechSmsPolicy::saveWindow(
+            (int) $validated['tech_sms_quiet_start'],
+            (int) $validated['tech_sms_quiet_end'],
+        );
 
         return back()->with('success', '✓ تنظیمات سرویس پیامک ذخیره شد.');
     }
@@ -148,6 +157,10 @@ class SmsManagementController extends Controller
             '{visit_date}' => 'زمان مراجعه',
             '{amount}' => 'مبلغ (برای پیامک‌های مالی)',
             '{pay_link}' => 'لینک پرداخت (برای پیامک فاکتور)',
+            '{device_name}' => 'نام دستگاه',
+            '{city_name}' => 'شهر سفارش',
+            '{cancel_reason}' => 'دلیل لغو سفارش',
+            '{deadline_at}' => 'سررسید مهلت (فقط در یادآورهای مهلت)',
         ];
     }
 }

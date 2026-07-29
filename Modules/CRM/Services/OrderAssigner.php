@@ -91,7 +91,11 @@ final class OrderAssigner
         // ارسال خواهد شد.
         $order->refresh()->load('technician');
         try {
-            $this->sms->notify($order, SmsTrigger::OrderAssignedTech);
+            // اثرِ انگشت = لحظهٔ همین تخصیص. تخصیصِ مجدد رویدادِ تازه‌ای
+            // است و باید پیامک بگیرد؛ ولی اجرای دوبارهٔ همان تخصیص نه.
+            $this->sms->notify($order, SmsTrigger::OrderAssignedTech, null, [
+                '_fingerprint' => \Modules\CRM\Support\TechSmsPolicy::assignmentFingerprint($order),
+            ]);
         } catch (\Throwable $e) {
             // شکستِ پیامک نباید تخصیصِ ثبت‌شده را برگرداند.
             Log::warning('assign SMS failed', ['order' => $order->id, 'err' => $e->getMessage()]);

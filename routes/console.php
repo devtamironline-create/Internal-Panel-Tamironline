@@ -53,3 +53,12 @@ Schedule::command('crm:orders:auto-assign')
     ->everyFiveMinutes()
     ->onOneServer()
     ->withoutOverlapping();
+
+// یادآورِ مهلتِ تعیین وضعیت به تکنسین (یک ساعت مانده + خودِ سررسید).
+// اپِ تکنسین پوشِ آنی ندارد، پس مهلت‌ها از کانالِ پیامک هم اطلاع داده
+// می‌شوند. قالب‌های غیرفعال سایلنت رد می‌شوند و ضدِتکرارِ TechSmsPolicy
+// جلوی ارسالِ دوباره را می‌گیرد، پس زمان‌بندیِ همیشگی بی‌خطر است.
+Schedule::command('crm:orders:sla-reminders')
+    ->everyFifteenMinutes()
+    ->onOneServer()
+    ->withoutOverlapping();

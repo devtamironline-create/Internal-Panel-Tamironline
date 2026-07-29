@@ -269,6 +269,33 @@ class Order extends Model
             }
         });
 
+        // اعلانِ «سفارش برگشت خورد» به تکنسین.
+        //
+        // مثلِ status_changed_at اینجا نشسته و نه در کنترلر: برگشتی
+        // می‌تواند از پنل، از سینکِ WP یا از اسکریپت ثبت شود و اپِ
+        // تکنسین پوشِ آنی ندارد، پس تنها کانالِ مطمئن پیامک است.
+        // ضدِتکرارِ TechSmsPolicy جلوی ارسالِ دوباره را می‌گیرد.
+        static::updated(function (self $order) {
+            if (! $order->wasChanged('return_review_pending') || ! $order->return_review_pending) {
+                return;
+            }
+            if (! $order->technician_id) {
+                return;
+            }
+
+            try {
+                app(\Modules\CRM\Services\OrderSmsNotifier::class)->notify(
+                    $order,
+                    \Modules\CRM\Enums\SmsTrigger::TechOrderReturned
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('crm.return_review_sms_failed', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        });
+
         // Push ساخت سفارش جدید به WP — وقتی اپراتور در پنل لاراول
         // سفارش ثبت می‌کند، باید در WP CRM هم بسازد. CREATE همیشه push
         // می‌شود (بدون توجه به order_sync_direction تکنسین) چون قانون:

@@ -49,6 +49,7 @@ use Modules\CRM\Console\Commands\ResyncOrderStatusesFromWp;
 use Modules\CRM\Console\Commands\ResyncTechnicians;
 use Modules\CRM\Console\Commands\ResyncWalletTransactions;
 use Modules\CRM\Console\Commands\RetroCloseOrdersFromLog;
+use Modules\CRM\Console\Commands\SendSlaReminders;
 use Modules\CRM\Console\Commands\SetTechPercent;
 use Modules\CRM\Console\Commands\ShowWpTechSettings;
 use Modules\CRM\Console\Commands\SnapshotOrderStatuses;
@@ -123,6 +124,7 @@ class CrmServiceProvider extends ServiceProvider
                 FixInvoicesFromWp::class,
                 FindWalletDuplicates::class,
                 ShowWpTechSettings::class,
+                SendSlaReminders::class,
                 SetTechPercent::class,
                 RestoreTechPercentFromHistory::class,
                 RemoveManualAdjustments::class,

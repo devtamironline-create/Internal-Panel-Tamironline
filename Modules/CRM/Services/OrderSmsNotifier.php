@@ -8,6 +8,7 @@ use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\SmsLog;
 use Modules\CRM\Models\SmsTemplate;
+use Modules\CRM\Support\TechSmsPolicy;
 use Modules\SMS\Services\KavenegarService;
 
 /**
@@ -33,6 +34,14 @@ class OrderSmsNotifier
                 return;
             }
 
+            // نگهبانِ اعلان‌های اپِ تکنسین: ساعتِ مجاز + «یک‌بار برای هر
+            // رویداد». برای بقیهٔ triggerها بی‌اثر است.
+            $fingerprint = $extraVars['_fingerprint'] ?? null;
+            unset($extraVars['_fingerprint']);
+            if (! TechSmsPolicy::allows($order, $trigger, $recipient, $fingerprint)) {
+                return;
+            }
+
             $order->loadMissing(['technician', 'customer']);
             $vars = array_merge($this->buildVariables($order), $extraVars);
 
@@ -49,7 +58,8 @@ class OrderSmsNotifier
                     'trigger_key' => $trigger->value,
                     'recipient_mobile' => $recipient,
                     'recipient_role' => $role,
-                    'body' => $template->kavenegar_template.' | '.json_encode($tokens, JSON_UNESCAPED_UNICODE),
+                    'body' => $template->kavenegar_template.' | '.json_encode($tokens, JSON_UNESCAPED_UNICODE)
+                        .($fingerprint !== null ? ' '.TechSmsPolicy::stamp($fingerprint) : ''),
                     'status' => $result['success'] ? 'success' : 'failed',
                     'response' => $result['success'] ? null : ($result['message'] ?? null),
                     'sent_by' => $sentBy,
@@ -61,7 +71,7 @@ class OrderSmsNotifier
 
             // Fallback: متن آزاد
             $body = $template->render($vars);
-            $this->dispatch($order, $trigger->value, $recipient, $role, $body, $sentBy);
+            $this->dispatch($order, $trigger->value, $recipient, $role, $body, $sentBy, $fingerprint);
         } catch (\Throwable $e) {
             Log::error('CRM OrderSmsNotifier failed', [
                 'order_id' => $order->id,
@@ -149,6 +159,11 @@ class OrderSmsNotifier
             'order_type' => 'تعمیر',
             'amount' => (string) ($order->final_price ?: $order->total_invoice ?: $order->price_customer ?: 0),
             'cancel_reason' => trim((string) ($order->cancel_reason ?? '')),
+            // متنِ اعلان‌های اپِ تکنسین به دستگاه و شهر اشاره می‌کند تا
+            // تکنسین بدونِ باز کردنِ اپ بفهمد سفارش به دردش می‌خورد یا نه.
+            'device_name' => (string) ($order->device?->name ?? ''),
+            'city_name' => (string) ($order->city?->name ?? ''),
+            'deadline_at' => '',
             'pay_link' => '',
         ];
     }
@@ -159,7 +174,8 @@ class OrderSmsNotifier
         string $recipient,
         ?string $role,
         string $body,
-        ?int $sentBy
+        ?int $sentBy,
+        ?string $fingerprint = null
     ): array {
         $result = $this->sms->send($recipient, $body);
 
@@ -168,7 +184,8 @@ class OrderSmsNotifier
             'trigger_key' => $triggerKey,
             'recipient_mobile' => $recipient,
             'recipient_role' => $role,
-            'body' => $body,
+            // اثرِ انگشت فقط در لاگ می‌نشیند، نه در متنِ ارسالی.
+            'body' => $body.($fingerprint !== null ? "\n".TechSmsPolicy::stamp($fingerprint) : ''),
             'status' => $result['success'] ? 'success' : 'failed',
             'response' => $result['success'] ? null : ($result['message'] ?? null),
             'sent_by' => $sentBy,
