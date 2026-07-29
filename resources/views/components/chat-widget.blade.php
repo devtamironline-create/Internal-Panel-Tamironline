@@ -421,16 +421,17 @@ function chatWidget() {
             // Poll for new messages — کاهش از ۳ به ۱۰ ثانیه تا بار سرور
             // پایین بیاید (هر تب هر ۳ ثانیه دو request می‌فرستاد؛ با چند
             // اپراتور و چند تب باز، در دقیقه صد‌ها درخواست می‌شد).
-            setInterval(async () => {
+            window.__panelPoll(async () => {
                 await this.checkForNewMessages();
 
                 if (this.currentView === 'chat' && this.currentConversation) {
                     this.loadMessages(this.currentConversation.id);
                 }
-            }, 10000);
+            }, 15000);
 
-            // Update presence every 30 seconds
-            setInterval(() => {
+            // Update presence every 30 seconds — فقط وقتی تب دیده می‌شود؛
+            // «آنلاین بودن» در تبِ پنهان معنا ندارد.
+            window.__panelPoll(() => {
                 this.heartbeat();
             }, 30000);
 

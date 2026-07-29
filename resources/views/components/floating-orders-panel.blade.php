@@ -159,7 +159,7 @@ function floatingOrdersPanel() {
             this.refresh();
 
             // Auto refresh every 30 seconds
-            this.refreshInterval = setInterval(() => {
+            this.refreshInterval = window.__panelPoll(() => {
                 this.refresh();
             }, 30000);
         },

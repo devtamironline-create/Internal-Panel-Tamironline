@@ -1371,7 +1371,9 @@ function messenger() {
             // می‌شود که واقعاً چیزی عوض شده باشد.
             this.startRealtime();
 
-            setInterval(() => {
+            // ضربانِ حضور هم مثلِ بقیه فقط در تبِ دیده‌شونده — «آنلاین
+            // بودن» در تبِ پنهان معنایی ندارد.
+            window.__panelPoll(() => {
                 this.heartbeat();
             }, 30000);
         },
