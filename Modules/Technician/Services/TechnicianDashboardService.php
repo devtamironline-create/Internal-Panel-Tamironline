@@ -24,8 +24,11 @@ class TechnicianDashboardService
         '365' => 'یک سال اخیر',
     ];
 
-    /** ستون‌های قابلِ مرتب‌سازی. */
+    /** ستون‌های قابلِ مرتب‌سازی — اولی پیش‌فرض است. */
     public const SORTS = [
+        // خواستهٔ مدیریت: پرمشغله‌ترین تکنسین اول دیده شود. «کار فعال» =
+        // در انتظار + در جریان، یعنی هر سفارشی که هنوز تمام نشده.
+        'open' => 'بیشترین کار فعال (در انتظار + در جریان)',
         'orders' => 'بیشترین سفارش',
         'in_progress' => 'بیشترین کار در جریان',
         'completed' => 'بیشترین تکمیل‌شده',
@@ -57,7 +60,7 @@ class TechnicianDashboardService
         $rows = $technicians
             ->map(fn (Technician $tech) => $this->row($tech, $orderStats[$tech->id] ?? null))
             ->when(! empty($filters['only_with_orders']), fn (Collection $c) => $c->where('total', '>', 0))
-            ->pipe(fn (Collection $c) => $this->sort($c, (string) ($filters['sort'] ?? 'orders')))
+            ->pipe(fn (Collection $c) => $this->sort($c, (string) ($filters['sort'] ?? 'open')))
             ->values();
 
         return [
@@ -192,14 +195,16 @@ class TechnicianDashboardService
     private function sort(Collection $rows, string $sort): Collection
     {
         return match ($sort) {
+            'orders' => $rows->sortByDesc(fn ($r) => [$r['total'], $r['completed']]),
             'in_progress' => $rows->sortByDesc(fn ($r) => $r['groups']['in_progress']),
             'completed' => $rows->sortByDesc('completed'),
             'completion_rate' => $rows->sortByDesc(fn ($r) => [$r['completion_rate'] ?? -1, $r['total']]),
             'revenue' => $rows->sortByDesc('revenue'),
             'last_order' => $rows->sortByDesc(fn ($r) => $r['last_at'] ?? ''),
             'profile' => $rows->sortByDesc(fn ($r) => $r['profile']['percent']),
-            // پیش‌فرضِ خواستهٔ مدیریت: بیشترین سفارش → کمترین
-            default => $rows->sortByDesc(fn ($r) => [$r['total'], $r['completed']]),
+            // پیش‌فرض: بیشترین کارِ فعال (در انتظار + در جریان). در تساوی،
+            // کسی که کارِ در جریانِ بیشتری دارد جلوتر می‌آید و بعد کلِ سفارش‌ها.
+            default => $rows->sortByDesc(fn ($r) => [$r['open'], $r['groups']['in_progress'], $r['total']]),
         };
     }
 
