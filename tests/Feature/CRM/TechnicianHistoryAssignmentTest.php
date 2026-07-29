@@ -52,6 +52,8 @@ class TechnicianHistoryAssignmentTest extends TestCase
             $t->unsignedBigInteger('max_price')->nullable();
             $t->bigInteger('wallet_balance')->default(0);
             $t->string('status', 20)->default('active');
+            // نوبتِ چرخشِ پخش خودکار.
+            $t->timestamp('last_assigned_at')->nullable();
             $t->boolean('ready_for_delivery')->default(true);
             $t->boolean('exclude_from_suggestions')->default(false);
             $t->timestamps();

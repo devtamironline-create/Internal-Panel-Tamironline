@@ -39,6 +39,8 @@ class OrderStatusLogActorTest extends TestCase
             $t->string('first_name')->nullable();
             $t->string('firstname_tech')->nullable();
             $t->string('status', 20)->default('active');
+            // نوبتِ چرخشِ پخش خودکار.
+            $t->timestamp('last_assigned_at')->nullable();
             $t->boolean('ready_for_delivery')->default(true);
             $t->boolean('exclude_from_suggestions')->default(false);
             $t->bigInteger('wallet_balance')->default(0);

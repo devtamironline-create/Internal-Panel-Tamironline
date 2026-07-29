@@ -66,6 +66,7 @@ class Technician extends Authenticatable
         // وضعیت
         'status',
         'ready_for_delivery',
+        'last_assigned_at',
         'exclude_from_suggestions',
 
         // جهت سینک (per-technician) — برای جلوگیری از overwrite ناخواسته بین WP↔Laravel
@@ -123,6 +124,7 @@ class Technician extends Authenticatable
         'exclude_from_suggestions' => 'boolean',
         'password' => 'hashed',
         'last_login_at' => 'datetime',
+        'last_assigned_at' => 'datetime',
         'training_completed_at' => 'datetime',
         'service_types' => 'array',
     ];

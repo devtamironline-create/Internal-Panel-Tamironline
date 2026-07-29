@@ -96,6 +96,19 @@
                 </span>
             </label>
 
+            <label class="block">
+                <span class="text-xs text-gray-600 dark:text-gray-300">سقف کار فعال در هر دور (چرخش)</span>
+                <input type="number" name="assign_balance_cap" min="1" max="50" dir="ltr"
+                       value="{{ old('assign_balance_cap', $settings['assign_balance_cap']) }}"
+                       class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                <span class="text-[11px] text-gray-400 leading-5 block mt-1">
+                    سفارش‌ها یکی‌یکی بین تکنسین‌های واجد شرایط می‌چرخند. هر تکنسین که به این عدد کارِ فعال رسید،
+                    تا وقتی بقیه هم به آن نرسیده‌اند نوبتش نمی‌رسد؛ وقتی همه پر شدند دور بعدی از اول شروع می‌شود.
+                    این با «حداکثر سفارش» پروفایل تکنسین فرق دارد — آن سقفِ سختِ اختصاصی است و هرگز شکسته نمی‌شود.
+                    سفارش‌های یک مشتری با یک آدرس در یک روز از این سقف مستثنا هستند و با هم به یک تکنسین می‌رسند.
+                </span>
+            </label>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label class="block">
                     <span class="text-xs text-gray-600 dark:text-gray-300">سقف سفارش در هر اجرا</span>
@@ -148,7 +161,8 @@
                 ۱) تکنسینی که همین امروز روی همین آدرس سفارش دارد ←
                 ۲) کم‌کردن تعداد مراجعه (کسی که بیشترین سفارش این آدرس را پوشش دهد) ←
                 ۳) تکنسین قبلیِ همان دستگاه ←
-                ۴) امتیاز کیفی.
+                ۴) نوبتِ چرخش (کمترین کار فعال، بعد هرکه دیرتر سفارش گرفته) ←
+                ۵) امتیاز کیفی — فقط برای شکستن تساوی.
             </div>
         </div>
 

@@ -44,6 +44,8 @@ class OrderCancelledSmsTest extends TestCase
             $t->string('firstname_tech')->nullable();
             $t->string('mobile')->nullable();
             $t->string('status', 20)->default('active');
+            // نوبتِ چرخشِ پخش خودکار.
+            $t->timestamp('last_assigned_at')->nullable();
             $t->timestamps();
             $t->softDeletes();
         });

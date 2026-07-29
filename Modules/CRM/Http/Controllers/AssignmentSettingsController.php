@@ -50,6 +50,7 @@ class AssignmentSettingsController extends Controller
             'assign_max_age_days' => 'required|integer|min:1|max:90',
             'assign_history_enabled' => 'required|boolean',
             'assign_history_months' => 'required|integer|min:1|max:60',
+            'assign_balance_cap' => 'required|integer|min:1|max:50',
             'weights' => 'required|array',
             'weights.*' => 'required|integer|min:0|max:100',
         ]);

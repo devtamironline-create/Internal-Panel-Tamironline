@@ -35,6 +35,9 @@ final class AssignmentSettings
         'assign_history_enabled' => 1,
         // تا چند ماه عقب سابقه معتبر است.
         'assign_history_months' => 6,
+        // سقفِ توازن: هر تکنسین در یک «دور» حداکثر چند کارِ فعال بگیرد.
+        // وقتی همهٔ واجدین شرایط به این عدد رسیدند، دور بعدی شروع می‌شود.
+        'assign_balance_cap' => 3,
     ];
 
     public static function mode(): string
@@ -77,6 +80,11 @@ final class AssignmentSettings
     public static function historyMonths(): int
     {
         return max(1, self::intValue('assign_history_months', 1, 60));
+    }
+
+    public static function balanceCap(): int
+    {
+        return max(1, self::intValue('assign_balance_cap', 1, 50));
     }
 
     /** برچسبِ فارسیِ هر بُعدِ امتیازدهی — برای صفحهٔ تنظیمات و توضیح در پنل. */
@@ -184,6 +192,7 @@ final class AssignmentSettings
             'assign_max_age_days' => self::maxAgeDays(),
             'assign_history_enabled' => self::historyEnabled() ? 1 : 0,
             'assign_history_months' => self::historyMonths(),
+            'assign_balance_cap' => self::balanceCap(),
             'weights_raw' => self::rawWeights(),
             'weights_effective' => self::weights(),
         ];

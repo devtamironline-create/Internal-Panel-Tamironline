@@ -56,6 +56,8 @@ class TechnicianGroupAssignmentTest extends TestCase
             $t->unsignedBigInteger('max_price')->nullable();
             $t->bigInteger('wallet_balance')->default(0);
             $t->string('status', 20)->default('active');
+            // نوبتِ چرخشِ پخش خودکار.
+            $t->timestamp('last_assigned_at')->nullable();
             $t->boolean('ready_for_delivery')->default(true);
             $t->boolean('exclude_from_suggestions')->default(false);
             $t->timestamps();
@@ -484,32 +486,37 @@ class TechnicianGroupAssignmentTest extends TestCase
 
     public function test_changing_weights_changes_who_is_suggested(): void
     {
-        // «بدهکارِ خلوت» بدهی دارد ولی سفارش باز ندارد.
-        // «بی‌بدهیِ شلوغ» بدهی ندارد ولی ۸ سفارش باز دارد.
-        $indebted = $this->technician('بدهکار خلوت', ['wallet_balance' => -4_000_000]);
+        // هر دو بدون سفارش باز — چون «چرخش» (کمترین بارِ فعال) بالاتر از
+        // امتیاز می‌نشیند، اگر بارشان برابر نباشد وزن‌ها اصلاً به تصمیم
+        // نمی‌رسند. پس تفاوت را روی دو محورِ امتیازی می‌گذاریم:
+        // «بدهکارِ راضی» بدهی دارد ولی رضایت کامل، «بی‌بدهیِ ناراضی» برعکس.
+        $indebted = $this->technician('بدهکار راضی', [
+            'wallet_balance' => -4_000_000,
+            'satisfaction_score' => 5,
+        ]);
         $this->coverDevices($indebted, [1]);
 
-        $busy = $this->technician('بی‌بدهی شلوغ');
-        $this->coverDevices($busy, [1]);
-        for ($i = 0; $i < 8; $i++) {
-            $this->order(1, ['technician_id' => $busy->id, 'status' => 'coordinated']);
-        }
+        $unhappy = $this->technician('بی‌بدهی ناراضی', [
+            'wallet_balance' => 0,
+            'satisfaction_score' => 1,
+        ]);
+        $this->coverDevices($unhappy, [1]);
 
-        // وزن همه روی «سفارش باز» → بدهکارِ خلوت باید برنده شود.
+        // وزن همه روی «رضایت» → بدهکارِ راضی باید برنده شود.
         AssignmentSettings::saveWeights([
-            'open_orders' => 100, 'debt' => 0, 'satisfaction' => 0,
+            'open_orders' => 0, 'debt' => 0, 'satisfaction' => 100,
             'cancel_rate' => 0, 'recent_activity' => 0, 'response_speed' => 0,
         ]);
         $winner = app(TechnicianGroupPlanner::class)->plan(collect([$this->order(1)]))->steps->first();
         $this->assertSame($indebted->id, $winner->technician->id);
 
-        // وزن همه روی «بدهی» → بی‌بدهیِ شلوغ باید برنده شود.
+        // وزن همه روی «بدهی» → بی‌بدهیِ ناراضی باید برنده شود.
         AssignmentSettings::saveWeights([
             'open_orders' => 0, 'debt' => 100, 'satisfaction' => 0,
             'cancel_rate' => 0, 'recent_activity' => 0, 'response_speed' => 0,
         ]);
         $winner = app(TechnicianGroupPlanner::class)->plan(collect([$this->order(1)]))->steps->first();
-        $this->assertSame($busy->id, $winner->technician->id);
+        $this->assertSame($unhappy->id, $winner->technician->id);
     }
 
     // ───────────────────────── لاگ دلیل
