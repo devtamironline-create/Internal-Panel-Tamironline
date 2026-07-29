@@ -180,23 +180,29 @@ class ChatController extends Controller
     {
         $userId = auth()->id();
 
-        $base = Message::query()
+        // یک پیمایش به‌جای دو تا: بیشینهٔ شناسه و شمارشِ نخوانده‌ها با هم
+        // درمی‌آیند. این ضربان هر ۱۵ ثانیه در هر تبِ باز اجرا می‌شود، پس
+        // نصف‌کردنِ کارش مستقیماً از بارِ دیتابیس کم می‌کند.
+        $row = Message::query()
             ->join('conversation_participants as p', function ($join) use ($userId) {
                 $join->on('p.conversation_id', '=', 'messages.conversation_id')
                     ->where('p.user_id', '=', $userId)
                     ->whereNull('p.left_at');
             })
             ->whereNull('messages.deleted_at')
-            ->where('messages.user_id', '!=', $userId);
+            ->where('messages.user_id', '!=', $userId)
+            ->selectRaw('MAX(messages.id) as max_id')
+            ->selectRaw(
+                'SUM(CASE WHEN p.last_read_at IS NULL OR messages.created_at > p.last_read_at THEN 1 ELSE 0 END) as unread'
+            )
+            ->first();
 
-        $maxId = (int) (clone $base)->max('messages.id');
+        $maxId = (int) ($row->max_id ?? 0);
+        $unread = (int) ($row->unread ?? 0);
 
-        $unread = (int) (clone $base)
-            ->where(function ($q) {
-                $q->whereNull('p.last_read_at')
-                    ->orWhereColumn('messages.created_at', '>', 'p.last_read_at');
-            })
-            ->count();
+        // سایدبار همین عدد را روی رندرِ بعدی از کش می‌خواند، پس دیگر
+        // لازم نیست خودش کوئری بزند.
+        Message::rememberUnreadCount($userId, $unread);
 
         // شناسهٔ آخرین پیامِ گفتگوی باز — تا صفحه بفهمد همان گفتگو
         // پیام تازه گرفته یا گفتگوی دیگری.
@@ -534,6 +540,10 @@ class ChatController extends Controller
         $conversation->participants()->updateExistingPivot($userId, [
             'last_read_at' => now(),
         ]);
+
+        // بجِ سایدبار کش می‌شود؛ بعد از خواندنِ پیام‌ها باید فوراً کهنه
+        // شود وگرنه تا ۳۰ ثانیه عددِ قدیمی می‌ماند.
+        Message::forgetUnreadCache($userId);
 
         // آیا پیام‌های قدیمی‌تر وجود دارد؟
         $oldestId = $messages->first()['id'] ?? null;

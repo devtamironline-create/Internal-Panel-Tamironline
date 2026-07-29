@@ -129,12 +129,20 @@ class Message extends Model
     }
 
     // Static methods
+
+    /** چند ثانیه شمارشِ بج در کش بماند. */
+    public const UNREAD_CACHE_SECONDS = 30;
+
     /**
-     * مجموعِ پیام‌های خوانده‌نشدهٔ یک کاربر در همهٔ گفتگوهایش — یک کوئریِ
-     * تجمیعی، نه یکی به‌ازای هر گفتگو.
+     * شمارشِ خوانده‌نشده‌ها با کشِ کوتاه.
      *
-     * سایدبار روی هر صفحه این را صدا می‌زند، پس در برابر نبودِ جدول
-     * (پیش از migration) امن است تا کلِ پنل نشکند.
+     * این متد در سایدبار روی *هر رندرِ صفحه* صدا زده می‌شود، پس هزینه‌اش
+     * به همهٔ صفحات پنل اضافه می‌شود نه فقط پیام‌رسان. کشِ ۳۰ ثانیه‌ای
+     * تقریباً تمامِ آن بار را برمی‌دارد و چیزی هم از دست نمی‌رود: خودِ
+     * صفحه بلافاصله بعد از لود، عدد را با /admin/chat/tick تازه می‌کند.
+     *
+     * هر جا عدد باید فوراً درست باشد (مثلاً بعد از خواندنِ پیام‌ها)
+     * forget() صدا زده می‌شود.
      */
     public static function unreadCountFor(?int $userId): int
     {
@@ -142,6 +150,21 @@ class Message extends Model
             return 0;
         }
 
+        return \Illuminate\Support\Facades\Cache::remember(
+            self::unreadCacheKey($userId),
+            self::UNREAD_CACHE_SECONDS,
+            fn () => self::countUnreadFor($userId)
+        );
+    }
+
+    /**
+     * شمارشِ بی‌واسطه — بدونِ کش. مسیرهای بلادرنگ از این استفاده می‌کنند.
+     *
+     * یک کوئریِ تجمیعی، نه یکی به‌ازای هر گفتگو. در برابرِ نبودِ جدول
+     * (پیش از migration) امن است تا کلِ پنل نشکند.
+     */
+    public static function countUnreadFor(int $userId): int
+    {
         try {
             return (int) static::query()
                 ->join('conversation_participants as p', function ($join) use ($userId) {
@@ -159,6 +182,34 @@ class Message extends Model
         } catch (\Throwable) {
             return 0;
         }
+    }
+
+    /** بی‌اعتبارکردنِ کشِ بج — بعد از ارسال یا خواندنِ پیام. */
+    public static function forgetUnreadCache(?int $userId): void
+    {
+        if ($userId) {
+            \Illuminate\Support\Facades\Cache::forget(self::unreadCacheKey($userId));
+        }
+    }
+
+    /**
+     * نوشتنِ عددِ تازه در کش.
+     *
+     * ضربانِ /admin/chat/tick این عدد را به‌هرحال محاسبه می‌کند؛ همان را
+     * در کش می‌گذاریم تا رندرِ بعدیِ سایدبار رایگان *و* درست باشد.
+     */
+    public static function rememberUnreadCount(?int $userId, int $count): void
+    {
+        if ($userId) {
+            \Illuminate\Support\Facades\Cache::put(
+                self::unreadCacheKey($userId), $count, self::UNREAD_CACHE_SECONDS
+            );
+        }
+    }
+
+    private static function unreadCacheKey(int $userId): string
+    {
+        return 'chat.unread.'.$userId;
     }
 
     public static function createText(int $conversationId, int $userId, string $body, ?int $replyToId = null): self
