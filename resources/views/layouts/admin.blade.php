@@ -21,6 +21,46 @@
          (سایدبار، dark mode، dropdown ها) دارد که باید همان زمان لود
          صفحه فعال باشند، نه بعد از آن‌که Livewire bundle خودش را اجرا
          کند. هشدار «multiple instances» یک warning بی‌ضرر است. --}}
+    {{-- ───────────────────────────────────────────────────────────────
+         زمان‌بندِ مشترکِ polling.
+
+         پنل هفت حلقهٔ مستقل داشت که هیچ‌کدام نمی‌پرسیدند «آیا این تب
+         اصلاً دیده می‌شود؟». اپراتوری که پنج تب باز دارد فقط به یکی نگاه
+         می‌کند، ولی هر هفت حلقه در هر پنج تب اجرا می‌شدند.
+
+         این مهم است چون درخواست‌های همزمانِ یک مرورگر روی یک فایلِ
+         session پشتِ هم صف می‌کشند (لاراول با درایورِ file برای خواندن
+         LOCK_SH و برای نوشتن LOCK_EX می‌گیرد و هر دو مسدودکننده‌اند). هر
+         درخواستی که حذف شود، مستقیماً از طولِ آن صف کم می‌کند.
+
+         قرارداد: در تبِ پنهان هیچ درخواستی نمی‌رود؛ به‌محضِ برگشتن به تب
+         یک اجرای فوری انجام می‌شود تا داده کهنه نماند.
+    --}}
+    <script>
+    (function () {
+        if (window.__panelPoll) return;
+
+        var pending = [];
+
+        window.__panelPoll = function (fn, intervalMs) {
+            var run = function () {
+                if (document.hidden) return;
+                try { fn(); } catch (e) {}
+            };
+
+            pending.push(run);
+
+            return setInterval(run, intervalMs);
+        };
+
+        // برگشتن به تب = داده‌های تازه، بدونِ انتظار تا تیکِ بعدی.
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) return;
+            pending.forEach(function (run) { run(); });
+        });
+    })();
+    </script>
+
     <script defer src="/vendor/js/alpine-collapse.min.js"></script>
     <script defer src="/vendor/js/alpine.min.js"></script>
     {{-- محافظِ پنجره‌ی انتخاب فایل: در صفحاتی که Livewire اجرا می‌شود دو نمونه‌ی
@@ -432,7 +472,7 @@
                         @auth
                         <a href="{{ route('crm.tech-chats.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.tech-chats.*') ? 'sidebar-menu-item-active' : '' }}"
                            x-data="{ unread: 0 }"
-                           x-init="(async () => { const refresh = async () => { try { const r = await fetch('{{ route('crm.tech-chats.unread') }}', { cache: 'no-store', headers: { 'Accept': 'application/json' } }); const j = await r.json(); unread = j.unread || 0; } catch (e) {} }; await refresh(); setInterval(refresh, 20000); })()">
+                           x-init="(async () => { const refresh = async () => { try { const r = await fetch('{{ route('crm.tech-chats.unread') }}', { cache: 'no-store', headers: { 'Accept': 'application/json' } }); const j = await r.json(); unread = j.unread || 0; } catch (e) {} }; await refresh(); window.__panelPoll(refresh, 20000); })()">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                             <span>گفت‌وگو با تکنسین‌ها</span>
                             <span x-cloak x-show="unread > 0"
@@ -1897,7 +1937,7 @@
             // اعلان‌های جدید به‌جای toastِ سمت چپ، در همین زنگِ بالای صفحه
             // به‌روزرسانی می‌شوند (نقطهٔ نارنجی + لیست). هر ۳۰ ثانیه.
             startPolling() {
-                setInterval(() => this.loadNotifications(), 30000);
+                window.__panelPoll(() => this.loadNotifications(), 30000);
             },
             async markRead(id) {
                 try {
@@ -2380,12 +2420,12 @@
 
         poll();
         refreshBadge();
-        setInterval(poll, 5000);
+        window.__panelPoll(poll, 5000);
 
         // روی صفحهٔ پیام‌رسان، خودِ صفحه بج را با ضربانِ ۳ ثانیه‌ای به‌روز
         // می‌کند؛ اینجا دوباره‌کاری لازم نیست.
         if (! location.pathname.startsWith('/admin/messenger')) {
-            setInterval(refreshBadge, 15000);
+            window.__panelPoll(refreshBadge, 15000);
         }
 
         // برگشتن به تب = عددِ تازه، بدون انتظار.
