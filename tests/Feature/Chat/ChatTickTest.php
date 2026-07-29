@@ -30,6 +30,8 @@ class ChatTickTest extends TestCase
             'database/migrations/2026_01_04_100000_create_chat_tables.php',
             // رندرِ صفحهٔ پیام‌رسان و سایدبار به این‌ها نیاز دارد.
             'database/migrations/2026_02_03_140854_create_settings_table.php',
+            // خواندنِ پیام‌ها روابطِ واکنش/منشن را لود می‌کند.
+            'database/migrations/2026_02_02_174221_create_message_reactions_table.php',
         ] as $path) {
             Artisan::call('migrate', ['--path' => $path, '--force' => true]);
         }
@@ -157,5 +159,76 @@ class ChatTickTest extends TestCase
 
         $this->assertSame(2, Message::unreadCountFor($this->me->id));
         $this->assertSame(0, Message::unreadCountFor(null));
+    }
+
+    // ───────────────────────── کارایی
+
+    public function test_the_sidebar_count_is_cached_between_page_renders(): void
+    {
+        $this->message($this->other);
+
+        $first = Message::unreadCountFor($this->me->id);
+        $this->assertSame(1, $first);
+
+        // پیامِ دوم بلافاصله در عددِ کش‌شده دیده نمی‌شود — و همین درست
+        // است: صفحه بعد از لود، عدد را با /admin/chat/tick تازه می‌کند.
+        $this->message($this->other, 'دومی');
+        $this->assertSame(1, Message::unreadCountFor($this->me->id));
+        $this->assertSame(2, Message::countUnreadFor($this->me->id));
+    }
+
+    /**
+     * خواندنِ گفتگو باید عددِ کش‌شده را فوراً کهنه کند.
+     *
+     * خودِ endpointِ پیام‌ها این‌جا صدا زده نمی‌شود چون روابطِ جانبی‌اش
+     * (واکنش، منشن، تسک) نیمِ schema را می‌طلبند و موضوعِ این تست نیستند؛
+     * همان دو کاری که کنترلر انجام می‌دهد این‌جا مستقیم انجام می‌شود.
+     */
+    public function test_marking_a_conversation_read_invalidates_the_cached_count(): void
+    {
+        $this->message($this->other);
+        $this->assertSame(1, Message::unreadCountFor($this->me->id));
+
+        DB::table('conversation_participants')
+            ->where('conversation_id', $this->conversation->id)
+            ->where('user_id', $this->me->id)
+            ->update(['last_read_at' => now()]);
+
+        // بدونِ بی‌اعتبارکردن، عددِ کهنه می‌ماند …
+        $this->assertSame(1, Message::unreadCountFor($this->me->id));
+
+        // … و با آن، فوراً درست می‌شود.
+        Message::forgetUnreadCache($this->me->id);
+        $this->assertSame(0, Message::unreadCountFor($this->me->id));
+    }
+
+    public function test_the_tick_refreshes_the_cache_so_the_next_render_is_free(): void
+    {
+        // کش را با عددِ کهنه پر می‌کنیم.
+        Message::unreadCountFor($this->me->id);
+        $this->message($this->other);
+        $this->assertSame(0, Message::unreadCountFor($this->me->id), 'عددِ کش‌شده هنوز کهنه است');
+
+        $this->actingAs($this->me)->getJson('/admin/chat/tick')->assertOk();
+
+        // ضربان عددِ تازه را در کش نوشته، پس رندرِ بعدی بدونِ کوئری درست است.
+        $this->assertSame(1, Message::unreadCountFor($this->me->id));
+    }
+
+    public function test_the_sidebar_count_costs_no_query_when_cached(): void
+    {
+        $this->message($this->other);
+        Message::unreadCountFor($this->me->id); // گرم‌کردنِ کش
+
+        $queries = 0;
+        DB::listen(function () use (&$queries) {
+            $queries++;
+        });
+
+        Message::unreadCountFor($this->me->id);
+
+        // کشِ فایل/دیتابیس ممکن است خودش یک کوئری بزند؛ چیزی که مهم است
+        // این است که کوئریِ سنگینِ join روی messages اجرا نشود.
+        $this->assertLessThanOrEqual(1, $queries);
     }
 }
