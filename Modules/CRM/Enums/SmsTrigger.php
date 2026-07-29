@@ -20,6 +20,14 @@ enum SmsTrigger: string
     case TechOrderCancelled = 'tech_order_cancelled';
     case TechInvoiceIssued = 'tech_invoice_issued';
 
+    // ── اعلانِ اپِ تکنسین ─────────────────────────────────────
+    // اپ در ایران پوشِ آنی ندارد (FCM در دسترس نیست) و همگام‌سازیِ
+    // پس‌زمینه تا نیم ساعت تأخیر دارد. این سه رویداد نمی‌توانند منتظر
+    // بمانند، پس از کانالِ پیامک هم می‌روند.
+    case TechSlaWarning = 'tech_sla_warning';    // یک ساعت مانده به مهلت
+    case TechSlaDue = 'tech_sla_due';            // مهلت رسید
+    case TechOrderReturned = 'tech_order_returned'; // برگشتی، منتظر تأیید تکنسین
+
     // ── مشتری (فاکتور/Happy Call) ────────────────────────────
     case CustomerInvoiceIssued = 'customer_invoice_issued';
     case CustomerHappyCall = 'customer_happy_call';
@@ -42,6 +50,9 @@ enum SmsTrigger: string
             self::TechPenaltyApplied => 'جریمه (تکنسین)',
             self::TechOrderCancelled => 'کنسل سفارش (تکنسین)',
             self::TechInvoiceIssued => 'صدور فاکتور (تأیید تکنسین)',
+            self::TechSlaWarning => 'یادآور مهلت تعیین وضعیت (تکنسین)',
+            self::TechSlaDue => 'رسیدن مهلت تعیین وضعیت (تکنسین)',
+            self::TechOrderReturned => 'برگشت خوردن سفارش (تکنسین)',
             self::CustomerInvoiceIssued => 'صدور فاکتور (مشتری)',
             self::CustomerHappyCall => 'رضایت‌سنجی (مشتری)',
             self::CustomerInvoicePayLink => 'لینک پرداخت فاکتور (مشتری)',

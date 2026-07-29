@@ -81,6 +81,34 @@
                 </div>
             </div>
 
+            {{-- ─── ساعتِ مجازِ ارسالِ اعلان‌های اپِ تکنسین ─── --}}
+            <div class="mt-2 p-3 rounded-lg border border-sky-200 bg-sky-50 dark:border-sky-700 dark:bg-sky-900/20">
+                <label class="block text-xs font-bold text-gray-800 dark:text-gray-100 mb-2">
+                    ساعت مجاز ارسال اعلان‌های اپ تکنسین
+                </label>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <span class="block text-[11px] text-gray-600 dark:text-gray-300 mb-1">از ساعت</span>
+                        <input type="number" name="tech_sms_quiet_start" min="0" max="23" dir="ltr"
+                               value="{{ old('tech_sms_quiet_start', $settings['start']) }}"
+                               class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
+                    </div>
+                    <div>
+                        <span class="block text-[11px] text-gray-600 dark:text-gray-300 mb-1">تا ساعت</span>
+                        <input type="number" name="tech_sms_quiet_end" min="0" max="23" dir="ltr"
+                               value="{{ old('tech_sms_quiet_end', $settings['end']) }}"
+                               class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded text-sm">
+                    </div>
+                </div>
+                <div class="text-[11px] text-gray-600 dark:text-gray-300 mt-2 leading-6">
+                    فقط روی اعلان‌های اپ تکنسین اثر دارد: «برگشت خوردن سفارش» و «یادآور مهلت».
+                    دو رویداد فوری — <b>تخصیص سفارش جدید</b> و <b>رسیدن مهلت تعیین وضعیت</b> — از این
+                    محدودیت مستثنا هستند و هر ساعتی ارسال می‌شوند، چون نگه‌داشتنشان تا صبح خودِ پیام را
+                    بی‌اثر می‌کند. دو عدد برابر یعنی «بدون محدودیت». بقیهٔ پیامک‌ها (مشتری، کیف‌پول،
+                    فاکتور) دست‌نخورده می‌مانند.
+                </div>
+            </div>
+
             <button type="submit" class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-bold">
                 ذخیره تنظیمات
             </button>
