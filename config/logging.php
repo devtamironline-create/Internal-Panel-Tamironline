@@ -42,6 +42,17 @@ return [
         // گزارشِ فعالیتِ کاربران — هر اکشنِ مهم (ایجاد/تغییر/حذف/ورود) یک خطِ
         // JSON در storage/logs/activity/activity-YYYY-MM-DD.log. چرخشِ روزانه
         // با نگهداریِ config('activity-log.retention_days') روز (پیش‌فرض ۱۵).
+        // درخواست‌های کندتر از SLOW_REQUEST_MS — فقط وقتی آن env ست باشد
+        // چیزی نوشته می‌شود. برای عیب‌یابیِ «پنل کند شده».
+        'slow' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/slow-requests.log'),
+            'level' => 'warning',
+            'days' => (int) env('SLOW_REQUEST_LOG_DAYS', 7),
+            'permission' => 0640,
+            'ignore_exceptions' => true,
+        ],
+
         'activity' => [
             'driver' => 'daily',
             'path' => storage_path('logs/activity/activity.log'),

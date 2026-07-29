@@ -53,6 +53,10 @@ return Application::configure(basePath: dirname(__DIR__))
             return '/';
         });
 
+        // اندازه‌گیریِ درخواست‌های کند — با SLOW_REQUEST_MS روشن می‌شود؛
+        // بدونِ آن هیچ کاری نمی‌کند.
+        $middleware->append(\App\Http\Middleware\LogSlowRequests::class);
+
         $middleware->alias([
             'verified.mobile' => \App\Http\Middleware\EnsureMobileIsVerified::class,
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,

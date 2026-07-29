@@ -124,7 +124,10 @@ class DiagnoseChatPerformance extends Command
             .' ('.($user?->full_name ?? '—').') ──</>');
 
         $results = [
-            ['بجِ سایدبار (هر رندرِ صفحه)', $this->time(fn () => Message::unreadCountFor($userId))],
+            // عمداً countUnreadFor و نه unreadCountFor: دومی از کش
+            // می‌خواند و عددِ بی‌معنایی گزارش می‌کرد.
+            ['بجِ سایدبار — بدونِ کش', $this->time(fn () => Message::countUnreadFor($userId))],
+            ['بجِ سایدبار — با کش (رفتارِ واقعی)', $this->time(fn () => Message::unreadCountFor($userId))],
             ['tick — بیشینهٔ شناسه', $this->time(fn () => $this->tickBase($userId)->max('messages.id'))],
             ['tick — شمارشِ نخوانده', $this->time(fn () => $this->tickBase($userId)
                 ->where(function ($q) {
