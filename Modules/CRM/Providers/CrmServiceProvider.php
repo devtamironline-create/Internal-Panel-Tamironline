@@ -13,6 +13,7 @@ use Modules\CRM\Console\Commands\BackfillInvoices;
 use Modules\CRM\Console\Commands\BackupWalletData;
 use Modules\CRM\Console\Commands\CombosAudit;
 use Modules\CRM\Console\Commands\ConsolidateDeviceSlugs;
+use Modules\CRM\Console\Commands\DiagnoseInvoiceMismatch;
 use Modules\CRM\Console\Commands\DiagnoseLogActors;
 use Modules\CRM\Console\Commands\DiagnoseOrderFinancialHealth;
 use Modules\CRM\Console\Commands\DiagnoseOrderSync;
@@ -156,6 +157,7 @@ class CrmServiceProvider extends ServiceProvider
                 DiffOrderStatuses::class,
                 InspectOrder::class,
                 RestoreStatusFromEvents::class,
+                DiagnoseInvoiceMismatch::class,
                 DiagnoseLogActors::class,
                 DiagnoseOrderSync::class,
                 DiagnoseOrderFinancialHealth::class,
