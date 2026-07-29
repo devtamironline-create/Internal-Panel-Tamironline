@@ -299,7 +299,7 @@ class DashboardController extends Controller
             'pieces.*.customer_price' => 'nullable|integer|min:0',
             'invoice_descripotion' => 'nullable|string|max:2000',
             'save_as_draft' => 'nullable|boolean',
-            'device_img1' => 'nullable|image|max:30720',
+            'device_img1' => \Modules\CRM\Support\UploadLimits::imageRule(),
         ], [
             'description.required' => 'برای ثبت تغییر این وضعیت، توضیحات الزامی است.',
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد (بدون فضای خالی).',

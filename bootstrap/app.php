@@ -49,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             if (Auth::check()) {
                 return route('admin.dashboard');
             }
+
             return '/';
         });
 
@@ -59,6 +60,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'internal.token' => \App\Http\Middleware\VerifyInternalToken::class,
             'trusted.frontend' => \App\Http\Middleware\VerifyTrustedFrontend::class,
             'no.cache' => \App\Http\Middleware\NoHttpCache::class,
+            // درخواستی که از post_max_size رد شده — PHP بدنه را دور
+            // انداخته و بدون این، اعتبارسنجی خطاهای گمراه‌کننده می‌دهد.
+            'upload.size' => \Modules\CRM\Http\Middleware\RejectOversizedUpload::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [
@@ -86,6 +90,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     $e->getStatusCode()
                 );
             }
+
             return response()->json([
                 'message' => app()->isProduction() ? 'Server error' : $e->getMessage(),
             ], 500);
