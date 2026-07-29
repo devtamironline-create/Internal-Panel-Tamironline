@@ -81,6 +81,29 @@ class ShowSlowRequests extends Command
         $this->line('  «زمانِ PHP» بزرگ‌تر از «زمانِ کوئری» یعنی مشکل در دیتابیس نیست — رندر یا حلقهٔ PHP است.');
         $this->line('  «بوت» بزرگ (بیش از ۲۰۰ms) یعنی مشکل پیش از خودِ صفحه است: کشِ config/route یا OPcache خاموش، یا کمبودِ CPU.');
 
+        // بوتِ کوچک + دیتابیسِ سریع + PHPِ بزرگ روی endpointی که کاری
+        // نمی‌کند = انتظار، نه پردازش. با session فایلی، متهمِ اصلی قفلِ
+        // فایلِ session است.
+        $drivers = array_unique(array_filter(array_column($entries, 'session_driver')));
+        if (in_array('file', $drivers, true)) {
+            $idle = array_filter(
+                $entries,
+                fn ($e) => ($e['query_count'] ?? 0) <= 5
+                    && ($e['query_ms'] ?? 0) < 50
+                    && ($e['boot_ms'] ?? 0) < 200
+                    && ($e['php_ms'] ?? 0) > 500
+            );
+
+            if ($idle) {
+                $this->newLine();
+                $this->error('  ⚠ '.count($idle).' درخواست با بوتِ سریع، دیتابیسِ سریع، ولی زمانِ PHP بالا.');
+                $this->line('    این یعنی پردازش نبوده، انتظار بوده. درایورِ session روی «file» است و');
+                $this->line('    لاراول برای هر خواندن LOCK_SH و برای هر نوشتن LOCK_EX می‌گیرد — هر دو');
+                $this->line('    مسدودکننده. درخواست‌های همزمانِ یک مرورگر پشتِ هم صف می‌کشند.');
+                $this->line('    راه‌حل: <fg=cyan>SESSION_DRIVER=database</> در .env و سپس config:cache.');
+            }
+        }
+
         if ($this->option('detail')) {
             $this->detail($groups);
         } else {

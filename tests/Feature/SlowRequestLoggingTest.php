@@ -81,5 +81,9 @@ class SlowRequestLoggingTest extends TestCase
 
         // زمانِ بوت — همان عددی که می‌گوید مشکل پیش از صفحه است یا داخلش.
         $this->assertArrayHasKey('boot_ms', $captured);
+
+        // درایورِ session لازم است: با «file» قفلِ فایل عاملِ انتظار است،
+        // و بدونِ این عدد نمی‌شود آن را از کمبودِ CPU تشخیص داد.
+        $this->assertSame(config('session.driver'), $captured['session_driver']);
     }
 }
