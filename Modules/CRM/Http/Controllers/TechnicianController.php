@@ -292,6 +292,10 @@ class TechnicianController extends Controller
             'selectedRegionIds' => $technician->regions->pluck('id')->all(),
             'selectedBrandIds' => $technician->brands->pluck('id')->all(),
             'selectedDeviceIds' => $technician->devices->pluck('id')->all(),
+            // اولویتِ تخصص هر دستگاه — کلید: device_id.
+            'devicePriorities' => $technician->devices
+                ->mapWithKeys(fn ($d) => [$d->id => (int) ($d->pivot->priority ?? 0)])
+                ->all(),
         ]);
     }
 
@@ -324,10 +328,36 @@ class TechnicianController extends Controller
         $technician->cities()->sync(array_filter(array_map('intval', $cityIds)));
         $technician->regions()->sync(array_filter(array_map('intval', $regionIds)));
         $technician->brands()->sync(array_filter(array_map('intval', $brandIds)));
-        $technician->devices()->sync(array_filter(array_map('intval', $deviceIds)));
+        $technician->devices()->sync($this->devicePivot($deviceIds, (array) $request->input('device_priority', [])));
 
         return redirect()->route('crm.technicians.index')
             ->with('success', 'تکنسین ویرایش شد.');
+    }
+
+    /**
+     * ورودیِ sync برای دستگاه‌ها — همراه با «اولویت تخصص».
+     *
+     * عددِ اولویت فقط برای دستگاه‌های تیک‌خورده معنا دارد؛ ورودیِ فرم
+     * برای همهٔ دستگاه‌ها ارسال می‌شود و بقیه دور ریخته می‌شوند.
+     *
+     * @param  array<int, mixed>  $deviceIds
+     * @param  array<int|string, mixed>  $priorities
+     * @return array<int, array{priority:int}>
+     */
+    private function devicePivot(array $deviceIds, array $priorities): array
+    {
+        $out = [];
+
+        foreach ($deviceIds as $raw) {
+            $id = (int) $raw;
+            if ($id <= 0) {
+                continue;
+            }
+
+            $out[$id] = ['priority' => max(0, min(9, (int) ($priorities[$id] ?? 0)))];
+        }
+
+        return $out;
     }
 
     public function destroy(Technician $technician)

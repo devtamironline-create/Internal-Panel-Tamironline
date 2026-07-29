@@ -257,6 +257,11 @@ final class OrderAssigner
             $parts[] = "پوشش {$covered} سفارش از {$groupSize} سفارشِ همین آدرس";
         }
 
+        if ((int) ($context['device_priority'] ?? 0) > 0) {
+            $parts[] = 'این دستگاه تخصصِ اولویت‌دارِ اوست (اولویت '
+                .(int) $context['device_priority'].')';
+        }
+
         if (! empty($context['history'])) {
             $h = $context['history'];
             $months = (int) ($h['months'] ?? 0);

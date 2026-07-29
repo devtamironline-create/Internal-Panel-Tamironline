@@ -103,6 +103,7 @@ final class AutoAssignService
                                 'breakdown' => $step->breakdown,
                                 'reasons' => $step->reasons,
                                 'history' => $step->history,
+                                'device_priority' => $step->device_priority ?? 0,
                                 'group_size' => $groupSize,
                                 'covered_count' => $step->orders->count(),
                                 'group_order_ids' => $groupIds,

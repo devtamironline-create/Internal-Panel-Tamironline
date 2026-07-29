@@ -239,10 +239,34 @@ class Technician extends Authenticatable
         return $this->belongsToMany(Brand::class, 'crm_technician_brands');
     }
 
-    /** دستگاه‌های قابل انجام. */
+    /**
+     * دستگاه‌های قابل انجام.
+     *
+     * pivot.priority = ترجیحِ تکنسین بینِ تخصص‌هایش (هرچه بزرگ‌تر،
+     * مهم‌تر؛ صفر یعنی بدون ترجیح).
+     */
     public function devices(): BelongsToMany
     {
-        return $this->belongsToMany(Device::class, 'crm_technician_devices');
+        return $this->belongsToMany(Device::class, 'crm_technician_devices')
+            ->withPivot('priority');
+    }
+
+    /**
+     * ترجیحِ این تکنسین برای یک دستگاه — صفر یعنی بدون ترجیح یا خارج از
+     * پوشش.
+     *
+     * رابطهٔ devices در مسیرِ پیشنهاد از قبل eager-load شده، پس این متد
+     * کوئری اضافه نمی‌زند.
+     */
+    public function devicePriority(?int $deviceId): int
+    {
+        if (! $deviceId) {
+            return 0;
+        }
+
+        $device = $this->devices->firstWhere('id', $deviceId);
+
+        return $device ? (int) ($device->pivot->priority ?? 0) : 0;
     }
 
     public function invoices(): HasMany

@@ -400,10 +400,21 @@
                         <input type="checkbox" name="device_ids[]" value="{{ $d->id }}"
                                @checked(in_array($d->id, $selectedDeviceIds ?? []))
                                class="w-4 h-4 accent-brand-600">
-                        <span>{{ $d->name }}</span>
+                        <span class="flex-1">{{ $d->name }}</span>
+                        {{-- اولویتِ تخصص: بین دستگاه‌هایی که این تکنسین می‌زند،
+                             کدام‌ها را ترجیحاً به او بدهیم. --}}
+                        <input type="number" name="device_priority[{{ $d->id }}]" min="0" max="9" dir="ltr"
+                               value="{{ old('device_priority.'.$d->id, $devicePriorities[$d->id] ?? 0) }}"
+                               title="اولویت تخصص — بزرگ‌تر یعنی مهم‌تر، صفر یعنی بدون ترجیح"
+                               class="w-11 px-1 py-0.5 text-xs text-center border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded">
                     </label>
                 @endforeach
             </div>
+            <span class="text-[11px] text-gray-400 leading-5 block mt-1">
+                عدد کنار هر دستگاه «اولویت تخصص» است: هرچه بزرگ‌تر، آن دستگاه ترجیحاً به این تکنسین
+                می‌رسد. صفر یعنی بدون ترجیح. این عدد چرخش پخش کار را بر هم نمی‌زند — فقط وقتی دو
+                تکنسین بار و نوبت یکسان دارند، تعیین می‌کند کدام‌شان سفارش را بگیرد.
+            </span>
         </div>
     </div>
 

@@ -28,8 +28,9 @@ use Modules\CRM\Support\AssignmentSettings;
  *   ۳) سابقهٔ همان دستگاه برای همان مشتری
  *   ۴) کمترین کارِ فعال — همین قید پخشِ «یکی‌یکی» را می‌سازد
  *   ۵) دیرترین نوبت (`last_assigned_at`) — تساوی‌شکنِ چرخش
- *   ۶) امتیازِ کیفیِ تکنسین (همان امتیاز ۰..۱۰۰ سرویس پیشنهاد)
- *   ۷) id کوچک‌تر — فقط برای قطعی‌بودنِ خروجی
+ *   ۶) اولویتِ تخصص روی این دستگاه (pivot.priority)
+ *   ۷) امتیازِ کیفیِ تکنسین (همان امتیاز ۰..۱۰۰ سرویس پیشنهاد)
+ *   ۸) id کوچک‌تر — فقط برای قطعی‌بودنِ خروجی
  *
  * دو سقفِ متفاوت در کارند:
  *   • `max_order` — سقفِ سختِ اختصاصیِ هر تکنسین. اگر فقط جای دو سفارش
@@ -169,6 +170,14 @@ final class TechnicianGroupPlanner
 
                 $load = (int) ($openCounts[$tech->id] ?? 0);
 
+                // ترجیحِ تخصص: بیشترین اولویتی که این تکنسین روی
+                // دستگاه‌های تحتِ پوششش اعلام کرده. عمداً *زیرِ* چرخش
+                // نشسته — وگرنه متخصصِ جاروبرقی همهٔ سفارش‌های جاروبرقی
+                // را جمع می‌کرد و پخشِ یکی‌یکی از بین می‌رفت.
+                $devicePriority = $coverage
+                    ->map(fn (Order $o) => $tech->devicePriority($o->device_id))
+                    ->max() ?? 0;
+
                 $rank = [
                     isset($preferred[$tech->id]) ? 1 : 0,
                     $coverage->count(),
@@ -179,6 +188,9 @@ final class TechnicianGroupPlanner
                     -$load,
                     // در تساویِ بار، هرکه دیرتر سفارش گرفته جلوتر است.
                     -$turn[$tech->id],
+                    // بینِ دو نفرِ هم‌بار و هم‌نوبت، کسی که این دستگاه
+                    // تخصصِ اصلی‌اش است جلوتر می‌ایستد.
+                    $devicePriority,
                     // امتیازِ کیفی فقط تساوی‌شکنِ آخر است، نه معیارِ اصلی.
                     (int) ($scored[$tech->id]->score ?? 0),
                     -$tech->id,
@@ -202,8 +214,13 @@ final class TechnicianGroupPlanner
                 ->map(fn (Order $o) => $historyMap[$o->id] ?? null)
                 ->first(fn (?array $h) => $h !== null && $h['technician_id'] === $tech->id);
 
+            $priority = $best['coverage']
+                ->map(fn (Order $o) => $tech->devicePriority($o->device_id))
+                ->max() ?? 0;
+
             $steps->push((object) [
                 'technician' => $tech,
+                'device_priority' => (int) $priority,
                 'orders' => $best['coverage']->values(),
                 'score' => (int) ($entry->score ?? 0),
                 'breakdown' => (array) ($entry->breakdown ?? []),
