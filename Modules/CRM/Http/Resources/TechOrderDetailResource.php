@@ -57,6 +57,7 @@ class TechOrderDetailResource extends JsonResource
             'scheduled_date' => $this->visit_scheduled_at?->format('Y-m-d'),
 
             // ─── مهلت تعیین وضعیت (SLA) — مرجعِ قفلِ اپ
+            'assigned_at' => $this->assigned_at?->utc()->toIso8601String(),
             'status_changed_at' => $this->status_changed_at?->utc()->toIso8601String(),
             'sla_deadline_at' => \Modules\CRM\Support\SlaPolicy::deadlineFor($this->resource)?->utc()->toIso8601String(),
             'estimated_ready_at' => $this->estimated_ready_at?->format('Y-m-d'),

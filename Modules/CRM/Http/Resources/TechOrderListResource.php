@@ -41,6 +41,10 @@ class TechOrderListResource extends JsonResource
             'created_at' => $this->created_at?->utc()->toIso8601String(),
 
             // ─── مهلت تعیین وضعیت (SLA) — مرجعِ قفلِ اپ
+            // assigned_at مبنای تشخیصِ «سفارشِ جدید» در اپ است: سفارشی که
+            // قبلاً دیده شده ممکن است دوباره تخصیص یافته باشد، پس created_at
+            // برای این کار کافی نیست.
+            'assigned_at' => $this->assigned_at?->utc()->toIso8601String(),
             'status_changed_at' => $this->status_changed_at?->utc()->toIso8601String(),
             'sla_deadline_at' => \Modules\CRM\Support\SlaPolicy::deadlineFor($this->resource)?->utc()->toIso8601String(),
             'return_review_pending' => (bool) $this->return_review_pending,
