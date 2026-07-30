@@ -474,4 +474,66 @@ class TechnicianRotationTest extends TestCase
         Artisan::call('crm:orders:auto-assign', ['--force' => true]);
         $this->assertNotNull($order->fresh()->technician_id);
     }
+
+    /**
+     * بازسازیِ دقیقِ چیزی که روی سرور دیده شد.
+     *
+     * ۵ تکنسین می‌توانستند سفارش را بگیرند، همه به سقفِ دور رسیده بودند،
+     * ولی در استخر تکنسین‌های بی‌کارِ دیگری بودند که این سفارش اصلاً به
+     * آن‌ها نمی‌خورد (شهر/دستگاهِ دیگر). چون «آیا کسی زیرِ سقف هست؟» روی
+     * *کلِ استخر* حساب می‌شد، دور هیچ‌وقت تمام‌شده به نظر نمی‌رسید و هر
+     * پنج نامزدِ واقعی رد می‌شدند — سفارش بی‌صاحب می‌ماند.
+     */
+    public function test_an_idle_technician_who_cannot_cover_it_must_not_block_the_lap(): void
+    {
+        $this->auto(['assign_balance_cap' => 2]);
+
+        // تنها کسی که این دستگاه را می‌زند — و به سقفِ دور رسیده.
+        $eligible = $this->technician('واجد شرایط');
+        $this->coverDevices($eligible, [1]);
+        for ($i = 0; $i < 2; $i++) {
+            $this->order(90 + $i, 1, ['technician_id' => $eligible->id, 'status' => 'coordinated']);
+        }
+
+        // بی‌کار است ولی دستگاهِ دیگری می‌زند — نباید روی این تصمیم اثر بگذارد.
+        $irrelevant = $this->technician('بی‌ربط و بی‌کار');
+        $this->coverDevices($irrelevant, [2]);
+
+        $order = $this->order(1, 1);
+        app(AutoAssignService::class)->run();
+
+        $this->assertSame(
+            $eligible->id,
+            $order->fresh()->technician_id,
+            'وقتی همهٔ نامزدهای واقعی به سقف رسیده‌اند، دور باید از نو شروع شود'
+        );
+    }
+
+    public function test_the_lap_still_respects_the_cap_among_real_candidates(): void
+    {
+        $this->auto(['assign_balance_cap' => 2]);
+
+        // هر دو این دستگاه را می‌زنند؛ یکی پر است و دیگری خالی.
+        $full = $this->technician('پر');
+        $this->coverDevices($full, [1]);
+        for ($i = 0; $i < 2; $i++) {
+            $this->order(90 + $i, 1, ['technician_id' => $full->id, 'status' => 'coordinated']);
+        }
+
+        $free = $this->technician('خالی');
+        $this->coverDevices($free, [1]);
+
+        // یک بی‌ربطِ بی‌کار هم باشد تا مطمئن شویم چیزی را خراب نمی‌کند.
+        $irrelevant = $this->technician('بی‌ربط');
+        $this->coverDevices($irrelevant, [2]);
+
+        $order = $this->order(1, 1);
+        app(AutoAssignService::class)->run();
+
+        $this->assertSame(
+            $free->id,
+            $order->fresh()->technician_id,
+            'تا وقتی نامزدی زیرِ سقف هست، نامزدِ پر نباید نوبت بگیرد'
+        );
+    }
 }
