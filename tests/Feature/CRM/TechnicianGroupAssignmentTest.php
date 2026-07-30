@@ -568,4 +568,69 @@ class TechnicianGroupAssignmentTest extends TestCase
             'previous_technician_id' => $t->id,
         ]);
     }
+
+    /**
+     * ردِ خودکار باید ردِ پایدار بگذارد.
+     *
+     * قبلاً «نامزد داشتم ولی امتیازش کم بود» فقط یک شمارندهٔ زودگذر در
+     * خروجیِ کامند بود؛ اپراتور در پنل فقط می‌دید سفارش بدونِ تکنسین
+     * مانده و هیچ‌جا نوشته نبود که سیستم عمداً رد کرده.
+     */
+    public function test_a_low_score_decline_is_recorded_in_the_order_log(): void
+    {
+        // حداقلِ امتیازِ غیرقابلِ دسترس تا حتماً رد شود.
+        AssignmentSettings::save(['assign_mode' => 'auto', 'assign_min_score' => 100]);
+
+        $tech = $this->technician('کم‌امتیاز', ['wallet_balance' => -9_000_000]);
+        $this->coverDevices($tech, [1]);
+
+        $order = $this->order(1);
+        $order->forceFill(['created_at' => now()->subHour()])->save();
+
+        $stats = app(AutoAssignService::class)->run();
+
+        $this->assertSame(0, $stats['assigned']);
+        $this->assertSame(1, $stats['skipped_low_score']);
+        $this->assertNull($order->fresh()->technician_id);
+
+        $log = OrderAssignmentLog::where('order_id', $order->id)->first();
+        $this->assertNotNull($log, 'ردِ خودکار باید در لاگ سفارش ثبت شود');
+        $this->assertSame('skipped_low_score', $log->mode);
+        $this->assertNull($log->technician_id);
+        $this->assertStringContainsString('حداقلِ تنظیم‌شده', $log->note);
+    }
+
+    public function test_the_decline_is_recorded_only_once_across_runs(): void
+    {
+        AssignmentSettings::save(['assign_mode' => 'auto', 'assign_min_score' => 100]);
+
+        $tech = $this->technician('کم‌امتیاز', ['wallet_balance' => -9_000_000]);
+        $this->coverDevices($tech, [1]);
+
+        $order = $this->order(1);
+        $order->forceFill(['created_at' => now()->subHour()])->save();
+
+        // پخش هر چند دقیقه اجرا می‌شود — لاگ نباید پر از ردیفِ تکراری شود.
+        app(AutoAssignService::class)->run();
+        app(AutoAssignService::class)->run();
+        app(AutoAssignService::class)->run();
+
+        $this->assertSame(1, OrderAssignmentLog::where('order_id', $order->id)
+            ->where('mode', 'skipped_low_score')->count());
+    }
+
+    public function test_a_dry_run_leaves_no_decline_rows(): void
+    {
+        AssignmentSettings::save(['assign_mode' => 'auto', 'assign_min_score' => 100]);
+
+        $tech = $this->technician('کم‌امتیاز', ['wallet_balance' => -9_000_000]);
+        $this->coverDevices($tech, [1]);
+
+        $order = $this->order(1);
+        $order->forceFill(['created_at' => now()->subHour()])->save();
+
+        app(AutoAssignService::class)->run(dryRun: true);
+
+        $this->assertSame(0, OrderAssignmentLog::where('order_id', $order->id)->count());
+    }
 }
