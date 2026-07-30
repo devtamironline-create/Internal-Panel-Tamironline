@@ -633,4 +633,68 @@ class TechnicianGroupAssignmentTest extends TestCase
 
         $this->assertSame(0, OrderAssignmentLog::where('order_id', $order->id)->count());
     }
+
+    /**
+     * «هیچ‌کس پوششش نمی‌دهد» با «امتیاز کم» فرق اساسی دارد: امتیاز ممکن
+     * است فردا بالا برود، ولی نبودِ پوشش خودبه‌خود درست نمی‌شود. پس باید
+     * در پنل دیده شود تا کسی تگ‌ها را اصلاح کند.
+     */
+    public function test_an_unassignable_order_is_logged_with_the_reasons(): void
+    {
+        AssignmentSettings::save(['assign_mode' => 'auto', 'assign_min_score' => 0]);
+
+        // تکنسین فقط دستگاه ۱ را پوشش می‌دهد؛ سفارش برای دستگاه ۵ است.
+        $tech = $this->technician('محدود');
+        $this->coverDevices($tech, [1]);
+
+        $order = $this->order(5);
+        $order->forceFill(['created_at' => now()->subHour()])->save();
+
+        $stats = app(AutoAssignService::class)->run();
+
+        $this->assertSame(0, $stats['assigned']);
+        $this->assertSame(1, $stats['unassignable']);
+
+        $log = OrderAssignmentLog::where('order_id', $order->id)
+            ->where('mode', 'unassignable')->first();
+
+        $this->assertNotNull($log, 'سفارشِ بی‌پوشش باید در لاگ ثبت شود');
+        $this->assertNull($log->technician_id);
+        // علتِ واقعی باید شمرده شده باشد، نه یک پیام کلی.
+        $this->assertSame(['device' => 1], $log->reasons);
+        $this->assertStringContainsString('دستگاه در پوششش نیست', $log->note);
+    }
+
+    public function test_the_unassignable_log_is_written_only_once(): void
+    {
+        AssignmentSettings::save(['assign_mode' => 'auto', 'assign_min_score' => 0]);
+
+        $tech = $this->technician('محدود');
+        $this->coverDevices($tech, [1]);
+
+        $order = $this->order(5);
+        $order->forceFill(['created_at' => now()->subHour()])->save();
+
+        app(AutoAssignService::class)->run();
+        app(AutoAssignService::class)->run();
+        app(AutoAssignService::class)->run();
+
+        $this->assertSame(1, OrderAssignmentLog::where('order_id', $order->id)
+            ->where('mode', 'unassignable')->count());
+    }
+
+    public function test_a_dry_run_leaves_no_unassignable_rows(): void
+    {
+        AssignmentSettings::save(['assign_mode' => 'auto', 'assign_min_score' => 0]);
+
+        $tech = $this->technician('محدود');
+        $this->coverDevices($tech, [1]);
+
+        $order = $this->order(5);
+        $order->forceFill(['created_at' => now()->subHour()])->save();
+
+        app(AutoAssignService::class)->run(dryRun: true);
+
+        $this->assertSame(0, OrderAssignmentLog::where('order_id', $order->id)->count());
+    }
 }

@@ -31,6 +31,7 @@ final class AutoAssignService
         private readonly OrderGroupResolver $groups,
         private readonly TechnicianGroupPlanner $planner,
         private readonly OrderAssigner $assigner,
+        private readonly TechnicianSuggestionService $suggestions,
     ) {}
 
     /**
@@ -126,6 +127,10 @@ final class AutoAssignService
             }
 
             $stats['unassignable'] += $plan->unassignable->count();
+
+            if (! $dryRun && $plan->unassignable->isNotEmpty()) {
+                $this->recordUnassignable($plan->unassignable);
+            }
         }
 
         return $stats;
@@ -172,6 +177,83 @@ final class AutoAssignService
                 ]);
             }
         }
+    }
+
+    /**
+     * ثبتِ «هیچ‌کس این سفارش را پوشش نمی‌دهد» — با شمارشِ علت‌ها.
+     *
+     * این با «امتیاز کم» فرق اساسی دارد: امتیاز ممکن است فردا بالا برود،
+     * ولی نبودِ پوشش خودبه‌خود درست نمی‌شود. تا وقتی کسی تگِ شهر/دستگاه/
+     * برندِ یک تکنسین را عوض نکند، این سفارش هرگز خودکار پخش نمی‌شود.
+     * پس باید در پنل دیده شود، نه اینکه فقط یک عدد در خروجیِ کامند بماند.
+     *
+     * @param  Collection<int, Order>  $orders
+     */
+    private function recordUnassignable(Collection $orders): void
+    {
+        $pool = $this->suggestions->candidatePool();
+        $openCounts = $pool->isEmpty() ? [] : $this->suggestions->openCountsFor($pool);
+
+        foreach ($orders as $order) {
+            try {
+                $already = OrderAssignmentLog::where('order_id', $order->id)
+                    ->where('mode', 'unassignable')
+                    ->exists();
+
+                if ($already) {
+                    continue;
+                }
+
+                $reasons = [];
+                foreach ($pool as $tech) {
+                    $why = $this->suggestions->rejectionFor(
+                        $tech, $order, (int) ($openCounts[$tech->id] ?? 0)
+                    );
+                    if ($why !== null) {
+                        $reasons[$why] = ($reasons[$why] ?? 0) + 1;
+                    }
+                }
+                arsort($reasons);
+
+                OrderAssignmentLog::create([
+                    'order_id' => $order->id,
+                    'technician_id' => null,
+                    'mode' => 'unassignable',
+                    'reasons' => $reasons,
+                    'note' => $pool->isEmpty()
+                        ? 'هیچ تکنسین فعالی در استخر نبود.'
+                        : 'از '.$pool->count().' تکنسین فعال، هیچ‌کدام واجد شرایط این سفارش نبودند — '
+                            .self::reasonSummary($reasons)
+                            .'. تا اصلاح تگ‌های پوشش، این سفارش خودکار پخش نمی‌شود.',
+                    'created_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                Log::debug('auto-assign unassignable log failed', [
+                    'order' => $order->id, 'err' => $e->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    /** @param  array<string, int>  $reasons */
+    private static function reasonSummary(array $reasons): string
+    {
+        $labels = [
+            'capacity' => 'به سقف ظرفیت رسیده',
+            'city' => 'شهر در پوششش نیست',
+            'region' => 'منطقه در پوششش نیست',
+            'brand' => 'برند در پوششش نیست',
+            'device' => 'دستگاه در پوششش نیست',
+            'service_type' => 'این نوع خدمت را ارائه نمی‌دهد',
+            'no_service_types' => 'نوع خدماتش در پروفایل تعیین نشده',
+        ];
+
+        $parts = [];
+        foreach ($reasons as $key => $count) {
+            $parts[] = $count.' نفر: '.($labels[$key] ?? $key);
+        }
+
+        return implode('، ', $parts);
     }
 
     /**
