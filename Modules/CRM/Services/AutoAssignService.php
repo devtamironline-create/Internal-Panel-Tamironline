@@ -6,6 +6,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Order;
+use Modules\CRM\Models\OrderAssignmentLog;
 use Modules\CRM\Support\AssignmentSettings;
 
 /**
@@ -82,6 +83,10 @@ final class AutoAssignService
                 if (! $exempt && $step->score < $minScore) {
                     $stats['skipped_low_score'] += $step->orders->count();
 
+                    if (! $dryRun) {
+                        $this->recordDecline($step, $minScore);
+                    }
+
                     continue;
                 }
 
@@ -124,6 +129,49 @@ final class AutoAssignService
         }
 
         return $stats;
+    }
+
+    /**
+     * ثبتِ «نامزد داشتم ولی ندادم».
+     *
+     * بدونِ این، ردِ خودکار فقط یک شمارندهٔ زودگذر در خروجیِ کامند بود و
+     * در پنل هیچ اثری نداشت — اپراتور می‌دید سفارش بدونِ تکنسین مانده،
+     * لیستِ پیشنهاد هم چند کاندید نشان می‌داد، و هیچ‌جا نوشته نبود که
+     * سیستم عمداً رد کرده و چرا.
+     *
+     * برای هر سفارش فقط *یک‌بار* ثبت می‌شود؛ پخش هر چند دقیقه اجرا
+     * می‌شود و بدونِ این قید، لاگِ سفارش پر از ردیفِ تکراری می‌شد.
+     */
+    private function recordDecline(object $step, int $minScore): void
+    {
+        foreach ($step->orders as $order) {
+            try {
+                $already = OrderAssignmentLog::where('order_id', $order->id)
+                    ->where('mode', 'skipped_low_score')
+                    ->exists();
+
+                if ($already) {
+                    continue;
+                }
+
+                OrderAssignmentLog::create([
+                    'order_id' => $order->id,
+                    'technician_id' => null,
+                    'mode' => 'skipped_low_score',
+                    'score' => $step->score,
+                    'breakdown' => $step->breakdown,
+                    'reasons' => $step->reasons,
+                    'note' => 'بهترین گزینه «'.($step->technician->firstname_tech ?: $step->technician->first_name)
+                        .'» با امتیاز '.$step->score.' بود که از حداقلِ تنظیم‌شده ('.$minScore
+                        .') کمتر است، پس تخصیص خودکار انجام نشد و تصمیم به اپراتور واگذار شد.',
+                    'created_at' => now(),
+                ]);
+            } catch (\Throwable $e) {
+                Log::debug('auto-assign decline log failed', [
+                    'order' => $order->id, 'err' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     /**

@@ -107,6 +107,26 @@ class DiagnoseAutoAssign extends Command
             $this->line('    می‌ماند و جای سفارش‌های تازه را می‌گیرد.');
         }
 
+        // اجرای خشک — همان تصمیمی که پخشِ واقعی می‌گیرد، بدونِ نوشتن.
+        $stats = $service->run(dryRun: true);
+        $this->newLine();
+        $this->table(
+            ['گروه', 'تخصیص می‌شد', 'ردشده (امتیاز کم)', 'بی‌تکنسین ماند', 'بدونِ نوع خدمت'],
+            [[$stats['groups'], $stats['assigned'], $stats['skipped_low_score'],
+                $stats['unassignable'], $stats['skipped_no_type']]]
+        );
+
+        if ($stats['skipped_low_score'] > 0) {
+            $this->error('  ⚠ '.$stats['skipped_low_score'].' سفارش نامزد دارد ولی امتیازش از حداقلِ '
+                .AssignmentSettings::minScore().' کمتر است.');
+            $this->line('    این‌ها عمداً برای تصمیمِ اپراتور کنار گذاشته می‌شوند. اگر انتظار دارید');
+            $this->line('    پخش شوند، حداقلِ امتیاز را در /crm/assignment-settings پایین بیاورید.');
+        }
+
+        if ($stats['unassignable'] > 0) {
+            $this->warn('  ⚠ '.$stats['unassignable'].' سفارش هیچ تکنسینِ واجدِ شرایطی ندارد (پوششِ شهر/دستگاه/برند).');
+        }
+
         if ($eligible->isEmpty()) {
             return;
         }
@@ -124,17 +144,69 @@ class DiagnoseAutoAssign extends Command
         );
     }
 
+    /**
+     * پیداکردنِ سفارش با تحملِ تفاوت‌های کپی‌پیست.
+     *
+     * کدِ کپی‌شده از پنل می‌تواند رقمِ فارسی، فاصلهٔ نامرئی یا خط تیرهٔ
+     * غیر-ASCII داشته باشد. تطبیقِ دقیق آن‌وقت شکست می‌خورد و پیامِ
+     * «پیدا نشد» کاربر را به بیراهه می‌برد.
+     */
+    private function find(string $ref): ?Order
+    {
+        $clean = trim(strtr($ref, [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+            '‌' => '', "\u{200e}" => '', "\u{200f}" => '',
+            '−' => '-', '–' => '-', '—' => '-',
+        ]));
+
+        $query = fn () => Order::query()->with(['city', 'device', 'brand']);
+
+        if (is_numeric($clean)) {
+            if ($found = $query()->find((int) $clean)) {
+                return $found;
+            }
+        }
+
+        if ($found = $query()->where('order_code', $clean)->first()) {
+            return $found;
+        }
+
+        // آخرین تلاش: فقط رقم‌های انتهایی — پیشوندِ ماه ممکن است اشتباه
+        // تایپ شده باشد.
+        $digits = preg_replace('/\D/', '', $clean);
+
+        return $digits === ''
+            ? null
+            : $query()->where('order_code', 'like', '%'.$digits.'%')->orderByDesc('id')->first();
+    }
+
     /** ریزِ یک سفارش — دروازه به دروازه. */
     private function order(string $ref): int
     {
-        $order = Order::query()
-            ->when(is_numeric($ref), fn ($q) => $q->where('id', (int) $ref))
-            ->when(! is_numeric($ref), fn ($q) => $q->where('order_code', $ref))
-            ->with(['city', 'device', 'brand'])
-            ->first();
+        $order = $this->find($ref);
 
         if (! $order) {
-            $this->error('سفارش پیدا نشد.');
+            $this->error('سفارشی با «'.$ref.'» پیدا نشد.');
+
+            // نزدیک‌ترین کدها را نشان بده — معمولاً یعنی رقمِ فارسی،
+            // فاصلهٔ اضافه یا خط تیرهٔ متفاوت در کپی‌پیست.
+            $digits = preg_replace('/\D/', '', $ref);
+            if ($digits !== '') {
+                $similar = Order::query()
+                    ->where('order_code', 'like', '%'.substr($digits, -5).'%')
+                    ->orderByDesc('id')
+                    ->limit(5)
+                    ->pluck('order_code');
+
+                if ($similar->isNotEmpty()) {
+                    $this->newLine();
+                    $this->line('  کدهای مشابه در دیتابیس:');
+                    foreach ($similar as $code) {
+                        $this->line('    <fg=cyan>'.$code.'</>');
+                    }
+                }
+            }
 
             return self::FAILURE;
         }
