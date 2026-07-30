@@ -123,30 +123,17 @@ final class TechnicianGroupPlanner
         while ($remaining->isNotEmpty()) {
             $best = null;
 
-            // آیا هنوز کسی زیرِ سقفِ دور هست؟ اگر آری، رسیده‌ها را رد کن؛
-            // اگر همه پر شده‌اند، دور تمام شده و همه دوباره وارد نوبت
-            // می‌شوند.
-            $someoneBelowCap = false;
+            // ─── گامِ اول: چه کسی *اصلاً* می‌تواند چیزی از این گروه را بگیرد؟
+            //
+            // پوشش را جدا و پیش از قیدِ چرخش حساب می‌کنیم، چون «دورِ
+            // چرخش» فقط بینِ همین‌ها معنا دارد. اگر مثل قبل روی کلِ استخر
+            // حساب شود، یک تکنسینِ بی‌کار در شهرِ دیگر که این سفارش به او
+            // نمی‌خورد باعث می‌شود دور «تمام‌نشده» به نظر برسد و هر پنج
+            // نامزدِ واقعی — که همه به سقف رسیده‌اند — رد شوند و سفارش
+            // بی‌صاحب بماند.
+            $candidates = [];
             foreach ($pool as $tech) {
                 if (isset($used[$tech->id]) || ($capacity[$tech->id] ?? 0) <= 0) {
-                    continue;
-                }
-                if ((int) ($openCounts[$tech->id] ?? 0) < $balanceCap) {
-                    $someoneBelowCap = true;
-                    break;
-                }
-            }
-
-            foreach ($pool as $tech) {
-                if (isset($used[$tech->id]) || ($capacity[$tech->id] ?? 0) <= 0) {
-                    continue;
-                }
-                // چسبندگی از سقفِ دور مستثناست: سفارشِ دومِ همان مشتری و
-                // همان آدرس نباید فقط به خاطرِ نوبت‌بندی به نفر دیگری برود.
-                // یکپارچگیِ گروه بر توازنِ بار مقدم است.
-                if ($someoneBelowCap
-                    && ! isset($preferred[$tech->id])
-                    && (int) ($openCounts[$tech->id] ?? 0) >= $balanceCap) {
                     continue;
                 }
 
@@ -159,7 +146,33 @@ final class TechnicianGroupPlanner
                 }
 
                 // بریدن به ظرفیت باقی‌مانده
-                $coverage = $coverage->take($capacity[$tech->id]);
+                $candidates[] = ['tech' => $tech, 'coverage' => $coverage->take($capacity[$tech->id])];
+            }
+
+            // آیا از میانِ *همین نامزدها* کسی زیرِ سقفِ دور هست؟ اگر آری،
+            // رسیده‌ها را رد کن؛ اگر همه پر شده‌اند، دور تمام شده و همه
+            // دوباره وارد نوبت می‌شوند.
+            $someoneBelowCap = false;
+            foreach ($candidates as $candidate) {
+                if ((int) ($openCounts[$candidate['tech']->id] ?? 0) < $balanceCap) {
+                    $someoneBelowCap = true;
+                    break;
+                }
+            }
+
+            // ─── گامِ دوم: رتبه‌بندی
+            foreach ($candidates as $candidate) {
+                $tech = $candidate['tech'];
+                $coverage = $candidate['coverage'];
+
+                // چسبندگی از سقفِ دور مستثناست: سفارشِ دومِ همان مشتری و
+                // همان آدرس نباید فقط به خاطرِ نوبت‌بندی به نفر دیگری برود.
+                // یکپارچگیِ گروه بر توازنِ بار مقدم است.
+                if ($someoneBelowCap
+                    && ! isset($preferred[$tech->id])
+                    && (int) ($openCounts[$tech->id] ?? 0) >= $balanceCap) {
+                    continue;
+                }
 
                 // چند تا از سفارش‌های تحتِ پوشش را قبلاً برای همین مشتری
                 // تعمیر کرده؟ بعد از «تعدادِ پوشش» می‌آید تا کم‌کردنِ
