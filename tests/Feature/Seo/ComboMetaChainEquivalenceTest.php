@@ -65,15 +65,30 @@ class ComboMetaChainEquivalenceTest extends ComboMetaUniquenessTest
         $this->assertSame('تعمیر اجاق گاز زانوسی | تعمیرات ۳ ساعته و ۶ ماه ضمانت', $meta['meta_title']);
     }
 
-    public function test_the_length_cap_still_applies_to_a_manual_override(): void
+    /**
+     * سقفِ طول عمداً روی نوشتهٔ دستی اعمال *نمی‌شود*.
+     *
+     * قالب را ما نوشته‌ایم و کوتاه‌کردنش بی‌ضرر است؛ ولی وقتی ادمین عنوانی را
+     * عمداً تایپ کرده، بریدنِ بی‌خبرِ آن یعنی «چیزی که نوشتم عوض شد». اگر از
+     * بودجه رد شود، ابزارِ بازبینی علامتش می‌زند تا خودش تصمیم بگیرد.
+     */
+    public function test_a_manual_override_is_never_trimmed(): void
     {
-        $long = 'تعمیر '.str_repeat('ماشین لباسشویی الکترواستیل ', 4);
+        $long = trim('تعمیر '.str_repeat('ماشین لباسشویی الکترواستیل ', 4));
         $this->setPerPair('gaz', $long, null);
 
         $meta = $this->chain('gaz', 'zanussi');
 
+        $this->assertSame($long, $meta['meta_title']);
+        $this->assertGreaterThan(60, mb_strlen($meta['meta_title']));
+    }
+
+    /** ولی خروجیِ قالب همچنان زیرِ سقف نگه داشته می‌شود. */
+    public function test_the_template_output_is_still_capped(): void
+    {
+        $meta = $this->chain('gaz', 'zanussi');
+
         $this->assertLessThanOrEqual(60, mb_strlen($meta['meta_title']));
-        $this->assertStringStartsWith('تعمیر ماشین لباسشویی', $meta['meta_title']);
     }
 
     /** @return array{meta_title: string, meta_description: string} */

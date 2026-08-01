@@ -69,18 +69,25 @@ class MetaResolver
         $cfg = $this->registry->config($type) ?? [];
         $meta = method_exists($model, 'seoMeta') ? $model->seoMeta : null;
 
-        return $this->composeText($type, $meta, $this->buildContext($type, $cfg, $model));
+        return $this->composeText($type, $meta, $model, $this->buildContext($type, $cfg, $model));
     }
 
     /**
      * @param  array<string, string|null>  $context
      * @return array{title: string, description: string}
      */
-    private function composeText(string $type, ?SeoMeta $meta, array $context): array
+    private function composeText(string $type, ?SeoMeta $meta, Model $model, array $context): array
     {
-        $title = $this->variables->render(
-            self::pick($meta?->title, $this->template($type, 'title')),
-            $context
+        // اولویت: پنلِ سئو (`seo_meta`) ← فیلدِ خودِ موجودیت (`meta_title`) ← قالب.
+        //
+        // سطحِ دوم تازه اضافه شده. تا پیش از این، کانالِ سئو ستونِ خودِ موجودیت را
+        // نمی‌دید ولی کانالِ کاتالوگ می‌دید — یعنی هر صفحه‌ای که ادمین برایش متا
+        // نوشته بود، از دو مسیر دو چیزِ متفاوت می‌گرفت. حالا هر دو یک منبع دارند.
+        $title = $this->compose(
+            self::pick($meta?->title, $this->attribute($model, 'meta_title')),
+            $this->template($type, 'title'),
+            $context,
+            fn (string $value) => \Modules\Seo\Support\MetaLength::title($value),
         );
 
         // مقالاتِ بلاگ: Title باید کوتاه و یکدست باشد «{عنوانِ کوتاه} | تعمیرآنلاین»
@@ -90,18 +97,42 @@ class MetaResolver
             $title = \Modules\Site\Support\ArticleSeoTitle::build($title);
         }
 
-        $description = $this->variables->render(
-            self::pick($meta?->description, $this->template($type, 'description')),
-            $context
+        $description = $this->compose(
+            self::pick($meta?->description, $this->attribute($model, 'meta_description')),
+            $this->template($type, 'description'),
+            $context,
+            fn (string $value) => \Modules\Seo\Support\MetaLength::description($value),
         );
 
-        // تورِ ایمنیِ نهاییِ طول — بعد از رندرِ متغیرها، چون طولِ واقعی تازه
-        // این‌جا معلوم می‌شود: قالب زیرِ سقف است ولی «ماشین لباسشویی الکترواستیل»
-        // چند کاراکتر ردش می‌کند. سرِ عنوان (نامِ دستگاه/برند) دست‌نخورده می‌ماند.
-        return [
-            'title' => \Modules\Seo\Support\MetaLength::title($title),
-            'description' => \Modules\Seo\Support\MetaLength::description($description),
-        ];
+        return ['title' => $title, 'description' => $description];
+    }
+
+    /**
+     * متنِ نهایی با یک قاعده: **نوشتهٔ دستی دست‌نخورده می‌ماند.**
+     *
+     * سقفِ طول فقط روی خروجیِ قالب اعمال می‌شود. قالب را ما نوشته‌ایم و بریدنش
+     * بی‌ضرر است؛ ولی وقتی ادمین عمداً عنوانی تایپ کرده، کوتاه‌کردنِ بی‌خبرِ آن
+     * یعنی «چیزی که نوشتم عوض شد» — و اعتماد به پنل را از بین می‌برد. اگر متنِ
+     * دستی از بودجه رد شود، ابزارِ بازبینی علامتش می‌زند تا خودِ ادمین تصمیم بگیرد.
+     *
+     * @param  array<string, string|null>  $context
+     * @param  callable(string):string  $cap
+     */
+    private function compose(?string $manual, ?string $template, array $context, callable $cap): string
+    {
+        if ($manual !== null && trim($manual) !== '') {
+            return trim($this->variables->render($manual, $context));
+        }
+
+        return $cap($this->variables->render($template, $context));
+    }
+
+    /** مقدارِ یک ستون، اگر روی این مدل اصلاً وجود داشته باشد. */
+    private function attribute(Model $model, string $column): ?string
+    {
+        $value = $model->getAttribute($column);
+
+        return is_string($value) && trim($value) !== '' ? $value : null;
     }
 
     /**
@@ -114,7 +145,7 @@ class MetaResolver
 
         $context = $this->buildContext($type, $cfg, $model);
 
-        ['title' => $title, 'description' => $description] = $this->composeText($type, $meta, $context);
+        ['title' => $title, 'description' => $description] = $this->composeText($type, $meta, $model, $context);
 
         $canonical = self::pick($meta?->canonical) ?: $this->absoluteUrl($this->registry->pathFor($type, $model));
 

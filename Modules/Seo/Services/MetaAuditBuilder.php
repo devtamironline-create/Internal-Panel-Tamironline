@@ -474,6 +474,8 @@ class MetaAuditBuilder
         $combo->deviceModel = $device;
         $combo->brandModel = $brand;
         $combo->setRelation('seoMeta', $page->seoMeta);
+        $combo->meta_title = $page->meta_title;
+        $combo->meta_description = $page->meta_description;
 
         return $combo;
     }

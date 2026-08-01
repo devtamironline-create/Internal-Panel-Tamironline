@@ -109,6 +109,10 @@ class SeoableRegistry
             ->with('seoMeta')
             ->first();
         $combo->setRelation('seoMeta', $page?->seoMeta);
+        // متایِ per-pair روی خودِ combo می‌نشیند تا MetaResolver — که ستونِ
+        // موجودیت را می‌خواند — همان چیزی را بدهد که کانالِ کاتالوگ می‌دهد.
+        $combo->meta_title = $page?->meta_title;
+        $combo->meta_description = $page?->meta_description;
 
         return $combo;
     }
