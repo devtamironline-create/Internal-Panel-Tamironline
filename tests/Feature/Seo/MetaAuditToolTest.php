@@ -201,6 +201,39 @@ class MetaAuditToolTest extends ComboMetaUniquenessTest
         $this->assertFalse((bool) SeoMetaAuditRow::where('page_type', 'brand')->value('url_pattern_conflict'));
     }
 
+    /**
+     * روی MySQL دستورِ TRUNCATE یک DDL است و تراکنش را ضمنی commit می‌کند؛
+     * commitِ بعدی با «There is no active transaction» می‌شکند و کلِ snapshot
+     * از دست می‌رود. SQLite آن را به DELETE ترجمه می‌کند و همین تفاوت باعث شد
+     * تست‌ها یک بار این را نگیرند — پس این‌جا خودِ دستور ممنوع می‌شود، نه اثرش.
+     */
+    public function test_the_rebuild_never_issues_a_truncate(): void
+    {
+        $statements = [];
+        DB::listen(function ($query) use (&$statements) {
+            $statements[] = strtolower($query->sql);
+        });
+
+        $this->build();
+
+        foreach ($statements as $sql) {
+            $this->assertStringNotContainsString('truncate', $sql, 'TRUNCATE روی MySQL تراکنش را می‌شکند.');
+        }
+    }
+
+    public function test_the_chunk_size_changes_nothing_but_the_number_of_writes(): void
+    {
+        $builder = app(\Modules\Seo\Services\MetaAuditBuilder::class);
+
+        $builder->rebuild(null, 1);
+        $oneAtATime = SeoMetaAuditRow::orderBy('url')->get(['url', 'live_title', 'verdict', 'flags'])->toJson();
+
+        $builder->rebuild(null, 1000);
+        $allAtOnce = SeoMetaAuditRow::orderBy('url')->get(['url', 'live_title', 'verdict', 'flags'])->toJson();
+
+        $this->assertSame($oneAtATime, $allAtOnce);
+    }
+
     public function test_a_second_rebuild_is_idempotent(): void
     {
         $first = $this->build();

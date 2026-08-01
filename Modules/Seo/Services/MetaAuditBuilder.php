@@ -42,36 +42,63 @@ class MetaAuditBuilder
 
     /**
      * @param  callable(string):void|null  $progress
+     * @param  int  $chunk  اندازهٔ هر دستهٔ نوشتن
      * @return array<string, int>
      */
-    public function rebuild(?callable $progress = null): array
+    public function rebuild(?callable $progress = null, int $chunk = 50): array
     {
         // بدونِ callback هم باید کار کند (فراخوانی از کنترلر، نه فقط کامند).
         $progress ??= static fn (string $message) => null;
+        $chunk = max(1, $chunk);
 
         $this->sectionSeo = $this->loadSeoSections();
         $crawled = $this->latestCrawl();
 
-        $rows = [];
+        // عمداً `delete()` و نه `truncate()`: در MySQL دستورِ TRUNCATE یک DDL
+        // است و تراکنش را ضمنی commit می‌کند، پس commitِ بعدی با «There is no
+        // active transaction» می‌شکند. روی SQLite به DELETE ترجمه می‌شود و
+        // همین تفاوت باعث شد تست‌ها این را نگیرند.
+        DB::table('seo_meta_audit_rows')->delete();
+
+        // دسته‌به‌دسته نوشته می‌شود، نه یک‌جا در پایان: پیشرفت دیده می‌شود و
+        // اگر اجرا وسطِ کار قطع شود، آنچه نوشته شده سرِ جایش می‌ماند.
+        $written = 0;
+        $buffer = [];
         foreach (['brand_device' => 'combos', 'device' => 'devices', 'brand' => 'brands'] as $type => $method) {
             $progress('جمع‌آوریِ '.SeoMetaAuditRow::PAGE_TYPE_LABELS[$type].'…');
+
             foreach ($this->{$method}($crawled) as $row) {
-                $rows[] = $row;
+                $buffer[] = $row;
+                if (count($buffer) >= $chunk) {
+                    $written += $this->flush($buffer);
+                    $progress('  ثبت شد: '.number_format($written).' ردیف');
+                }
             }
         }
+        $written += $this->flush($buffer);
 
-        $progress('تشخیصِ تکراری‌ها روی '.number_format(count($rows)).' ردیف…');
-        $this->markDuplicates($rows);
+        $progress('تشخیصِ تکراری‌ها روی '.number_format($written).' ردیف…');
+        $this->markDuplicates($chunk);
 
-        $progress('نوشتنِ snapshot…');
-        DB::transaction(function () use ($rows) {
-            DB::table('seo_meta_audit_rows')->truncate();
-            foreach (array_chunk($rows, 300) as $chunk) {
-                DB::table('seo_meta_audit_rows')->insert($chunk);
-            }
-        });
+        return $this->summarise();
+    }
 
-        return $this->summarise($rows);
+    /**
+     * نوشتنِ یک دسته و خالی‌کردنِ بافر.
+     *
+     * @param  array<int, array<string, mixed>>  $buffer
+     */
+    private function flush(array &$buffer): int
+    {
+        if ($buffer === []) {
+            return 0;
+        }
+
+        $count = count($buffer);
+        DB::table('seo_meta_audit_rows')->insert($buffer);
+        $buffer = [];
+
+        return $count;
     }
 
     /**
@@ -246,80 +273,82 @@ class MetaAuditBuilder
             'crawled_description' => $crawled->meta_description ?? null,
             'crawled_at' => $crawled->crawled_at ?? null,
             'flags' => json_encode($flags, JSON_UNESCAPED_UNICODE),
-            'verdict' => null,   // بعد از تشخیصِ تکراری تعیین می‌شود
-            'matches_template' => $title === $expected['title'] && $description === $expected['description'],
+            // حکمِ اولیه بدونِ «تکراری» — آن فقط با دیدنِ همهٔ ردیف‌ها معلوم
+            // می‌شود و در پاسِ بعدی روی همین می‌نشیند.
+            'verdict' => $this->verdict($crawled, $title, $flags),
+            'matches_template' => $flags === [] && $title === $expected['title'] && $description === $expected['description'],
             'url_pattern_conflict' => $urlConflict,
             'generated_at' => now(),
         ];
     }
 
     /**
-     * تکراری‌ها + حکمِ نهایی. هر دو به همهٔ ردیف‌ها نیاز دارند، پس بعد از جمع‌آوری.
-     *
-     * @param  array<int, array<string, mixed>>  $rows
+     * تکراری‌ها فقط با دیدنِ کلِ مجموعه معلوم می‌شوند، پس بعد از نوشتنِ همهٔ
+     * دسته‌ها و با یک GROUP BY روی هشِ ایندکس‌شده — نه نگه‌داشتنِ همه‌چیز در حافظه.
      */
-    private function markDuplicates(array &$rows): void
+    private function markDuplicates(int $chunk): void
     {
-        $titleCounts = [];
-        $descCounts = [];
-        foreach ($rows as $row) {
-            if ($row['title_hash']) {
-                $titleCounts[$row['title_hash']] = ($titleCounts[$row['title_hash']] ?? 0) + 1;
+        foreach (['title_hash' => 'title_duplicate', 'description_hash' => 'description_duplicate'] as $column => $flag) {
+            $hashes = DB::table('seo_meta_audit_rows')
+                ->select($column)
+                ->whereNotNull($column)
+                ->groupBy($column)
+                ->havingRaw('COUNT(*) > 1')
+                ->pluck($column);
+
+            if ($hashes->isEmpty()) {
+                continue;
             }
-            if ($row['description_hash']) {
-                $descCounts[$row['description_hash']] = ($descCounts[$row['description_hash']] ?? 0) + 1;
+
+            foreach ($hashes->chunk($chunk) as $group) {
+                $rows = DB::table('seo_meta_audit_rows')
+                    ->whereIn($column, $group->all())
+                    ->get(['id', 'flags']);
+
+                foreach ($rows as $row) {
+                    $flags = json_decode((string) $row->flags, true) ?: [];
+                    if (in_array($flag, $flags, true)) {
+                        continue;
+                    }
+                    $flags[] = $flag;
+
+                    DB::table('seo_meta_audit_rows')->where('id', $row->id)->update([
+                        'flags' => json_encode(array_values($flags), JSON_UNESCAPED_UNICODE),
+                        // تکراری بودن خودش یک مشکل است — حکم و برچسبِ «مطابق
+                        // الگو» باید همین‌جا عقب‌نشینی کنند.
+                        'verdict' => 'needs_review',
+                        'matches_template' => false,
+                    ]);
+                }
             }
         }
-
-        foreach ($rows as &$row) {
-            $flags = json_decode((string) $row['flags'], true) ?: [];
-
-            if ($row['title_hash'] && ($titleCounts[$row['title_hash']] ?? 0) > 1) {
-                $flags[] = 'title_duplicate';
-            }
-            if ($row['description_hash'] && ($descCounts[$row['description_hash']] ?? 0) > 1) {
-                $flags[] = 'description_duplicate';
-            }
-
-            $row['flags'] = json_encode(array_values(array_unique($flags)), JSON_UNESCAPED_UNICODE);
-            $row['verdict'] = $this->verdict($row, $flags);
-        }
-        unset($row);
-
-        // برچسبِ «مطابق الگو» نباید روی ردیفی بنشیند که هنوز مشکلی دارد.
-        foreach ($rows as &$row) {
-            if ($row['flags'] !== '[]') {
-                $row['matches_template'] = $row['matches_template'] && $row['verdict'] !== 'needs_review';
-            }
-        }
-        unset($row);
     }
 
     /**
-     * @param  array<string, mixed>  $row
      * @param  array<int, string>  $flags
      */
-    private function verdict(array $row, array $flags): string
+    private function verdict(?object $crawled, string $liveTitle, array $flags): string
     {
         if ($flags !== []) {
             return 'needs_review';
         }
 
-        $before = (string) ($row['crawled_title'] ?? '');
+        $before = (string) ($crawled->title ?? '');
         if ($before === '') {
             // هرگز کرال نشده — نمی‌شود گفت اصلاح شد یا نه.
             return 'awaiting_crawl';
         }
 
-        if ($before === $row['live_title']) {
+        if ($before === $liveTitle) {
             return 'ok';
         }
 
         // کرالِ قدیمی خودش مشکل داشت و مقدارِ زنده ندارد → اصلاح واقعی است و
         // فقط منتظرِ کرالِ بعدی است تا در ابزارهای بیرونی هم دیده شود.
+        $beforeDescription = (string) ($crawled->meta_description ?? '');
         $beforeBroken = mb_strlen($before) > MetaLength::TITLE_MAX
-            || mb_strlen((string) ($row['crawled_description'] ?? '')) > MetaLength::DESCRIPTION_MAX
-            || trim((string) ($row['crawled_description'] ?? '')) === '';
+            || mb_strlen($beforeDescription) > MetaLength::DESCRIPTION_MAX
+            || trim($beforeDescription) === '';
 
         return $beforeBroken ? 'fixed' : 'awaiting_crawl';
     }
@@ -437,24 +466,21 @@ class MetaAuditBuilder
     }
 
     /**
-     * @param  array<int, array<string, mixed>>  $rows
+     * خلاصه از روی چیزی که *واقعاً نوشته شده* — نه از آرایهٔ حافظه. اگر اجرا
+     * وسطِ کار قطع شده باشد، عدد باید همان چیزی را بگوید که در جدول هست.
+     *
      * @return array<string, int>
      */
-    private function summarise(array $rows): array
+    private function summarise(): array
     {
-        $out = ['total' => count($rows)];
-        foreach (array_keys(SeoMetaAuditRow::FLAG_LABELS) as $flag) {
-            $out[$flag] = 0;
-        }
+        $out = ['total' => (int) DB::table('seo_meta_audit_rows')->count()];
+
         foreach (array_keys(SeoMetaAuditRow::VERDICT_LABELS) as $verdict) {
-            $out[$verdict] = 0;
+            $out[$verdict] = (int) DB::table('seo_meta_audit_rows')->where('verdict', $verdict)->count();
         }
 
-        foreach ($rows as $row) {
-            foreach (json_decode((string) $row['flags'], true) ?: [] as $flag) {
-                $out[$flag] = ($out[$flag] ?? 0) + 1;
-            }
-            $out[$row['verdict']] = ($out[$row['verdict']] ?? 0) + 1;
+        foreach (array_keys(SeoMetaAuditRow::FLAG_LABELS) as $flag) {
+            $out[$flag] = (int) SeoMetaAuditRow::query()->withFlag($flag)->count();
         }
 
         return $out;
