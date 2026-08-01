@@ -7,6 +7,7 @@ use Modules\Seo\Http\Controllers\CannibalizationController;
 use Modules\Seo\Http\Controllers\CanonicalController;
 use Modules\Seo\Http\Controllers\DashboardController;
 use Modules\Seo\Http\Controllers\InternalLinkController;
+use Modules\Seo\Http\Controllers\MetaAuditController;
 use Modules\Seo\Http\Controllers\NotFoundController;
 use Modules\Seo\Http\Controllers\RedirectController;
 use Modules\Seo\Http\Controllers\SeoRoleController;
@@ -48,6 +49,10 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::delete('/404/{notFound}', [NotFoundController::class, 'destroy'])->name('not-found.destroy');
 
         // مانیتورینگ و آدیت
+        // بازبینیِ تایتل/دیسکریپشن — فقط نمایش. تنها نوشتنش بازسازیِ snapshot است.
+        Route::get('/meta-audit', [MetaAuditController::class, 'index'])->name('meta-audit.index');
+        Route::post('/meta-audit/refresh', [MetaAuditController::class, 'refresh'])->name('meta-audit.refresh');
+
         Route::get('/audit', [AuditController::class, 'index'])->name('audit.index');
         Route::post('/audit/run', [AuditController::class, 'run'])->name('audit.run');
         Route::get('/audit/run/{run}', [AuditController::class, 'show'])->name('audit.show');
