@@ -19,6 +19,7 @@ use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\Province;
 use Modules\CRM\Models\Technician;
 use Modules\CRM\Services\OrderSmsNotifier;
+use Modules\CRM\Support\MobileNumber;
 
 /**
  * Wizard ۵-مرحله‌ای ثبت سفارش — هم‌تراز با add_order.php در WP CRM.
@@ -585,12 +586,26 @@ class OrderWizard extends Component
      * آدرس فقط برای سفارش‌های قابل ثبت اجباری است؛ برای لیدها شهر کافی
      * است و آدرس را اپراتور وارد نمی‌کند.
      */
+    /**
+     * شماره را همان‌جا که تایپ می‌شود تمیز می‌کند.
+     *
+     * بدونِ این، اپراتور «۰۹۱۲…» می‌نویسد و پیامِ خطا می‌گیرد بی‌آنکه بفهمد چرا —
+     * از نظرِ او همان یازده رقم است. حالا فیلد خودش به `09…` تبدیل می‌شود و
+     * اگر باز هم نامعتبر بود، یعنی واقعاً نامعتبر است.
+     */
+    public function updatedNewMobile(?string $value): void
+    {
+        $this->newMobile = MobileNumber::normalize($value);
+    }
+
     protected function validateStep2Customer(): void
     {
         $rules = $this->showNewCustomerForm
             ? [
                 'newName' => 'required|string|max:255',
-                'newMobile' => 'required|string|max:20',
+                // موبایل تا امروز هر چیزی را می‌پذیرفت. حالا بعد از نرمال‌سازی
+                // باید دقیقاً ۱۱ رقم و با 09 باشد — همان قاعدهٔ ماژول Staff.
+                'newMobile' => ['required', 'string', MobileNumber::RULE],
                 'newPhone' => 'nullable|string|max:20',
                 'introduction' => 'required|string|max:255',
             ]
@@ -617,6 +632,8 @@ class OrderWizard extends Component
         ], messages: [
             'introduction.required' => 'انتخاب «نحوه آشنایی» الزامی است.',
             'regionId.required' => 'برای این شهر، انتخاب منطقه الزامی است.',
+            'newMobile.required' => 'شماره موبایل الزامی است.',
+            'newMobile.regex' => MobileNumber::MESSAGE,
         ]);
     }
 
@@ -716,6 +733,9 @@ class OrderWizard extends Component
                 // ۱) مشتری — اگر فرم مشتری جدید پر شده، ولی شماره موبایل
                 //    تکراری است (مشتری از قبل وجود دارد)، همان را استفاده کن.
                 if ($this->showNewCustomerForm) {
+                    // نرمال‌سازیِ دوباره پیش از جست‌وجو: وگرنه «۰۹۱۲…» و «0912…»
+                    // دو مشتریِ جدا می‌سازند و سابقهٔ یک نفر دو تکه می‌شود.
+                    $this->newMobile = MobileNumber::normalize($this->newMobile);
                     $existing = Customer::where('mobile', $this->newMobile)->first();
                     if ($existing) {
                         // مشتری موجود — فیلدهای خالی را با ورودی پر کن
