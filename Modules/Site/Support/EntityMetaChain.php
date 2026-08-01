@@ -2,7 +2,6 @@
 
 namespace Modules\Site\Support;
 
-use Modules\Seo\Support\MetaLength;
 use Modules\Seo\Support\TemplateMeta;
 
 /**
@@ -30,15 +29,18 @@ final class EntityMetaChain
         ?string $metaDescription,
         array $template = [],
     ): array {
-        $title = MetaLength::title(
-            CatalogMerger::pick($metaTitle, $template['seo']['meta_title'] ?? null)
-                ?: TemplateMeta::title($type, ['title' => $name])
-        );
+        // نوشتهٔ دستی عیناً می‌ماند؛ سقفِ طول فقط روی خروجیِ قالب اعمال می‌شود.
+        // (`TemplateMeta` خودش سقف را می‌زند.)
+        $manualTitle = CatalogMerger::pick($metaTitle, $template['seo']['meta_title'] ?? null);
+        $manualDescription = CatalogMerger::pick($metaDescription, $template['seo']['meta_description'] ?? null);
 
-        $description = MetaLength::description(
-            CatalogMerger::pick($metaDescription, $template['seo']['meta_description'] ?? null)
-                ?: TemplateMeta::description($type, ['title' => $name])
-        );
+        $title = $manualTitle !== null && trim((string) $manualTitle) !== ''
+            ? trim((string) $manualTitle)
+            : TemplateMeta::title($type, ['title' => $name]);
+
+        $description = $manualDescription !== null && trim((string) $manualDescription) !== ''
+            ? trim((string) $manualDescription)
+            : TemplateMeta::description($type, ['title' => $name]);
 
         return [
             'meta_title' => $title ?: null,

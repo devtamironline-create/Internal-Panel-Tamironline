@@ -6,7 +6,6 @@ use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceBrandPage;
 use Modules\Seo\Support\ComboMeta;
-use Modules\Seo\Support\MetaLength;
 
 /**
  * زنجیرهٔ متایِ صفحهٔ ترکیبی (دستگاه × برند) — منبعِ واحد.
@@ -40,19 +39,20 @@ final class ComboMetaChain
         array $template = [],
         array $deviceCombo = [],
     ): array {
-        $title = MetaLength::title(self::pick(
+        // نوشتهٔ دستی عیناً می‌ماند؛ سقفِ طول فقط روی خروجیِ قالب اعمال می‌شود
+        // (`ComboMeta` خودش سقف را می‌زند). کوتاه‌کردنِ بی‌خبرِ متنی که ادمین
+        // تایپ کرده یعنی «چیزی که نوشتم عوض شد».
+        $title = self::pick(
             $page?->meta_title,
             $deviceCombo['seo']['meta_title'] ?? null,
             $template['seo']['meta_title'] ?? null,
-            ComboMeta::title($device->name, $brand->name),
-        ));
+        ) ?? ComboMeta::title($device->name, $brand->name);
 
-        $description = MetaLength::description(self::pick(
+        $description = self::pick(
             $page?->meta_description,
             $deviceCombo['seo']['meta_description'] ?? null,
             $template['seo']['meta_description'] ?? null,
-            ComboMeta::description($device->name, $brand->name),
-        ));
+        ) ?? ComboMeta::description($device->name, $brand->name);
 
         return [
             'meta_title' => $title ?: null,

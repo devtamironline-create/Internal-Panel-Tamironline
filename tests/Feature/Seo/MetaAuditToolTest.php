@@ -99,9 +99,24 @@ class MetaAuditToolTest extends ComboMetaUniquenessTest
         $this->assertNotNull($device, 'صفحهٔ دستگاه در snapshot نیست.');
         $this->assertSame('تعمیر اجاق گاز | تعمیرکار ۵ ستاره، اعزام تا ۳ ساعت', $device->live_title);
 
+        // این برند در فیکسچر متایِ دستی (واردشده از وردپرس) دارد، پس همان باید
+        // برنده باشد — نه قالب. قالب فقط جای خالی را پر می‌کند.
         $brand = SeoMetaAuditRow::where('page_type', 'brand')->where('url', '/brands/zanussi')->first();
         $this->assertNotNull($brand, 'صفحهٔ برند در snapshot نیست.');
-        $this->assertSame('تعمیرات زانوسی در محل | اعزام ۳ ساعته، ضمانت ۱۸۰ روزه', $brand->live_title);
+        $this->assertStringContainsString('نمایندگی زانوسی', $brand->live_title);
+        $this->assertFalse($brand->channels_diverge, 'هر دو کانال باید همین مقدار را بدهند.');
+    }
+
+    public function test_a_brand_without_manual_meta_falls_back_to_the_template(): void
+    {
+        Brand::query()->where('slug', 'zanussi')->update(['meta_title' => null, 'meta_description' => null]);
+
+        $this->build();
+
+        $this->assertSame(
+            'تعمیرات زانوسی در محل | اعزام ۳ ساعته، ضمانت ۱۸۰ روزه',
+            SeoMetaAuditRow::where('url', '/brands/zanussi')->value('live_title')
+        );
     }
 
     public function test_lengths_are_counted_in_characters_not_bytes(): void
@@ -143,23 +158,24 @@ class MetaAuditToolTest extends ComboMetaUniquenessTest
     }
 
     /**
-     * یافته‌ای که همین تست رو کرد: `crm_device_brand_pages.meta_title` فقط
-     * کانالِ کاتالوگ را عوض می‌کند و کانالِ سئو (`/v1/seo/meta`) آن را نمی‌بیند.
-     * یعنی همان صفحه از دو مسیر دو عنوانِ متفاوت می‌گیرد — دقیقاً چیزی که
-     * ستونِ `channels_diverge` برای دیدنش ساخته شد.
+     * `crm_device_brand_pages.meta_title` زمانی فقط کانالِ کاتالوگ را عوض می‌کرد
+     * و کانالِ سئو آن را نمی‌دید — یعنی همان صفحه از دو مسیر دو عنوان می‌داد و
+     * ابزار «نیاز به بررسی» می‌زد، در حالی که ادمین فقط متایش را نوشته بود.
+     *
+     * حالا هر دو کانال یک منبع دارند: نوشتهٔ دستی همه‌جا برنده است و اختلافی
+     * نمی‌ماند.
      */
-    public function test_a_per_pair_override_shows_up_as_a_channel_divergence(): void
+    public function test_a_per_pair_override_reaches_both_channels(): void
     {
-        DeviceBrandPage::query()->update(['meta_title' => 'عنوانِ دستیِ فقط-کاتالوگ']);
+        DeviceBrandPage::query()->update(['meta_title' => 'عنوانِ دستیِ همین جفت']);
 
         $this->build();
 
         $row = SeoMetaAuditRow::where('url', '/services/gaz/zanussi')->first();
 
-        $this->assertTrue($row->channels_diverge, 'اختلافِ دو کانال تشخیص داده نشد.');
-        $this->assertSame('عنوانِ دستیِ فقط-کاتالوگ', $row->catalog_title);
-        $this->assertNotSame($row->catalog_title, $row->live_title);
-        $this->assertContains('channels_diverge', $row->flags);
+        $this->assertSame('عنوانِ دستیِ همین جفت', $row->live_title);
+        $this->assertFalse($row->channels_diverge, 'نوشتهٔ دستی نباید اختلافِ کانال بسازد.');
+        $this->assertNotContains('channels_diverge', $row->flags);
     }
 
     public function test_a_stale_broken_crawl_against_a_healthy_live_value_reads_as_fixed(): void

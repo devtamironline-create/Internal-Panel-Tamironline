@@ -3,6 +3,7 @@
 namespace Tests\Feature\Seo;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Modules\Seo\Http\Controllers\MetaAuditController;
 use Modules\Seo\Services\MetaAuditBuilder;
 
@@ -60,38 +61,43 @@ class MetaAuditViewTest extends MetaAuditToolTest
     }
 
     /**
-     * اولین اجرای واقعی نشان داد اختلافِ دو کانال معمولاً در *دیسکریپشن* است نه
-     * عنوان — و صفحه آن‌وقت دو عنوانِ کاملاً یکسان کنارِ هم چاپ می‌کرد. جعبهٔ
-     * اختلاف باید فقط فیلدی را نشان دهد که واقعاً فرق دارد.
+     * صفحه باید فقط فیلدی را نشان دهد که واقعاً فرق دارد — اولین اجرای واقعی
+     * دو عنوانِ کاملاً یکسان کنارِ هم چاپ می‌کرد چون اختلاف در دیسکریپشن بود.
+     *
+     * تنها اختلافِ واقعیِ باقی‌مانده: مقداری که در «مدیریت محتوای صفحه» نوشته
+     * شده. آن ردیف را فقط کانالِ کاتالوگ می‌خواند و کانالِ سئو از وجودش خبر
+     * ندارد — پس همان صفحه از دو مسیر دو دیسکریپشن می‌دهد.
      */
     public function test_the_divergence_box_shows_the_field_that_actually_differs(): void
     {
-        \Modules\CRM\Models\DeviceBrandPage::query()->update([
-            'meta_description' => 'دیسکریپشنِ متفاوتِ کانالِ کاتالوگ.',
+        DB::table('site_page_sections')->insert([
+            'page_slug' => 'device_brand',
+            'section_key' => 'seo',
+            'payload' => json_encode(['meta_description' => 'دیسکریپشنِ فقط-کاتالوگ.'], JSON_UNESCAPED_UNICODE),
+            'is_published' => true,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
-        // فقط صفحاتِ ترکیبی: عنوانشان از هر دو کانال یکی است و تنها دیسکریپشن
-        // فرق دارد. (صفحاتِ برند در همین فیکسچر متایِ آلودهٔ وردپرس دارند، پس
-        // آن‌جا عنوان هم فرق می‌کند و تستِ این حالت را مبهم می‌کرد.)
         $html = $this->render(['type' => 'brand_device']);
 
         $this->assertStringContainsString('دیسکریپشن کانال کاتالوگ', $html);
-        $this->assertStringContainsString('دیسکریپشنِ متفاوتِ کانالِ کاتالوگ.', $html);
+        $this->assertStringContainsString('دیسکریپشنِ فقط-کاتالوگ.', $html);
+        // عنوان‌ها یکی‌اند، پس جعبهٔ عنوان نباید بیاید.
         $this->assertStringNotContainsString('تایتل کانال کاتالوگ', $html);
     }
 
     /**
-     * قرینه‌اش: صفحهٔ برندی که هنوز متایِ واردشده از وردپرس دارد، در کانالِ
-     * کاتالوگ همان را سرو می‌کند در حالی که کانالِ سئو قالبِ تأییدشده را می‌دهد.
-     * تا پیش از این، ابزار برای صفحاتِ مستقل اصلاً کانالِ کاتالوگ را نمی‌خواند و
-     * این اختلاف نامرئی بود.
+     * صفحهٔ برندی که متای دستی دارد، دیگر «اختلافِ دو کانال» نمی‌گیرد — هر دو
+     * کانال همان نوشتهٔ ادمین را می‌دهند. پیش از این، ابزار این‌ها را «نیاز به
+     * بررسی» علامت می‌زد در حالی که هیچ مشکلی نبود.
      */
-    public function test_a_standalone_brand_page_reveals_its_catalog_channel_title(): void
+    public function test_a_standalone_brand_page_no_longer_diverges(): void
     {
         $html = $this->render(['type' => 'brand']);
 
-        $this->assertStringContainsString('تایتل کانال کاتالوگ', $html);
         $this->assertStringContainsString('نمایندگی زانوسی', $html);
+        $this->assertStringNotContainsString('تایتل کانال کاتالوگ', $html);
     }
 
     public function test_the_page_offers_no_way_to_edit_content(): void

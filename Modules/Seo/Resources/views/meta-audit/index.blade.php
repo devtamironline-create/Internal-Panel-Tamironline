@@ -65,6 +65,38 @@
         </div>
     @else
 
+    @php
+        // «همه‌چیز مرتب است» باید یک نگاه معلوم باشد، نه با جمع‌زدنِ هشت کارت.
+        $problems = collect($cards)->keys()->reject(fn ($k) => $k === 'total')
+            ->sum(fn ($k) => $summary[$k] ?? 0);
+    @endphp
+
+    @if($problems === 0)
+        <div class="mb-6 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-2 border-emerald-300 dark:border-emerald-800">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">✓</span>
+                <div>
+                    <div class="font-bold text-emerald-800 dark:text-emerald-200">
+                        همهٔ {{ number_format($summary['total']) }} صفحه سالم‌اند.
+                    </div>
+                    <div class="text-sm text-emerald-700 dark:text-emerald-300 mt-0.5">
+                        هیچ تایتل بلند، تکراری یا خالی نمانده و هر دو کانال یک چیز می‌گویند.
+                        نوشته‌های دستی شما دست‌نخورده‌اند و بقیه از الگوی تأییدشده می‌آیند.
+                    </div>
+                </div>
+            </div>
+        </div>
+    @else
+        <div class="mb-6 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border-2 border-amber-300 dark:border-amber-800">
+            <div class="font-bold text-amber-800 dark:text-amber-200">
+                {{ number_format($problems) }} مورد نیاز به بررسی دارد.
+            </div>
+            <div class="text-sm text-amber-700 dark:text-amber-300 mt-0.5">
+                روی کارت‌های زیر بزنید تا فقط همان دسته را ببینید.
+            </div>
+        </div>
+    @endif
+
     {{-- کارت‌های خلاصه — کلیک روی هرکدام جدول را فیلتر می‌کند --}}
     <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 mb-6">
         @foreach($cards as $key => [$label, $colour])
