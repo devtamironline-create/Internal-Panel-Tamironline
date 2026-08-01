@@ -195,6 +195,12 @@ class TechAppNotificationSmsTest extends TestCase
     public function test_warning_goes_out_an_hour_before_the_deadline(): void
     {
         $this->activate('tech_sla_warning', 'tech_sla_due');
+
+        // ساعت را تثبیت می‌کنیم: «یادآور» رویدادِ فوری نیست، پس تابعِ
+        // پنجرهٔ ساعتِ مجاز (پیش‌فرض ۸ تا ۲۲) است. بدونِ این، تست بسته به
+        // ساعتِ اجرا سبز یا قرمز می‌شد — که از نداشتنش بدتر است.
+        $this->travelTo(now()->startOfDay()->addHours(10));
+
         $tech = $this->technician();
         // ۵۰ دقیقه مانده به مهلتِ یک‌ساعته.
         $this->order($tech, ['assigned_at' => now()->subMinutes(10)]);
