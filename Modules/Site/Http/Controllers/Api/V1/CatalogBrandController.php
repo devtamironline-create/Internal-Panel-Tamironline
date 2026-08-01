@@ -7,6 +7,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
+use Modules\Seo\Support\MetaLength;
 use Modules\Site\Models\Review;
 use Modules\Site\Services\PageSectionService;
 use Modules\Site\Support\CatalogMerger;
@@ -102,8 +103,11 @@ class CatalogBrandController extends Controller
                 'tone' => $brand->tone,
                 'bg' => $brand->bg,
 
-                'meta_title' => CatalogMerger::pick($brand->meta_title, $template['seo']['meta_title'] ?? null),
-                'meta_description' => CatalogMerger::pick($brand->meta_description, $template['seo']['meta_description'] ?? null),
+                // زنجیرهٔ اولویت عمداً دست‌نخورده: در صفحهٔ مستقلِ برند،
+                // `brand->meta_title` مقدارِ درستِ همین صفحه است و تکرار نیست.
+                // فقط سقفِ طول اعمال می‌شود چون مقادیرِ واردشده از وردپرس بلندند.
+                'meta_title' => MetaLength::title(CatalogMerger::pick($brand->meta_title, $template['seo']['meta_title'] ?? null)) ?: null,
+                'meta_description' => MetaLength::description(CatalogMerger::pick($brand->meta_description, $template['seo']['meta_description'] ?? null)) ?: null,
 
                 'sections' => [
                     'hero' => $this->buildHero($brand, $template, $enabled('hero', true)),

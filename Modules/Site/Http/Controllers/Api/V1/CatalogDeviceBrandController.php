@@ -7,6 +7,8 @@ use Illuminate\Http\JsonResponse;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceBrandPage;
+use Modules\Seo\Support\ComboMeta;
+use Modules\Seo\Support\MetaLength;
 use Modules\Site\Models\Review;
 use Modules\Site\Services\PageSectionService;
 use Modules\Site\Support\CatalogMerger;
@@ -112,20 +114,35 @@ class CatalogDeviceBrandController extends Controller
                     'logo' => MediaUrl::resolve($brand->logo),
                 ],
 
-                'meta_title' => $this->merge(
+                // متایِ صفحهٔ ترکیبی — عمداً بدونِ `$device->meta_*` و `$brand->meta_*`.
+                //
+                // آن دو، مقدارِ *یک* موجودیت‌اند و در صفحهٔ ترکیبی معنایشان را از
+                // دست می‌دهند: `brand->meta_title` برای همهٔ دستگاه‌های آن برند
+                // یکی است، پس `services/gaz/zanussi` و `services/range-hood/zanussi`
+                // عنوانِ کاملاً یکسان می‌گرفتند — بدونِ هیچ نامی از دستگاه.
+                // قرینه‌اش `device->meta_title` بود که همهٔ برندهای یک دستگاه را
+                // هم‌عنوان می‌کرد. (منشأشان ایمپورتِ وردپرس است؛ رشتهٔ رندرشدهٔ
+                // RankMath عیناً در ستون نشسته و placeholder ندارد که فیلتر شود.)
+                //
+                // زنجیرهٔ باقی‌مانده هر چهار سطح را پوشش می‌دهد: override دستیِ
+                // همین جفت ← الگوی اختصاصیِ این دستگاه ← الگوی محتواییِ ترکیبی
+                // (site_page_sections) ← قالبِ تأییدشدهٔ ماژول سئو. آخری تضمین
+                // می‌کند که با خالی‌بودنِ ردیفِ محتوایی، متا `null` نشود — و هر دو
+                // متغیرِ %device% و %brand% در آن هست، پس تکرار برنمی‌گردد.
+                // صفحاتِ مستقلِ دستگاه و برند دست‌نخورده‌اند: آن‌جا همان مقادیر
+                // درست‌اند و تکرار محسوب نمی‌شوند.
+                'meta_title' => MetaLength::title($this->merge(
                     $page?->meta_title,
                     $deviceCombo['seo']['meta_title'] ?? null,
-                    $device->meta_title,
-                    $brand->meta_title,
-                    $template['seo']['meta_title'] ?? null
-                ),
-                'meta_description' => $this->merge(
+                    $template['seo']['meta_title'] ?? null,
+                    ComboMeta::title($device->name, $brand->name)
+                )) ?: null,
+                'meta_description' => MetaLength::description($this->merge(
                     $page?->meta_description,
                     $deviceCombo['seo']['meta_description'] ?? null,
-                    $device->meta_description,
-                    $brand->meta_description,
-                    $template['seo']['meta_description'] ?? null
-                ),
+                    $template['seo']['meta_description'] ?? null,
+                    ComboMeta::description($device->name, $brand->name)
+                )) ?: null,
 
                 'sections' => [
                     'hero' => $this->buildHero($page, $device, $brand, $template, $enabled('hero', true), $deviceHeroImage, $deviceCombo),
