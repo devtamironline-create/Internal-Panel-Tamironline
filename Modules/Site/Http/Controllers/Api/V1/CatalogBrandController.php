@@ -7,11 +7,10 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
-use Modules\Seo\Support\MetaLength;
-use Modules\Seo\Support\TemplateMeta;
 use Modules\Site\Models\Review;
 use Modules\Site\Services\PageSectionService;
 use Modules\Site\Support\CatalogMerger;
+use Modules\Site\Support\EntityMetaChain;
 use Modules\Site\Support\InlineMediaUrl;
 use Modules\Site\Support\MediaUrl;
 
@@ -95,6 +94,10 @@ class CatalogBrandController extends Controller
         $sectionsEnabled = (array) ($brand->sections_enabled ?? []);
         $enabled = fn (string $key, bool $default = true): bool => (bool) ($sectionsEnabled[$key] ?? $default);
 
+        // زنجیرهٔ متا در EntityMetaChain زندگی می‌کند تا ابزارِ بازبینی
+        // بتواند همان مقدار را بدونِ درخواستِ HTTP بخواند.
+        $meta = EntityMetaChain::for('brand', (string) $brand->name, $brand->meta_title, $brand->meta_description, $template);
+
         return response()
             ->json([
                 'id' => (int) $brand->id,
@@ -107,10 +110,8 @@ class CatalogBrandController extends Controller
                 // زنجیرهٔ اولویت عمداً دست‌نخورده: در صفحهٔ مستقلِ برند،
                 // `brand->meta_title` مقدارِ درستِ همین صفحه است و تکرار نیست.
                 // فقط سقفِ طول اعمال می‌شود چون مقادیرِ واردشده از وردپرس بلندند.
-                'meta_title' => MetaLength::title(CatalogMerger::pick($brand->meta_title, $template['seo']['meta_title'] ?? null)
-                    ?: TemplateMeta::title('brand', ['title' => $brand->name])) ?: null,
-                'meta_description' => MetaLength::description(CatalogMerger::pick($brand->meta_description, $template['seo']['meta_description'] ?? null)
-                    ?: TemplateMeta::description('brand', ['title' => $brand->name])) ?: null,
+                'meta_title' => $meta['meta_title'],
+                'meta_description' => $meta['meta_description'],
 
                 'sections' => [
                     'hero' => $this->buildHero($brand, $template, $enabled('hero', true)),

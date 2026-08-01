@@ -70,12 +70,28 @@ class MetaAuditViewTest extends MetaAuditToolTest
             'meta_description' => 'دیسکریپشنِ متفاوتِ کانالِ کاتالوگ.',
         ]);
 
-        $html = $this->render();
+        // فقط صفحاتِ ترکیبی: عنوانشان از هر دو کانال یکی است و تنها دیسکریپشن
+        // فرق دارد. (صفحاتِ برند در همین فیکسچر متایِ آلودهٔ وردپرس دارند، پس
+        // آن‌جا عنوان هم فرق می‌کند و تستِ این حالت را مبهم می‌کرد.)
+        $html = $this->render(['type' => 'brand_device']);
 
         $this->assertStringContainsString('دیسکریپشن کانال کاتالوگ', $html);
         $this->assertStringContainsString('دیسکریپشنِ متفاوتِ کانالِ کاتالوگ.', $html);
-        // عنوان‌ها یکی‌اند، پس جعبهٔ عنوان نباید بیاید.
         $this->assertStringNotContainsString('تایتل کانال کاتالوگ', $html);
+    }
+
+    /**
+     * قرینه‌اش: صفحهٔ برندی که هنوز متایِ واردشده از وردپرس دارد، در کانالِ
+     * کاتالوگ همان را سرو می‌کند در حالی که کانالِ سئو قالبِ تأییدشده را می‌دهد.
+     * تا پیش از این، ابزار برای صفحاتِ مستقل اصلاً کانالِ کاتالوگ را نمی‌خواند و
+     * این اختلاف نامرئی بود.
+     */
+    public function test_a_standalone_brand_page_reveals_its_catalog_channel_title(): void
+    {
+        $html = $this->render(['type' => 'brand']);
+
+        $this->assertStringContainsString('تایتل کانال کاتالوگ', $html);
+        $this->assertStringContainsString('نمایندگی زانوسی', $html);
     }
 
     public function test_the_page_offers_no_way_to_edit_content(): void

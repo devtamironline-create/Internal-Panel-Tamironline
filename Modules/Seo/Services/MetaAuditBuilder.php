@@ -11,6 +11,7 @@ use Modules\Seo\Models\SeoSetting;
 use Modules\Seo\Support\BrandDeviceCombo;
 use Modules\Seo\Support\MetaLength;
 use Modules\Site\Support\ComboMetaChain;
+use Modules\Site\Support\EntityMetaChain;
 
 /**
  * ساختِ snapshotِ بازبینیِ متا.
@@ -169,6 +170,14 @@ class MetaAuditBuilder
         foreach (Device::query()->where('is_active', true)->cursor() as $device) {
             $url = str_replace('{slug}', $device->slug, $pattern);
 
+            $catalog = EntityMetaChain::for('device', (string) $device->name,
+                $device->meta_title, $device->meta_description,
+                $this->seoSection('device', [
+                    'device' => $device->short_name ?? $device->name,
+                    'device_label' => $device->name,
+                    'device_slug' => $device->slug,
+                ]));
+
             yield $this->row(
                 type: 'device',
                 url: $url,
@@ -176,8 +185,8 @@ class MetaAuditBuilder
                 secondaryId: null,
                 label: $device->name,
                 live: $this->resolver->titleAndDescription('device', $device),
-                catalogTitle: null,
-                catalogDescription: null,
+                catalogTitle: $catalog['meta_title'],
+                catalogDescription: $catalog['meta_description'],
                 expected: $this->expected('device', ['title' => $device->name]),
                 crawled: $crawled[$this->key($url)] ?? null,
                 // صفحاتِ دستگاه تنها جایی‌اند که دو الگوی URL در ریپو با هم
@@ -199,6 +208,10 @@ class MetaAuditBuilder
         foreach (Brand::query()->where('is_active', true)->cursor() as $brand) {
             $url = str_replace('{slug}', $brand->slug, $pattern);
 
+            $catalog = EntityMetaChain::for('brand', (string) $brand->name,
+                $brand->meta_title, $brand->meta_description,
+                $this->seoSection('brand', ['brand' => $brand->name, 'brand_slug' => $brand->slug]));
+
             yield $this->row(
                 type: 'brand',
                 url: $url,
@@ -206,8 +219,8 @@ class MetaAuditBuilder
                 secondaryId: null,
                 label: $brand->name,
                 live: $this->resolver->titleAndDescription('brand', $brand),
-                catalogTitle: null,
-                catalogDescription: null,
+                catalogTitle: $catalog['meta_title'],
+                catalogDescription: $catalog['meta_description'],
                 expected: $this->expected('brand', ['title' => $brand->name]),
                 crawled: $crawled[$this->key($url)] ?? null,
             );
