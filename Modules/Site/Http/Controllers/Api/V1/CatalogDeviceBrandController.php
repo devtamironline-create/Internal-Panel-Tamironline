@@ -41,6 +41,7 @@ class CatalogDeviceBrandController extends Controller
         $page = DeviceBrandPage::query()
             ->where('device_id', $device->id)
             ->where('brand_id', $brand->id)
+            ->with('seoMeta')
             ->first();
 
         if (! $page || ! $page->is_active) {

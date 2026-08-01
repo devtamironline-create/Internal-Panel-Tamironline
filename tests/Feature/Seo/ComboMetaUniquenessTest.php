@@ -185,6 +185,17 @@ class ComboMetaUniquenessTest extends TestCase
             $t->timestamps();
         });
 
+        // کانالِ کاتالوگ حالا `seo_meta` را هم می‌خواند تا با کانالِ سئو یکی باشد.
+        Schema::create('seo_meta', function ($t) {
+            $t->id();
+            $t->string('seoable_type');
+            $t->unsignedBigInteger('seoable_id');
+            $t->string('title')->nullable();
+            $t->text('description')->nullable();
+            $t->string('status')->nullable();
+            $t->timestamps();
+        });
+
         Schema::create('site_page_sections', function ($t) {
             $t->id();
             $t->string('page_slug');

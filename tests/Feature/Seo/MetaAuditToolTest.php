@@ -53,16 +53,6 @@ class MetaAuditToolTest extends ComboMetaUniquenessTest
             $t->text('meta_description')->nullable();
             $t->timestamp('crawled_at')->nullable();
         });
-
-        Schema::create('seo_meta', function ($t) {
-            $t->id();
-            $t->string('seoable_type');
-            $t->unsignedBigInteger('seoable_id');
-            $t->string('title')->nullable();
-            $t->text('description')->nullable();
-            $t->string('status')->nullable();
-            $t->timestamps();
-        });
     }
 
     private function build(): array
@@ -165,6 +155,32 @@ class MetaAuditToolTest extends ComboMetaUniquenessTest
      * حالا هر دو کانال یک منبع دارند: نوشتهٔ دستی همه‌جا برنده است و اختلافی
      * نمی‌ماند.
      */
+    /**
+     * قرینهٔ همان اشکال، از سمتِ دیگر: متایی که ادمین در **پنلِ سئو**
+     * (`seo_meta`) می‌نویسد. کانالِ سئو از اول آن را می‌خواند، ولی کانالِ کاتالوگ
+     * اصلاً از وجودش خبر نداشت — پس همان صفحه از دو مسیر دو عنوان می‌داد و
+     * ابزار «اختلافِ دو کانال» می‌زد، در حالی که ادمین فقط یک بار چیزی نوشته بود.
+     */
+    public function test_a_value_written_in_the_seo_panel_reaches_both_channels(): void
+    {
+        foreach (DeviceBrandPage::all() as $page) {
+            DB::table('seo_meta')->insert([
+                'seoable_type' => DeviceBrandPage::class,
+                'seoable_id' => $page->id,
+                'title' => 'عنوانِ نوشته‌شده در پنلِ سئو '.$page->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        $this->build();
+
+        $row = SeoMetaAuditRow::where('url', '/services/gaz/zanussi')->first();
+
+        $this->assertStringStartsWith('عنوانِ نوشته‌شده در پنلِ سئو', $row->live_title);
+        $this->assertFalse($row->channels_diverge, 'نوشتهٔ پنلِ سئو باید در هر دو کانال دیده شود.');
+    }
+
     public function test_a_per_pair_override_reaches_both_channels(): void
     {
         DeviceBrandPage::query()->update(['meta_title' => 'عنوانِ دستیِ همین جفت']);

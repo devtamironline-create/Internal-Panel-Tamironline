@@ -158,7 +158,7 @@ class CatalogDeviceController extends Controller
 
         // زنجیرهٔ متا در EntityMetaChain زندگی می‌کند تا ابزارِ بازبینی
         // بتواند همان مقدار را بدونِ درخواستِ HTTP بخواند.
-        $meta = EntityMetaChain::for('device', (string) $device->name, $device->meta_title, $device->meta_description, $template);
+        $meta = EntityMetaChain::for('device', (string) $device->name, $device->meta_title, $device->meta_description, $template, $device->seoMeta);
 
         return response()
             ->json([
