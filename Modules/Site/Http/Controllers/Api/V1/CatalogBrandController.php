@@ -96,7 +96,7 @@ class CatalogBrandController extends Controller
 
         // زنجیرهٔ متا در EntityMetaChain زندگی می‌کند تا ابزارِ بازبینی
         // بتواند همان مقدار را بدونِ درخواستِ HTTP بخواند.
-        $meta = EntityMetaChain::for('brand', (string) $brand->name, $brand->meta_title, $brand->meta_description, $template);
+        $meta = EntityMetaChain::for('brand', (string) $brand->name, $brand->meta_title, $brand->meta_description, $template, $brand->seoMeta);
 
         return response()
             ->json([

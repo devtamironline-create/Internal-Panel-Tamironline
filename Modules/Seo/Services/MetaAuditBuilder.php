@@ -115,7 +115,7 @@ class MetaAuditBuilder
 
         $pages = DeviceBrandPage::query()
             ->where('is_active', true)
-            ->with(['device', 'brand'])
+            ->with(['device', 'brand', 'seoMeta'])
             ->cursor();
 
         foreach ($pages as $page) {
@@ -167,7 +167,7 @@ class MetaAuditBuilder
     {
         $pattern = (string) config('seo.types.device.url', '/services/{slug}');
 
-        foreach (Device::query()->where('is_active', true)->cursor() as $device) {
+        foreach (Device::query()->where('is_active', true)->with('seoMeta')->cursor() as $device) {
             $url = str_replace('{slug}', $device->slug, $pattern);
 
             $catalog = EntityMetaChain::for('device', (string) $device->name,
@@ -176,7 +176,7 @@ class MetaAuditBuilder
                     'device' => $device->short_name ?? $device->name,
                     'device_label' => $device->name,
                     'device_slug' => $device->slug,
-                ]));
+                ]), $device->seoMeta);
 
             yield $this->row(
                 type: 'device',
@@ -205,12 +205,12 @@ class MetaAuditBuilder
     {
         $pattern = (string) config('seo.types.brand.url', '/brands/{slug}');
 
-        foreach (Brand::query()->where('is_active', true)->cursor() as $brand) {
+        foreach (Brand::query()->where('is_active', true)->with('seoMeta')->cursor() as $brand) {
             $url = str_replace('{slug}', $brand->slug, $pattern);
 
             $catalog = EntityMetaChain::for('brand', (string) $brand->name,
                 $brand->meta_title, $brand->meta_description,
-                $this->seoSection('brand', ['brand' => $brand->name, 'brand_slug' => $brand->slug]));
+                $this->seoSection('brand', ['brand' => $brand->name, 'brand_slug' => $brand->slug]), $brand->seoMeta);
 
             yield $this->row(
                 type: 'brand',

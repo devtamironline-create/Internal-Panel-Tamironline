@@ -43,12 +43,16 @@ final class ComboMetaChain
         // (`ComboMeta` خودش سقف را می‌زند). کوتاه‌کردنِ بی‌خبرِ متنی که ادمین
         // تایپ کرده یعنی «چیزی که نوشتم عوض شد».
         $title = self::pick(
+            // پنلِ سئو — کانالِ سئو از اول این را می‌خواند و کاتالوگ نمی‌خواند؛
+            // نتیجه‌اش دو عنوانِ متفاوت برای یک صفحه بود.
+            $page?->seoMeta?->title,
             $page?->meta_title,
             $deviceCombo['seo']['meta_title'] ?? null,
             $template['seo']['meta_title'] ?? null,
         ) ?? ComboMeta::title($device->name, $brand->name);
 
         $description = self::pick(
+            $page?->seoMeta?->description,
             $page?->meta_description,
             $deviceCombo['seo']['meta_description'] ?? null,
             $template['seo']['meta_description'] ?? null,
