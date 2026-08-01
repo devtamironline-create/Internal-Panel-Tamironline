@@ -80,6 +80,12 @@ class MetaResolver
             $context
         );
 
+        // تورِ ایمنیِ نهاییِ طول — بعد از رندرِ متغیرها، چون طولِ واقعی تازه
+        // این‌جا معلوم می‌شود: قالب زیرِ سقف است ولی «ماشین لباسشویی الکترواستیل»
+        // چند کاراکتر ردش می‌کند. سرِ عنوان (نامِ دستگاه/برند) دست‌نخورده می‌ماند.
+        $title = \Modules\Seo\Support\MetaLength::title($title);
+        $description = \Modules\Seo\Support\MetaLength::description($description);
+
         $canonical = self::pick($meta?->canonical) ?: $this->absoluteUrl($this->registry->pathFor($type, $model));
 
         $robotsFlags = $this->resolveRobots($type, $cfg, $model, $meta);
