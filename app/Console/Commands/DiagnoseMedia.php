@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * «چرا عکس‌ها نمایش داده نمی‌شوند؟»
@@ -31,10 +30,18 @@ class DiagnoseMedia extends Command
 
     public function handle(): int
     {
-        $this->symlink();
-        $this->storageDir();
-        $this->samples();
-        $this->permissions();
+        // هر بخش جدا محافظت می‌شود: روی سروری که تازه جابه‌جا شده ممکن
+        // است افزونه‌ای غایب یا دیتابیسی خاموش باشد، و شکستِ یک بخش نباید
+        // بخش‌های سالم را — که اتفاقاً جوابِ اصلی در آن‌هاست — از بین ببرد.
+        foreach (['symlink', 'storageDir', 'samples', 'permissions'] as $step) {
+            try {
+                $this->{$step}();
+            } catch (\Throwable $e) {
+                $this->newLine();
+                $this->error('  ✗ این بخش اجرا نشد: '.$e->getMessage());
+                $this->line('    (بقیهٔ بررسی‌ها ادامه پیدا می‌کنند.)');
+            }
+        }
 
         return self::SUCCESS;
     }
@@ -151,7 +158,6 @@ class DiagnoseMedia extends Command
     private function samples(): void
     {
         $limit = max(1, (int) $this->option('samples'));
-        $disk = Storage::disk('public');
 
         $sources = [
             ['site_media', 'path', 'رسانهٔ سایت (/media/{id})'],
@@ -201,7 +207,12 @@ class DiagnoseMedia extends Command
             foreach ($paths as $path) {
                 // مقادیر می‌توانند مطلق (/storage/…) یا نسبی باشند.
                 $relative = ltrim(preg_replace('#^/?storage/#', '', (string) $path), '/');
-                if (! $disk->exists($relative)) {
+
+                // عمداً به‌جای Storage::disk('public') از خودِ فایل‌سیستم:
+                // ساختنِ دیسک، آشکارسازِ mime را می‌سازد که به افزونهٔ
+                // fileinfo نیاز دارد. این ابزار باید روی سرورِ نیمه‌خراب هم
+                // کار کند — همان‌جایی که بیشترین نیاز به آن هست.
+                if (! is_file(storage_path('app/public/'.$relative))) {
                     $missing[] = $relative;
                 }
             }
