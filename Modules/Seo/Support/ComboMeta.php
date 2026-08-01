@@ -2,9 +2,6 @@
 
 namespace Modules\Seo\Support;
 
-use Modules\Seo\Models\SeoSetting;
-use Modules\Seo\Services\VariableRenderer;
-
 /**
  * قالبِ متایِ صفحهٔ ترکیبی (دستگاه × برند) برای مصرفِ endpointِ کاتالوگ.
  *
@@ -26,32 +23,17 @@ final class ComboMeta
 {
     public static function title(?string $device, ?string $brand): string
     {
-        return MetaLength::title(self::render('title', $device, $brand));
+        return TemplateMeta::title('brand_device', self::vars($device, $brand));
     }
 
     public static function description(?string $device, ?string $brand): string
     {
-        return MetaLength::description(self::render('description', $device, $brand));
+        return TemplateMeta::description('brand_device', self::vars($device, $brand));
     }
 
-    private static function render(string $field, ?string $device, ?string $brand): string
+    /** @return array<string, string> */
+    private static function vars(?string $device, ?string $brand): array
     {
-        $device = trim((string) $device);
-        $brand = trim((string) $brand);
-
-        // بدونِ نامِ دستگاه، عنوان همان چیزی می‌شود که می‌خواهیم از آن فرار کنیم.
-        if ($device === '' || $brand === '') {
-            return '';
-        }
-
-        // خواندنِ تنظیمات نباید صفحهٔ عمومی را بشکند (جدولِ نبوده، دیتابیسِ خاموش).
-        $stored = rescue(fn () => SeoSetting::get('tpl_brand_device_'.$field), null, false);
-
-        $template = $stored ?: (string) config('seo.templates.brand_device.'.$field, '');
-
-        return (new VariableRenderer)->render($template, [
-            'device' => $device,
-            'brand' => $brand,
-        ]);
+        return ['device' => trim((string) $device), 'brand' => trim((string) $brand)];
     }
 }

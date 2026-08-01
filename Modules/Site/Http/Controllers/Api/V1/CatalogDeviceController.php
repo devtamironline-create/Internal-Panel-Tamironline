@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\Seo\Support\MetaLength;
+use Modules\Seo\Support\TemplateMeta;
 use Modules\Site\Models\Review;
 use Modules\Site\Services\PageSectionService;
 use Modules\Site\Support\CatalogMerger;
@@ -168,8 +169,10 @@ class CatalogDeviceController extends Controller
                 // زنجیرهٔ اولویت عمداً دست‌نخورده: در صفحهٔ مستقلِ دستگاه،
                 // `device->meta_title` مقدارِ درستِ همین صفحه است و تکرار نیست.
                 // فقط سقفِ طول اعمال می‌شود چون مقادیرِ واردشده از وردپرس بلندند.
-                'meta_title' => MetaLength::title(CatalogMerger::pick($device->meta_title, $template['seo']['meta_title'] ?? null)) ?: null,
-                'meta_description' => MetaLength::description(CatalogMerger::pick($device->meta_description, $template['seo']['meta_description'] ?? null)) ?: null,
+                'meta_title' => MetaLength::title(CatalogMerger::pick($device->meta_title, $template['seo']['meta_title'] ?? null)
+                    ?: TemplateMeta::title('device', ['title' => $device->name])) ?: null,
+                'meta_description' => MetaLength::description(CatalogMerger::pick($device->meta_description, $template['seo']['meta_description'] ?? null)
+                    ?: TemplateMeta::description('device', ['title' => $device->name])) ?: null,
 
                 'sections' => [
                     'hero' => $this->buildHero($device, $template, $enabled('hero', true)),
