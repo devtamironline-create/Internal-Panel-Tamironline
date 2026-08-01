@@ -32,7 +32,9 @@ class CleanupImportedMeta extends Command
                             {--apply : واقعاً پاک کن (بدونِ این فقط گزارش می‌دهد)}
                             {--rollback : مقادیرِ پشتیبان‌گرفته‌شده را برگردان}
                             {--table=all : brands|devices|all}
-                            {--samples=5 : چند نمونه از هر گروه نشان داده شود}';
+                            {--samples=5 : چند نمونه از هر گروه نشان داده شود}
+                            {--list-backup : فهرستِ مقادیرِ پشتیبان‌گرفته‌شده با شناسه}
+                            {--id=* : فقط همین شناسه‌های پشتیبان برگردانده شوند}';
 
     protected $description = 'گزارش و پاک‌سازیِ متایِ آلودهٔ واردشده از وردپرس (برگشت‌پذیر)';
 
@@ -46,6 +48,10 @@ class CleanupImportedMeta extends Command
 
     public function handle(): int
     {
+        if ($this->option('list-backup')) {
+            return $this->listBackup();
+        }
+
         if ($this->option('rollback')) {
             return $this->rollback();
         }
@@ -229,6 +235,52 @@ class CleanupImportedMeta extends Command
         $this->info('  ✓ '.count($rows).' ردیف پشتیبان‌گیری و خالی شد. حالا قالبِ تأییدشده جایشان را می‌گیرد.');
     }
 
+    /**
+     * فهرستِ پشتیبان‌ها با شناسه — پیش‌نیازِ برگرداندنِ انتخابی.
+     *
+     * چرا لازم شد: پاک‌سازی چند عنوانِ دستیِ خوب را هم برد (تشخیصِ آلودگی
+     * چندنشانه‌ای است و مثلاً عنوانی که فقط یک نویسه از حد رد کرده بود هم در
+     * فهرست افتاد). برگرداندنِ همه با هم یعنی برگرداندنِ متایِ وردپرسی هم —
+     * پس باید بشود دانه‌دانه انتخاب کرد.
+     */
+    private function listBackup(): int
+    {
+        if (! Schema::hasTable(self::BACKUP_TABLE)) {
+            $this->error('جدولِ پشتیبان وجود ندارد — هنوز پاک‌سازی‌ای انجام نشده.');
+
+            return self::FAILURE;
+        }
+
+        $rows = DB::table(self::BACKUP_TABLE)->orderBy('id')->get();
+        if ($rows->isEmpty()) {
+            $this->line('پشتیبانی ثبت نشده.');
+
+            return self::SUCCESS;
+        }
+
+        $this->newLine();
+        $this->line('<fg=cyan>── مقادیرِ پشتیبان‌گرفته‌شده ──</>');
+
+        foreach ($rows as $row) {
+            $name = DB::table($row->source_table)->where('id', $row->source_id)->value('name');
+            $state = $row->restored_at ? '<fg=green>برگردانده شده</>' : 'خالی';
+
+            $this->newLine();
+            $this->line('  <fg=yellow>#'.$row->id.'</>  '.$name.'  ('.$row->source_table.')  ·  '.$state);
+            $this->line('    عنوان   ('.mb_strlen((string) $row->meta_title).'): '.$row->meta_title);
+            if (filled($row->meta_description)) {
+                $this->line('    توضیحات ('.mb_strlen((string) $row->meta_description).'): '
+                    .mb_substr((string) $row->meta_description, 0, 110).'…');
+            }
+        }
+
+        $this->newLine();
+        $this->line('  برگرداندنِ انتخابی: <fg=cyan>php artisan seo:meta:cleanup --rollback --id=3 --id=7</>');
+        $this->line('  برگرداندنِ همه:     <fg=cyan>php artisan seo:meta:cleanup --rollback</>');
+
+        return self::SUCCESS;
+    }
+
     private function rollback(): int
     {
         if (! Schema::hasTable(self::BACKUP_TABLE)) {
@@ -237,9 +289,17 @@ class CleanupImportedMeta extends Command
             return self::FAILURE;
         }
 
-        $rows = DB::table(self::BACKUP_TABLE)->whereNull('restored_at')->get();
+        $ids = array_filter(array_map('intval', (array) $this->option('id')));
+
+        $rows = DB::table(self::BACKUP_TABLE)
+            ->whereNull('restored_at')
+            ->when($ids !== [], fn ($q) => $q->whereIn('id', $ids))
+            ->get();
+
         if ($rows->isEmpty()) {
-            $this->line('همهٔ پشتیبان‌ها قبلاً برگردانده شده‌اند.');
+            $this->line($ids === []
+                ? 'همهٔ پشتیبان‌ها قبلاً برگردانده شده‌اند.'
+                : 'با این شناسه‌ها چیزی برای برگرداندن نبود (شاید قبلاً برگردانده شده‌اند).');
 
             return self::SUCCESS;
         }
