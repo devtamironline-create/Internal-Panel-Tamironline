@@ -54,15 +54,30 @@ class MetaResolver
     }
 
     /**
-     * @return array<string, mixed>
+     * فقط عنوان و توضیحاتِ نهایی — بدونِ canonical/robots/og/twitter و مهم‌تر از
+     * همه بدونِ `SchemaGenerator`، که برای JSON-LD به بانکِ FAQ کوئری می‌زند.
+     *
+     * برای ابزارِ بازبینیِ سئو لازم است: آن‌جا چند هزار صفحه پشتِ‌سرِ هم خوانده
+     * می‌شوند و اجرای کاملِ resolve() برای هرکدام گران است. `resolve()` خودش هم
+     * از همین متد استفاده می‌کند تا دو مسیرِ جدا شکل نگیرد و ابزار دقیقاً همان
+     * چیزی را گزارش کند که سایت سرو می‌کند.
+     *
+     * @return array{title: string, description: string}
      */
-    public function resolve(string $type, Model $model): array
+    public function titleAndDescription(string $type, Model $model): array
     {
         $cfg = $this->registry->config($type) ?? [];
         $meta = method_exists($model, 'seoMeta') ? $model->seoMeta : null;
 
-        $context = $this->buildContext($type, $cfg, $model);
+        return $this->composeText($type, $meta, $this->buildContext($type, $cfg, $model));
+    }
 
+    /**
+     * @param  array<string, string|null>  $context
+     * @return array{title: string, description: string}
+     */
+    private function composeText(string $type, ?SeoMeta $meta, array $context): array
+    {
         $title = $this->variables->render(
             self::pick($meta?->title, $this->template($type, 'title')),
             $context
@@ -71,7 +86,7 @@ class MetaResolver
         // مقالاتِ بلاگ: Title باید کوتاه و یکدست باشد «{عنوانِ کوتاه} | تعمیرآنلاین»
         // (~۶۵ کاراکتر) — بدونِ پسوندهای اضافهٔ واردشده از وردپرس که Titleِ مقالات
         // را از حدِ سئو رد می‌کردند. فقط نوعِ article؛ خدمات/برندها دست‌نخورده.
-        if ($type === 'article' && $title !== null && trim($title) !== '') {
+        if ($type === 'article' && trim($title) !== '') {
             $title = \Modules\Site\Support\ArticleSeoTitle::build($title);
         }
 
@@ -83,8 +98,23 @@ class MetaResolver
         // تورِ ایمنیِ نهاییِ طول — بعد از رندرِ متغیرها، چون طولِ واقعی تازه
         // این‌جا معلوم می‌شود: قالب زیرِ سقف است ولی «ماشین لباسشویی الکترواستیل»
         // چند کاراکتر ردش می‌کند. سرِ عنوان (نامِ دستگاه/برند) دست‌نخورده می‌ماند.
-        $title = \Modules\Seo\Support\MetaLength::title($title);
-        $description = \Modules\Seo\Support\MetaLength::description($description);
+        return [
+            'title' => \Modules\Seo\Support\MetaLength::title($title),
+            'description' => \Modules\Seo\Support\MetaLength::description($description),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function resolve(string $type, Model $model): array
+    {
+        $cfg = $this->registry->config($type) ?? [];
+        $meta = method_exists($model, 'seoMeta') ? $model->seoMeta : null;
+
+        $context = $this->buildContext($type, $cfg, $model);
+
+        ['title' => $title, 'description' => $description] = $this->composeText($type, $meta, $context);
 
         $canonical = self::pick($meta?->canonical) ?: $this->absoluteUrl($this->registry->pathFor($type, $model));
 
