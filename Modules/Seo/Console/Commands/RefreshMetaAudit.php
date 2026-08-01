@@ -14,7 +14,8 @@ use Modules\Seo\Services\MetaAuditBuilder;
  */
 class RefreshMetaAudit extends Command
 {
-    protected $signature = 'seo:meta-audit:refresh';
+    protected $signature = 'seo:meta-audit:refresh
+                            {--chunk=50 : هر چند ردیف یک‌بار در دیتابیس نوشته شود}';
 
     protected $description = 'بازسازی snapshot بازبینی تایتل و دیسکریپشن همهٔ صفحات';
 
@@ -22,7 +23,10 @@ class RefreshMetaAudit extends Command
     {
         $started = microtime(true);
 
-        $stats = $builder->rebuild(fn (string $message) => $this->line('  '.$message));
+        $stats = $builder->rebuild(
+            fn (string $message) => $this->line('  '.$message),
+            (int) $this->option('chunk'),
+        );
 
         $this->newLine();
         $this->info('  ✓ snapshot ساخته شد: '.number_format($stats['total']).' صفحه در '
