@@ -59,6 +59,25 @@ class MetaAuditViewTest extends MetaAuditToolTest
         $this->assertStringNotContainsString('/brands/zanussi', $html);
     }
 
+    /**
+     * اولین اجرای واقعی نشان داد اختلافِ دو کانال معمولاً در *دیسکریپشن* است نه
+     * عنوان — و صفحه آن‌وقت دو عنوانِ کاملاً یکسان کنارِ هم چاپ می‌کرد. جعبهٔ
+     * اختلاف باید فقط فیلدی را نشان دهد که واقعاً فرق دارد.
+     */
+    public function test_the_divergence_box_shows_the_field_that_actually_differs(): void
+    {
+        \Modules\CRM\Models\DeviceBrandPage::query()->update([
+            'meta_description' => 'دیسکریپشنِ متفاوتِ کانالِ کاتالوگ.',
+        ]);
+
+        $html = $this->render();
+
+        $this->assertStringContainsString('دیسکریپشن کانال کاتالوگ', $html);
+        $this->assertStringContainsString('دیسکریپشنِ متفاوتِ کانالِ کاتالوگ.', $html);
+        // عنوان‌ها یکی‌اند، پس جعبهٔ عنوان نباید بیاید.
+        $this->assertStringNotContainsString('تایتل کانال کاتالوگ', $html);
+    }
+
     public function test_the_page_offers_no_way_to_edit_content(): void
     {
         $html = $this->render();

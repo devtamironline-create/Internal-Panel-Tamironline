@@ -180,9 +180,11 @@
                             </details>
                         @endif
 
-                        @if($row->channels_diverge)
+                        {{-- فقط فیلدی که واقعاً فرق دارد نشان داده می‌شود؛ چاپِ عنوانِ
+                             یکسان کنارِ هم فقط گمراه‌کننده است. --}}
+                        @if($row->channels_diverge && $row->catalog_title !== $row->live_title)
                             <div class="mt-2 p-2 rounded bg-purple-100/70 dark:bg-purple-900/20 text-[11px]">
-                                <div class="font-bold text-purple-800 dark:text-purple-200 mb-0.5">کانال کاتالوگ چیز دیگری می‌دهد:</div>
+                                <div class="font-bold text-purple-800 dark:text-purple-200 mb-0.5">تایتل کانال کاتالوگ:</div>
                                 <div class="text-purple-900 dark:text-purple-100">{{ $row->catalog_title }}</div>
                             </div>
                         @endif
@@ -194,6 +196,15 @@
                                           : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' }}">
                             {{ $row->live_description_len }}/{{ $descriptionMax }}
                         </span>
+
+                        @if($row->channels_diverge && (string) $row->catalog_description !== (string) $row->live_description)
+                            <div class="mt-2 p-2 rounded bg-purple-100/70 dark:bg-purple-900/20 text-[11px]">
+                                <div class="font-bold text-purple-800 dark:text-purple-200 mb-0.5">
+                                    دیسکریپشن کانال کاتالوگ ({{ mb_strlen((string) $row->catalog_description) }} نویسه):
+                                </div>
+                                <div class="text-purple-900 dark:text-purple-100 leading-5">{{ $row->catalog_description ?: '—' }}</div>
+                            </div>
+                        @endif
                     </td>
                     <td class="p-3 max-w-[300px]">
                         @if($row->crawled_title)
