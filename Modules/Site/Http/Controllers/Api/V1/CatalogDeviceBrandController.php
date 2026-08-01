@@ -7,11 +7,10 @@ use Illuminate\Http\JsonResponse;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceBrandPage;
-use Modules\Seo\Support\ComboMeta;
-use Modules\Seo\Support\MetaLength;
 use Modules\Site\Models\Review;
 use Modules\Site\Services\PageSectionService;
 use Modules\Site\Support\CatalogMerger;
+use Modules\Site\Support\ComboMetaChain;
 use Modules\Site\Support\InlineMediaUrl;
 use Modules\Site\Support\MediaUrl;
 
@@ -96,6 +95,11 @@ class CatalogDeviceBrandController extends Controller
         );
         $enabled = fn (string $key, bool $default = true): bool => (bool) ($sectionsEnabled[$key] ?? $default);
 
+        // زنجیرهٔ متا در `ComboMetaChain` زندگی می‌کند تا ابزارِ بازبینیِ سئو
+        // بتواند بدونِ درخواستِ HTTP همان مقدار را بخواند — یک منبع، نه دو کپی
+        // که با هم اختلاف پیدا کنند.
+        $meta = ComboMetaChain::for($page, $device, $brand, $template, $deviceCombo);
+
         return response()
             ->json([
                 'device' => [
@@ -114,35 +118,8 @@ class CatalogDeviceBrandController extends Controller
                     'logo' => MediaUrl::resolve($brand->logo),
                 ],
 
-                // متایِ صفحهٔ ترکیبی — عمداً بدونِ `$device->meta_*` و `$brand->meta_*`.
-                //
-                // آن دو، مقدارِ *یک* موجودیت‌اند و در صفحهٔ ترکیبی معنایشان را از
-                // دست می‌دهند: `brand->meta_title` برای همهٔ دستگاه‌های آن برند
-                // یکی است، پس `services/gaz/zanussi` و `services/range-hood/zanussi`
-                // عنوانِ کاملاً یکسان می‌گرفتند — بدونِ هیچ نامی از دستگاه.
-                // قرینه‌اش `device->meta_title` بود که همهٔ برندهای یک دستگاه را
-                // هم‌عنوان می‌کرد. (منشأشان ایمپورتِ وردپرس است؛ رشتهٔ رندرشدهٔ
-                // RankMath عیناً در ستون نشسته و placeholder ندارد که فیلتر شود.)
-                //
-                // زنجیرهٔ باقی‌مانده هر چهار سطح را پوشش می‌دهد: override دستیِ
-                // همین جفت ← الگوی اختصاصیِ این دستگاه ← الگوی محتواییِ ترکیبی
-                // (site_page_sections) ← قالبِ تأییدشدهٔ ماژول سئو. آخری تضمین
-                // می‌کند که با خالی‌بودنِ ردیفِ محتوایی، متا `null` نشود — و هر دو
-                // متغیرِ %device% و %brand% در آن هست، پس تکرار برنمی‌گردد.
-                // صفحاتِ مستقلِ دستگاه و برند دست‌نخورده‌اند: آن‌جا همان مقادیر
-                // درست‌اند و تکرار محسوب نمی‌شوند.
-                'meta_title' => MetaLength::title($this->merge(
-                    $page?->meta_title,
-                    $deviceCombo['seo']['meta_title'] ?? null,
-                    $template['seo']['meta_title'] ?? null,
-                    ComboMeta::title($device->name, $brand->name)
-                )) ?: null,
-                'meta_description' => MetaLength::description($this->merge(
-                    $page?->meta_description,
-                    $deviceCombo['seo']['meta_description'] ?? null,
-                    $template['seo']['meta_description'] ?? null,
-                    ComboMeta::description($device->name, $brand->name)
-                )) ?: null,
+                'meta_title' => $meta['meta_title'],
+                'meta_description' => $meta['meta_description'],
 
                 'sections' => [
                     'hero' => $this->buildHero($page, $device, $brand, $template, $enabled('hero', true), $deviceHeroImage, $deviceCombo),
