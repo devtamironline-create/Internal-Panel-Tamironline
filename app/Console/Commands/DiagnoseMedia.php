@@ -204,7 +204,19 @@ class DiagnoseMedia extends Command
             }
 
             $missing = [];
+            $viaHttp = 0;
+
             foreach ($paths as $path) {
+                // بعضی ستون‌ها URLِ کامل نگه می‌دارند (مثلاً thumbnailِ
+                // دستگاه که به مسیرِ /media/{id} اشاره می‌کند). این‌ها
+                // اصلاً قرار نیست فایلِ مستقیم داشته باشند و بررسیِ دیسک
+                // برایشان بی‌معنا است — گزارشِ «روی دیسک نیست» فقط ما را
+                // دنبالِ مشکلی می‌فرستد که وجود ندارد.
+                if (preg_match('#^https?://#i', (string) $path)) {
+                    $viaHttp++;
+
+                    continue;
+                }
                 // مقادیر می‌توانند مطلق (/storage/…) یا نسبی باشند.
                 $relative = ltrim(preg_replace('#^/?storage/#', '', (string) $path), '/');
 
@@ -217,8 +229,18 @@ class DiagnoseMedia extends Command
                 }
             }
 
+            if ($viaHttp === $paths->count()) {
+                $this->line('  • '.$label.': هر '.$paths->count().' نمونه URLِ کامل است و از مسیرِ '
+                    .'HTTP سرو می‌شود، نه فایلِ مستقیم.');
+                $this->line('    سالم بودنشان را باید با curl سنجید، نه با وجودِ فایل:');
+                $this->line('    <fg=cyan>curl -I "'.$paths->first().'"</>');
+
+                continue;
+            }
+
             if (empty($missing)) {
-                $this->info('  ✓ '.$label.': هر '.$paths->count().' نمونه روی دیسک هست.');
+                $this->info('  ✓ '.$label.': هر '.($paths->count() - $viaHttp).' نمونهٔ فایلی روی دیسک هست.'
+                    .($viaHttp > 0 ? '  ('.$viaHttp.' نمونه URL بود و رد شد.)' : ''));
 
                 continue;
             }
