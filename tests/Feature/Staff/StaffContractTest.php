@@ -45,9 +45,10 @@ class StaffContractTest extends TestCase
         $this->actingAs($admin)
             ->post('/admin/staff-contracts', [
                 'user_ids' => [$a->id, $b->id],   // فقط دو نفر تیک خورده‌اند
-                'contract_date' => now()->toDateString(),
-                'start_date' => now()->toDateString(),
-                'end_date' => now()->addYear()->toDateString(),
+                // فرم تاریخ را شمسی می‌گیرد و کنترلر پیش از ذخیره تبدیل می‌کند.
+                'contract_date' => \App\Support\JalaliDate::toJalali(now()->toDateString()),
+                'start_date' => \App\Support\JalaliDate::toJalali(now()->toDateString()),
+                'end_date' => \App\Support\JalaliDate::toJalali(now()->addYear()->toDateString()),
                 'service_description' => 'نظارت و کنترل کیفیت',
                 'monthly_wage' => 22000000,
                 'promissory_amount' => 100000000,
@@ -280,6 +281,8 @@ class StaffContractTest extends TestCase
             'user_id' => $user->id,
             'party_name' => $user->full_name,
             'party_national_code' => '0012345678',
+            // این کمکی مستقیم روی مدل می‌نویسد و از فرم رد نمی‌شود، پس مقدار
+            // همان میلادیِ ستون است — تبدیلِ شمسی فقط در کنترلر اتفاق می‌افتد.
             'contract_date' => now()->toDateString(),
             'start_date' => now()->toDateString(),
             'end_date' => now()->addYear()->toDateString(),

@@ -83,43 +83,68 @@
                           placeholder="مثال: نظارت و بررسی و ارتباط با مشتریان به منظور کنترل کیفیت">{{ old('service_description') }}</textarea>
             </label>
 
+            @php
+                $today = \App\Support\JalaliDate::toJalali(now()->toDateString());
+                $hint = 'mt-1 text-[11px] text-gray-400 leading-5';
+                $box = 'mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm';
+            @endphp
+
+            {{-- تاریخ‌ها شمسی وارد می‌شوند و پیش از ذخیره به میلادی تبدیل
+                 می‌شوند؛ ستون دیتابیس میلادی می‌ماند. --}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <label class="block text-xs text-gray-500">تاریخ قرارداد *
-                    <input type="date" name="contract_date" required value="{{ old('contract_date', now()->toDateString()) }}" dir="ltr"
-                           class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                </label>
-                <label class="block text-xs text-gray-500">تاریخ شروع *
-                    <input type="date" name="start_date" required value="{{ old('start_date', now()->toDateString()) }}" dir="ltr"
-                           class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                </label>
-                <label class="block text-xs text-gray-500">تاریخ پایان
-                    <input type="date" name="end_date" value="{{ old('end_date') }}" dir="ltr"
-                           class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                </label>
-                <label class="block text-xs text-gray-500">مزد ماهانه (تومان)
-                    <input type="number" name="monthly_wage" min="0" value="{{ old('monthly_wage') }}" dir="ltr" placeholder="22000000"
-                           class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                </label>
-                <label class="block text-xs text-gray-500">نرخ ساعتی روز تعطیل (تومان)
-                    <input type="number" name="holiday_hourly_rate" min="0" value="{{ old('holiday_hourly_rate') }}" dir="ltr" placeholder="150000"
-                           class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                </label>
-                <label class="block text-xs text-gray-500">مبلغ سفته ضمانت (تومان)
-                    <input type="number" name="promissory_amount" min="0" value="{{ old('promissory_amount') }}" dir="ltr" placeholder="100000000"
-                           class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                </label>
-                <label class="block text-xs text-gray-500">مدت عدم جذب (ماه)
-                    <input type="number" name="non_solicit_months" min="0" max="120" value="{{ old('non_solicit_months', 24) }}" dir="ltr"
-                           class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                </label>
-                <label class="block text-xs text-gray-500">مهلت بررسی تأخیر پرداخت (روز کاری)
-                    <input type="number" name="payment_grace_days" min="0" max="60" value="{{ old('payment_grace_days', 3) }}" dir="ltr"
-                           class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                </label>
-                <label class="block text-xs text-gray-500">مدت محرمانگی پس از پایان (سال)
-                    <input type="number" name="confidentiality_years" min="0" max="50" value="{{ old('confidentiality_years', 5) }}" dir="ltr"
-                           class="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                </label>
+                <div>
+                    <label class="block text-xs text-gray-500">تاریخ قرارداد *</label>
+                    <input type="text" name="contract_date" required dir="ltr" placeholder="۱۴۰۵/۰۵/۱۱"
+                           value="{{ old('contract_date', $today) }}"
+                           class="jalali-datepicker cursor-pointer bg-white {{ $box }}">
+                    <p class="{{ $hint }}">تاریخ درجِ سند — در سرآغازِ قرارداد می‌نشیند.</p>
+                    @error('contract_date')<p class="text-[11px] text-rose-600 mt-1">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">تاریخ شروع *</label>
+                    <input type="text" name="start_date" required dir="ltr" placeholder="۱۴۰۵/۰۵/۱۱"
+                           value="{{ old('start_date', $today) }}"
+                           class="jalali-datepicker cursor-pointer bg-white {{ $box }}">
+                    <p class="{{ $hint }}">بند ۳-۱ — آغازِ مدت همکاری.</p>
+                    @error('start_date')<p class="text-[11px] text-rose-600 mt-1">{{ $message }}</p>@enderror
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">تاریخ پایان</label>
+                    <input type="text" name="end_date" dir="ltr" placeholder="خالی = بدون تاریخ پایان"
+                           value="{{ old('end_date') }}"
+                           class="jalali-datepicker cursor-pointer bg-white {{ $box }}">
+                    <p class="{{ $hint }}">بند ۳-۱ — خاتمهٔ مدت. اگر خالی بماند در متن «—» درج می‌شود.</p>
+                    @error('end_date')<p class="text-[11px] text-rose-600 mt-1">{{ $message }}</p>@enderror
+                </div>
+            </div>
+
+            {{-- تنها مقادیرِ متغیر به‌ازای هر نفر. بندهای ثابتِ قرارداد (عدم
+                 جذب، مهلت پرداخت، محرمانگی، نرخ روز تعطیل) از تنظیماتِ مجموعه
+                 می‌آیند و این‌جا قابل تغییر نیستند — متنِ قراردادِ پایه آن‌ها را
+                 ثابت اعلام کرده. --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500">مزد ماهانه (تومان)</label>
+                    <input type="number" name="monthly_wage" min="0" dir="ltr" placeholder="22000000"
+                           value="{{ old('monthly_wage') }}" class="{{ $box }}">
+                    <p class="{{ $hint }}">بند ۵-۱ — حق‌الزحمهٔ ماهانهٔ همین کارمند.</p>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500">مبلغ سفته ضمانت (تومان)</label>
+                    <input type="number" name="promissory_amount" min="0" dir="ltr" placeholder="100000000"
+                           value="{{ old('promissory_amount') }}" class="{{ $box }}">
+                    <p class="{{ $hint }}">بند ۱۴-۱ — مبلغِ سفتهٔ تضمین. شمارهٔ سفته را بالاتر، جلوی نامِ هر کارمند وارد کنید.</p>
+                </div>
+            </div>
+
+            <div class="text-[11px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/40 rounded-lg p-3 leading-6">
+                <b class="text-gray-600 dark:text-gray-300">بندهای ثابتِ قرارداد</b> — این‌ها برای همهٔ کارمندان یکسان‌اند و
+                از تنظیماتِ مجموعه خوانده می‌شوند، چون متنِ قراردادِ پایه آن‌ها را ثابت اعلام کرده:
+                <span class="whitespace-nowrap">مدت عدم جذب (بند ۱۳-۱): <b>{{ $party1['contract_non_solicit_months'] ?: '۲۴' }} ماه</b></span> ·
+                <span class="whitespace-nowrap">مهلت بررسی تأخیر پرداخت (بند ۷-۱): <b>{{ $party1['contract_payment_grace_days'] ?: '۳' }} روز کاری</b></span> ·
+                <span class="whitespace-nowrap">مدت محرمانگی (بند ۱۰-۵): <b>{{ $party1['contract_confidentiality_years'] ?: '۵' }} سال</b></span> ·
+                <span class="whitespace-nowrap">نرخ ساعتی روز تعطیل (بند ۵-۲):
+                    <b>{{ $party1['contract_holiday_hourly_rate'] ? number_format((int) $party1['contract_holiday_hourly_rate']).' تومان' : 'تعیین‌نشده' }}</b></span>
             </div>
         </div>
 
