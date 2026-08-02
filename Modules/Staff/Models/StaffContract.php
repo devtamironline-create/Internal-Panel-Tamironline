@@ -167,6 +167,27 @@ class StaffContract extends Model
     }
 
     /**
+     * همهٔ فایل‌های این قرارداد روی دیسک — مدارک، امضا، ویدیوی احراز و PDF نهایی.
+     *
+     * فقط جای حذف به‌کار می‌رود: پاک‌کردنِ رکورد بدونِ این‌ها یعنی کارت ملی و
+     * شناسنامهٔ یک نفر روی سرور می‌ماند بی‌آنکه از پنل دیده شود.
+     *
+     * @return list<string>
+     */
+    public function allFilePaths(): array
+    {
+        $paths = [];
+        foreach (array_keys(self::DOCUMENTS) as $column) {
+            $paths[] = $this->{$column};
+        }
+        $paths[] = $this->signature_path;
+        $paths[] = $this->video_path;
+        $paths[] = $this->final_pdf_path;
+
+        return array_values(array_filter($paths, fn ($p) => filled($p)));
+    }
+
+    /**
      * آمارِ قراردادهای یک کاربر برای سایدبار — به‌صورتِ «امن».
      *
      * سایدبار روی همهٔ صفحات رندر می‌شود؛ اگر جدول هنوز migrate نشده باشد

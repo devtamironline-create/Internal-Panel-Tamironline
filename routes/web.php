@@ -1,14 +1,14 @@
 <?php
 
+use App\Http\Controllers\Admin\ChatController;
+use App\Http\Controllers\Admin\DataRestoreController;
+use App\Http\Controllers\Admin\PermissionController;
+use App\Http\Controllers\Admin\RoleController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Modules\Core\Http\Controllers\AuthController;
 use Modules\Core\Http\Controllers\DashboardController;
 use Modules\Staff\Http\Controllers\StaffController;
-use App\Http\Controllers\Admin\ChatController;
-use App\Http\Controllers\Admin\RoleController;
-use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\DataRestoreController;
 
 // Health Check for Coolify/Docker
 Route::get('/health', function () {
@@ -69,6 +69,7 @@ Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route('admin.dashboard');
     }
+
     return redirect()->route('admin.login');
 })->name('home');
 
@@ -149,7 +150,15 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::get('/{staffContract}/download', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'download'])->name('download');
         Route::get('/{staffContract}/file/{field}', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'document'])
             ->where('field', '[a-z0-9_]+')->name('file');
-        Route::delete('/{staffContract}', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'destroy'])->name('destroy');
+        // حذفِ قرارداد — فقط مدیرِ کل، و با تأییدِ پیامکی.
+        //
+        // قرارداد سندی امضاشده همراه با مدارکِ هویتیِ کارمند است؛ `manage-staff-contracts`
+        // برای دیدن و تأیید کافی است ولی برای پاک‌کردن نه. کد از سرویسِ احراز
+        // هویتِ پنل به موبایلِ خودِ مدیر می‌رود.
+        Route::middleware('can:manage-permissions')->group(function () {
+            Route::post('/{staffContract}/delete-code', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'requestDeleteCode'])->name('delete-code');
+            Route::delete('/{staffContract}', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'destroy'])->name('destroy');
+        });
     });
 
     // گزارش فعالیت (فایل‌محور، نگهداری ۱۵ روزه) — فقط مدیر کل

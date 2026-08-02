@@ -124,6 +124,52 @@
                     </form>
                 </div>
             @endif
+
+            {{-- حذفِ قرارداد — فقط مدیرِ کل، و فقط با کدِ پیامکی.
+                 برای قراردادهای تستی یا اشتباهی. رکورد و همهٔ فایل‌هایش
+                 (مدارک هویتی، امضا، ویدیو، PDF) با هم پاک می‌شوند. --}}
+            @can('manage-permissions')
+                <div class="bg-white dark:bg-gray-800 rounded-xl border-2 border-red-200 dark:border-red-900/60 p-4 space-y-3">
+                    <h2 class="text-sm font-bold text-red-700 dark:text-red-300">حذف قرارداد</h2>
+
+                    @error('delete')
+                        <p class="text-xs text-rose-600 bg-rose-50 dark:bg-rose-900/20 rounded p-2">{{ $message }}</p>
+                    @enderror
+
+                    @if(session('delete_code_sent') == $contract->id)
+                        <p class="text-xs text-gray-600 dark:text-gray-300 leading-6">
+                            کد تأیید به موبایل شما ({{ auth()->user()->mobile }}) پیامک شد.
+                            برای حذفِ قطعیِ قرارداد <b class="font-mono ltr">{{ $contract->contract_number }}</b> آن را وارد کنید.
+                        </p>
+                        <form method="POST" action="{{ route('admin.staff-contracts.destroy', $contract) }}" class="space-y-2"
+                              onsubmit="return confirm('قرارداد و همهٔ مدارک، امضا و ویدیوی آن برای همیشه حذف می‌شود. مطمئن‌اید؟');">
+                            @csrf
+                            @method('DELETE')
+                            <input type="text" name="confirmation_code" required dir="ltr" inputmode="numeric"
+                                   placeholder="کد ۶ رقمی" autocomplete="one-time-code"
+                                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm text-center font-mono">
+                            <button class="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold">
+                                🗑 حذف قطعی قرارداد
+                            </button>
+                        </form>
+                    @else
+                        <p class="text-xs text-gray-500 leading-6">
+                            @if($contract->status === 'approved')
+                                <span class="text-amber-600 dark:text-amber-400 font-bold">این قرارداد تأییدشده است.</span>
+                                حذفش سندِ امضاشده و مدارکِ هویتیِ کارمند را برای همیشه پاک می‌کند.
+                            @else
+                                برای قراردادهای تستی یا اشتباهی. رکورد به‌همراه همهٔ مدارک، امضا و ویدیو حذف می‌شود.
+                            @endif
+                        </p>
+                        <form method="POST" action="{{ route('admin.staff-contracts.delete-code', $contract) }}">
+                            @csrf
+                            <button class="w-full py-2 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-sm">
+                                درخواست کد تأیید حذف
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            @endcan
         </div>
 
         {{-- ستون چپ: متن کامل قرارداد --}}
