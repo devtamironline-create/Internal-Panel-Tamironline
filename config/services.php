@@ -62,4 +62,22 @@ return [
         'base_url' => env('NESHAN_BASE_URL', 'https://api.neshan.org'),
     ],
 
+    // پوش نوتیفیکیشن نجوا (push.najva.com) — اعلانِ وبِ اپِ تکنسین.
+    //
+    //   api_key    — هدرِ `apiKey` تمام درخواست‌ها (نه Authorization).
+    //   website_id — شناسهٔ عددیِ سایت، از GET /v1/sender. با UUIDِ اسکریپت
+    //                (`data-najva-id`) که داخل اپ است اشتباه نشود؛ فرستادن
+    //                UUID به‌جای عدد، خطای ۴۰۰ می‌دهد.
+    //
+    // هر دو از پنل ادمین هم قابل ویرایش‌اند و مقدارِ `crm_settings` بر این
+    // مقدارها اولویت دارد — همان الگوی کاوه‌نگار.
+    //
+    // یادآوری: بدونِ ثبتِ IP سرور در وایت‌لیستِ پنل نجوا، هر ارسال ۴۱۶
+    // می‌گیرد؛ این تنظیمات به‌تنهایی کافی نیست.
+    'najva' => [
+        'api_key' => env('NAJVA_API_KEY'),
+        'website_id' => env('NAJVA_WEBSITE_ID'),
+        'base_url' => env('NAJVA_BASE_URL', 'https://push.najva.com'),
+    ],
+
 ];
