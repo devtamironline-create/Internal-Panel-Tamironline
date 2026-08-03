@@ -364,4 +364,135 @@ class TechnicianPushEventsTest extends TestCase
         $this->assertSame('order_assigned_tech', $log->event_key);
         $this->assertSame(11, $log->order_id);
     }
+
+    // ───────────────────────── محتوای چهار رویدادِ دیگر
+
+    public function test_the_status_change_push_names_the_new_status(): void
+    {
+        $this->token('tok-a');
+        $this->accept(['tok-a']);
+
+        $this->fire(new SendTechnicianPush(
+            7,
+            PushEvent::OrderStatusChanged,
+            ['order_code' => 'OR-11', 'status_label' => 'هماهنگ شده'],
+            orderId: 11,
+            fingerprint: 'status:coordinated:100',
+        ));
+
+        Http::assertSent(function (ClientRequest $request) {
+            $fields = collect($request->data())->keyBy('name');
+
+            $this->assertSame('وضعیت سفارش تغییر کرد', $fields['message.title']['contents']);
+            $this->assertSame('OR-11: هماهنگ شده', $fields['message.body']['contents']);
+
+            return true;
+        });
+    }
+
+    public function test_going_back_to_a_previous_status_is_a_new_event(): void
+    {
+        $this->token('tok-a');
+        $this->accept(['tok-a']);
+
+        $job = fn (string $fingerprint) => new SendTechnicianPush(
+            7, PushEvent::OrderStatusChanged,
+            ['order_code' => 'OR-11', 'status_label' => 'هماهنگ شده'],
+            orderId: 11, fingerprint: $fingerprint,
+        );
+
+        $this->fire($job('status:coordinated:100'));
+        $this->fire($job('status:open:200'));
+        // برگشت به همان وضعیت، ولی در لحظهٔ دیگر ⇒ اعلانِ تازه.
+        $this->fire($job('status:coordinated:300'));
+
+        Http::assertSentCount(3);
+    }
+
+    public function test_the_returned_order_push_is_sent_once_per_order(): void
+    {
+        $this->token('tok-a');
+        $this->accept(['tok-a']);
+
+        $job = new SendTechnicianPush(
+            7, PushEvent::OrderReturned, ['order_code' => 'OR-11'], orderId: 11
+        );
+
+        $this->fire($job);
+        $this->fire($job);
+
+        Http::assertSentCount(1);
+        Http::assertSent(function (ClientRequest $request) {
+            $fields = collect($request->data())->keyBy('name');
+
+            $this->assertSame('سفارش برگشتی', $fields['message.title']['contents']);
+            $this->assertSame('OR-11 منتظر تأیید یا رد شماست.', $fields['message.body']['contents']);
+
+            return true;
+        });
+    }
+
+    /** برگشتیِ سفارشِ دیگر باید اعلانِ خودش را بگیرد. */
+    public function test_a_different_returned_order_still_pushes(): void
+    {
+        $this->token('tok-a');
+        $this->accept(['tok-a']);
+
+        $this->fire(new SendTechnicianPush(7, PushEvent::OrderReturned, ['order_code' => 'OR-11'], orderId: 11));
+        $this->fire(new SendTechnicianPush(7, PushEvent::OrderReturned, ['order_code' => 'OR-12'], orderId: 12));
+
+        Http::assertSentCount(2);
+    }
+
+    public function test_the_operator_message_push_carries_the_excerpt(): void
+    {
+        $this->token('tok-a');
+        $this->accept(['tok-a']);
+
+        $this->fire(new SendTechnicianPush(
+            7, PushEvent::OperatorMessage, ['excerpt' => 'فردا ساعت ۹ دفتر باش']
+        ));
+
+        Http::assertSent(function (ClientRequest $request) {
+            $fields = collect($request->data())->keyBy('name');
+
+            $this->assertSame('پیام جدید از پشتیبانی', $fields['message.title']['contents']);
+            $this->assertSame('فردا ساعت ۹ دفتر باش', $fields['message.body']['contents']);
+            $this->assertSame(
+                'https://tg.tamironline.com/messages',
+                $fields['message.notification_click.click_url']['contents']
+            );
+
+            return true;
+        });
+    }
+
+    /** پیام‌های پیاپیِ کارشناس هرکدام اعلانِ خودشان را دارند. */
+    public function test_operator_messages_are_not_deduplicated(): void
+    {
+        $this->token('tok-a');
+        $this->accept(['tok-a']);
+
+        $this->fire(new SendTechnicianPush(7, PushEvent::OperatorMessage, ['excerpt' => 'اول']));
+        $this->fire(new SendTechnicianPush(7, PushEvent::OperatorMessage, ['excerpt' => 'دوم']));
+
+        Http::assertSentCount(2);
+    }
+
+    public function test_an_operator_message_is_held_outside_the_allowed_window(): void
+    {
+        $this->assertFalse(TechPushPolicy::withinWindow(
+            PushEvent::OperatorMessage,
+            CarbonImmutable::parse('2026-08-03 04:00')
+        ));
+    }
+
+    /** برگشتی و تغییرِ وضعیت مهلت‌دارند و ساکت نمی‌شوند. */
+    public function test_order_events_ignore_the_quiet_window(): void
+    {
+        $night = CarbonImmutable::parse('2026-08-03 04:00');
+
+        $this->assertTrue(TechPushPolicy::withinWindow(PushEvent::OrderReturned, $night));
+        $this->assertTrue(TechPushPolicy::withinWindow(PushEvent::OrderStatusChanged, $night));
+    }
 }

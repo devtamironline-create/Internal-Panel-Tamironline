@@ -77,6 +77,27 @@ class SendSlaReminders extends Command
                 'deadline_at' => $deadline->format('Y-m-d H:i'),
                 '_fingerprint' => TechSmsPolicy::slaFingerprint($order),
             ]);
+
+            // پوش فقط برای «سررسید»، نه برای یادآورِ یک‌ساعت‌مانده: سند
+            // یک رویدادِ مهلت تعریف کرده و دو اعلانِ پشتِ‌هم برای یک مهلت،
+            // همان بی‌اعتمادی‌ای را می‌سازد که ضدِتکرار جلویش را می‌گیرد.
+            //
+            // این دستور از کرون اجرا می‌شود و پاسخِ HTTP ندارد؛ لاراول
+            // callbackهای `afterResponse` را موقعِ پایانِ دستور اجرا
+            // می‌کند، پس ارسال انجام می‌شود.
+            if ($trigger === SmsTrigger::TechSlaDue && $order->technician_id) {
+                \Modules\CRM\Jobs\SendTechnicianPush::queue(
+                    \Modules\CRM\Enums\PushEvent::SlaDue,
+                    (int) $order->technician_id,
+                    [
+                        'order_code' => (string) $order->order_code,
+                        'technician_name' => (string) ($order->technician->firstname_tech ?? ''),
+                    ],
+                    $order->id,
+                    \Modules\CRM\Support\TechPushPolicy::slaFingerprint($order),
+                );
+            }
+
             $sent[$key]++;
         }
 

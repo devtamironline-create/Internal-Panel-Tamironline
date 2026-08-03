@@ -294,6 +294,30 @@ class Order extends Model
                     'error' => $e->getMessage(),
                 ]);
             }
+
+            // پوش هم می‌رود. بدونِ اثرِ انگشت: یک سفارشِ برگشتی یک اعلان
+            // دارد، و اگر دوباره برگشت بخورد `return_review_pending` باید
+            // اول پاک شده باشد — یعنی رویدادِ تازه‌ای است ولی همان سفارش،
+            // و ضدِتکرارِ (تکنسین، رویداد، سفارش) درست عمل می‌کند.
+            //
+            // این هوک جدا از try بالاست: شکستِ پیامک نباید پوش را هم
+            // ببرد؛ دقیقاً برای همین دو کانال داریم.
+            try {
+                \Modules\CRM\Jobs\SendTechnicianPush::queue(
+                    \Modules\CRM\Enums\PushEvent::OrderReturned,
+                    (int) $order->technician_id,
+                    [
+                        'order_code' => (string) $order->order_code,
+                        'technician_name' => (string) ($order->technician->firstname_tech ?? ''),
+                    ],
+                    $order->id,
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('crm.return_review_push_failed', [
+                    'order_id' => $order->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         });
 
         // Push ساخت سفارش جدید به WP — وقتی اپراتور در پنل لاراول

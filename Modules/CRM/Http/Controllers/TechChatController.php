@@ -194,6 +194,18 @@ class TechChatController extends Controller
             'created_at'    => now(),
         ]);
 
+        // خلاصهٔ پیام روی اعلان می‌نشیند، نه کلِ متن: بدنهٔ پوش سقفِ ۴۰۰
+        // کاراکتری دارد و خواندنِ پیامِ کامل کارِ خودِ اپ است.
+        //
+        // بدونِ ضدِتکرار — هر پیام یک اعلانِ مستقل است — ولی داخلِ پنجرهٔ
+        // ساعتِ مجاز، چون پیامِ پشتیبانی مهلت ندارد.
+        \Modules\CRM\Jobs\SendTechnicianPush::queue(
+            \Modules\CRM\Enums\PushEvent::OperatorMessage,
+            $technician->id,
+            ['excerpt' => \Illuminate\Support\Str::limit($validated['body'], 120)],
+            sentBy: Auth::id(),
+        );
+
         if ($request->wantsJson()) {
             return response()->json([
                 'success' => true,
