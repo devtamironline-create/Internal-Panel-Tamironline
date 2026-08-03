@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Modules\CRM\Enums\PushEvent;
 use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Order;
+use Modules\CRM\Models\PushEventSetting;
 use Modules\CRM\Models\PushLog;
 
 /**
@@ -68,6 +69,11 @@ final class TechPushPolicy
         ?string $fingerprint = null,
         ?CarbonImmutable $now = null
     ): bool {
+        // خاموشیِ رویداد از پنل، بالاتر از هر قاعدهٔ دیگری است.
+        if (! PushEventSetting::enabled($event)) {
+            return false;
+        }
+
         if (! self::withinWindow($event, $now)) {
             return false;
         }
@@ -78,12 +84,17 @@ final class TechPushPolicy
     /** آیا ساعتِ فعلی داخلِ پنجرهٔ مجاز است (یا رویداد خارج از دامنه است)؟ */
     public static function withinWindow(PushEvent $event, ?CarbonImmutable $now = null): bool
     {
-        if (! in_array($event->value, self::GOVERNED, true)) {
+        // پنجرهٔ اختصاصیِ رویداد اگر ادمین تعیین کرده باشد — حتی برای
+        // رویدادی که به‌طور پیش‌فرض بی‌پنجره است. تعیینِ صریح یعنی خواستهٔ
+        // صریح.
+        $own = PushEventSetting::window($event);
+
+        if ($own === null && ! in_array($event->value, self::GOVERNED, true)) {
             return true;
         }
 
-        $start = self::hour(self::START_KEY, self::DEFAULT_START);
-        $end = self::hour(self::END_KEY, self::DEFAULT_END);
+        $start = $own['start'] ?? self::hour(self::START_KEY, self::DEFAULT_START);
+        $end = $own['end'] ?? self::hour(self::END_KEY, self::DEFAULT_END);
 
         // پنجرهٔ خالی یعنی محدودیتی نیست.
         if ($start === $end) {

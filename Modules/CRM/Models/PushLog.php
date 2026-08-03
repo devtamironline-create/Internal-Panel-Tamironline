@@ -41,12 +41,16 @@ class PushLog extends Model
     /** وضعیتِ داخلیِ ما وقتی درخواست اصلاً به نجوا نرسید. */
     public const STATUS_FAILED = 'failed';
 
+    /** ارسالِ زمان‌بندی‌شده‌ای که ادمین پیش از موعد لغو کرد. */
+    public const STATUS_CANCELLED = 'cancelled';
+
     /** برچسبِ فارسیِ وضعیت برای جدولِ پنل ادمین. */
     public const STATUS_LABELS = [
         self::STATUS_SENT => 'ارسال شد',
         self::STATUS_SCHEDULED => 'زمان‌بندی شد',
         self::STATUS_INVALID => 'توکن نامعتبر',
         self::STATUS_FAILED => 'ناموفق',
+        self::STATUS_CANCELLED => 'لغو شد',
     ];
 
     public function statusLabel(): string

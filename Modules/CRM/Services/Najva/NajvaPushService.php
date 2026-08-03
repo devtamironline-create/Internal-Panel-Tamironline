@@ -84,7 +84,8 @@ class NajvaPushService
         string $body,
         string $clickUrl,
         int $ttl = 24,
-        array $context = []
+        array $context = [],
+        ?string $scheduledAt = null
     ): NajvaResult {
         $tokens = array_values(array_unique(array_filter($tokens)));
 
@@ -107,7 +108,7 @@ class NajvaPushService
         $errorMessage = null;
 
         foreach (array_chunk($tokens, self::MAX_TOKENS_PER_REQUEST) as $chunk) {
-            $outcome = $this->sendChunk($chunk, $title, $body, $clickUrl, $ttl, $context);
+            $outcome = $this->sendChunk($chunk, $title, $body, $clickUrl, $ttl, $context, $scheduledAt);
 
             $sent = array_merge($sent, $outcome->sent);
             $invalid = array_merge($invalid, $outcome->invalid);
@@ -163,6 +164,139 @@ class NajvaPushService
         ];
     }
 
+    /**
+     * لغوِ ارسال‌های زمان‌بندی‌شده — POST /v1/cancel/token/.
+     *
+     * فقط تا پیش از رسیدنِ موعد کار می‌کند؛ بعد از آن نجوا خطا می‌دهد و
+     * همان خطا به ادمین نشان داده می‌شود، چون «لغو شد» گفتنِ دروغ بدتر از
+     * خطاست.
+     *
+     * @param  list<string>  $requestIds
+     * @return array{ok: bool, message: string}
+     */
+    public function cancelScheduled(array $requestIds): array
+    {
+        $requestIds = array_values(array_unique(array_filter($requestIds)));
+
+        if ($requestIds === []) {
+            return ['ok' => false, 'message' => 'شناسه‌ای برای لغو داده نشد.'];
+        }
+
+        if (! $this->configured()) {
+            return ['ok' => false, 'message' => 'کلید API یا شناسهٔ سایت نجوا تنظیم نشده است.'];
+        }
+
+        $payload = [['name' => 'website_id', 'contents' => $this->websiteId]];
+        foreach ($requestIds as $id) {
+            $payload[] = ['name' => 'request_ids[]', 'contents' => $id];
+        }
+
+        try {
+            $response = Http::withHeaders(['apiKey' => $this->apiKey])
+                ->asMultipart()
+                ->timeout(15)
+                ->post($this->baseUrl.'/v1/cancel/token/', $payload);
+        } catch (ConnectionException $e) {
+            return ['ok' => false, 'message' => 'اتصال به نجوا برقرار نشد: '.$e->getMessage()];
+        }
+
+        if (! $response->successful()) {
+            Log::error('najva.cancel_failed', ['code' => $response->status(), 'body' => $response->body()]);
+
+            return ['ok' => false, 'message' => $this->describe($response->status())];
+        }
+
+        return ['ok' => true, 'message' => 'ارسال زمان‌بندی‌شده لغو شد.'];
+    }
+
+    /**
+     * گزارشِ وضعیتِ یک درخواستِ تکی — GET /v1/report/token.
+     *
+     * پاسخِ لحظهٔ ارسال فقط می‌گوید «پذیرفته شد». تحویل و کلیک بعداً معلوم
+     * می‌شوند و این تنها راهِ دیدنشان است.
+     *
+     * @return array{ok: bool, message: string, tokens: list<array<string, mixed>>}
+     */
+    public function reportToken(string $requestId): array
+    {
+        return $this->report('/v1/report/token', ['request_id' => $requestId], 'tokens');
+    }
+
+    /**
+     * گزارشِ یک کمپینِ گروهی — GET /v1/report/bulk.
+     *
+     * @return array{ok: bool, message: string, tokens: list<array<string, mixed>>}
+     */
+    public function reportBulk(string $executionId): array
+    {
+        return $this->report('/v1/report/bulk', ['execution_id' => $executionId], 'reports');
+    }
+
+    /**
+     * مشخصاتِ دستگاهِ یک مشترک — GET /v1/detail/token.
+     *
+     * برای ستونِ «مرورگر / سیستم‌عامل» در صفحهٔ مشترکین؛ خودِ ما این‌ها را
+     * ذخیره نمی‌کنیم چون اپ نمی‌فرستدشان.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function tokenDetail(string $token): ?array
+    {
+        if (! $this->configured()) {
+            return null;
+        }
+
+        try {
+            $response = Http::withHeaders(['apiKey' => $this->apiKey])
+                ->timeout(15)
+                ->get($this->baseUrl.'/v1/detail/token', [
+                    'website_id' => $this->websiteId,
+                    'token' => $token,
+                ]);
+        } catch (ConnectionException) {
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $entries = $response->json('Entries');
+
+        return is_array($entries) ? $entries : null;
+    }
+
+    /**
+     * @param  array<string, string>  $query
+     * @return array{ok: bool, message: string, tokens: list<array<string, mixed>>}
+     */
+    protected function report(string $path, array $query, string $key): array
+    {
+        if (! $this->configured()) {
+            return ['ok' => false, 'message' => 'کلید API یا شناسهٔ سایت نجوا تنظیم نشده است.', 'tokens' => []];
+        }
+
+        try {
+            $response = Http::withHeaders(['apiKey' => $this->apiKey])
+                ->timeout(15)
+                ->get($this->baseUrl.$path, $query + ['website_id' => $this->websiteId]);
+        } catch (ConnectionException $e) {
+            return ['ok' => false, 'message' => 'اتصال به نجوا برقرار نشد: '.$e->getMessage(), 'tokens' => []];
+        }
+
+        if (! $response->successful()) {
+            return ['ok' => false, 'message' => $this->describe($response->status()), 'tokens' => []];
+        }
+
+        $rows = $response->json('Entries.'.$key, []);
+
+        return [
+            'ok' => true,
+            'message' => 'گزارش دریافت شد.',
+            'tokens' => is_array($rows) ? $rows : [],
+        ];
+    }
+
     // ───────────────────────── داخلی
 
     /**
@@ -175,10 +309,11 @@ class NajvaPushService
         string $body,
         string $clickUrl,
         int $ttl,
-        array $context
+        array $context,
+        ?string $scheduledAt = null
     ): NajvaResult {
         try {
-            $response = $this->request($chunk, $title, $body, $clickUrl, $ttl);
+            $response = $this->request($chunk, $title, $body, $clickUrl, $ttl, $scheduledAt);
         } catch (ConnectionException|RequestException $e) {
             Log::error('najva.send_failed', ['error' => $e->getMessage(), 'tokens' => count($chunk)]);
             $this->logChunk($chunk, $title, $body, $clickUrl, $context, PushLog::STATUS_FAILED, null, $e->getMessage());
@@ -204,8 +339,14 @@ class NajvaPushService
     /**
      * @param  list<string>  $chunk
      */
-    protected function request(array $chunk, string $title, string $body, string $clickUrl, int $ttl): Response
-    {
+    protected function request(
+        array $chunk,
+        string $title,
+        string $body,
+        string $clickUrl,
+        int $ttl,
+        ?string $scheduledAt = null
+    ): Response {
         $payload = [
             ['name' => 'website_id', 'contents' => $this->websiteId],
             ['name' => 'ttl', 'contents' => (string) max(1, $ttl)],
@@ -213,6 +354,12 @@ class NajvaPushService
             ['name' => 'message.body', 'contents' => $body],
             ['name' => 'message.notification_click.click_url', 'contents' => $clickUrl],
         ];
+
+        // `date` فقط وقتی می‌رود که واقعاً زمان‌بندی باشد؛ فرستادنِ خالی
+        // برای رویدادِ آنی، نجوا را به حالتِ Scheduled می‌برد.
+        if ($scheduledAt !== null) {
+            $payload[] = ['name' => 'date', 'contents' => $scheduledAt];
+        }
 
         foreach ($chunk as $token) {
             $payload[] = ['name' => 'tokens[]', 'contents' => $token];

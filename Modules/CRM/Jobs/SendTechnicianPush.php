@@ -9,6 +9,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Modules\CRM\Enums\PushEvent;
+use Modules\CRM\Models\PushEventSetting;
 use Modules\CRM\Models\TechnicianPushToken;
 use Modules\CRM\Services\Najva\NajvaPushService;
 use Modules\CRM\Support\TechPushPolicy;
@@ -109,10 +110,11 @@ class SendTechnicianPush implements ShouldQueue
         // هر مرورگر.
         $najva->sendToTokens(
             $tokens,
-            $this->event->title($this->vars),
-            $this->event->body($this->vars),
+            // قالب از پنل خوانده می‌شود؛ نبودنش یعنی پیش‌فرضِ کد.
+            $this->event->render(PushEventSetting::titleTemplate($this->event), $this->vars),
+            $this->event->render(PushEventSetting::bodyTemplate($this->event), $this->vars),
             $this->event->clickUrl($this->vars + ['order_id' => $this->orderId]),
-            $this->event->ttl(),
+            PushEventSetting::ttl($this->event),
             [
                 'event_key' => $this->event->value,
                 'fingerprint' => $this->fingerprint,
