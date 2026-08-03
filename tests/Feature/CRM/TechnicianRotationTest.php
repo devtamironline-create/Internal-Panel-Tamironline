@@ -3,8 +3,11 @@
 namespace Tests\Feature\CRM;
 
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Modules\CRM\Enums\PushEvent;
+use Modules\CRM\Jobs\SendTechnicianPush;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\Technician;
 use Modules\CRM\Services\AutoAssignService;
@@ -232,6 +235,35 @@ class TechnicianRotationTest extends TestCase
             $this->assertSame(1, $this->assignedTo($t, $orders),
                 'تکنسین «'.$t->first_name.'» باید دقیقاً یک سفارش بگیرد');
         }
+    }
+
+    /**
+     * تخصیص علاوه بر پیامک، پوش هم می‌فرستد.
+     *
+     * `afterResponse` و نه `dispatch` معمولی: پروژه worker ندارد و
+     * `QUEUE_CONNECTION=sync` است، پس ارسالِ درجا یعنی تایم‌اوتِ نجوا وسطِ
+     * تخصیص می‌نشیند.
+     */
+    public function test_an_assignment_also_queues_a_push_after_the_response(): void
+    {
+        Bus::fake();
+        $this->auto();
+
+        $tech = $this->technician('اول');
+        $this->coverDevices($tech, [1]);
+        $order = $this->order(1);
+
+        app(AutoAssignService::class)->run();
+
+        Bus::assertDispatchedAfterResponse(
+            SendTechnicianPush::class,
+            fn (SendTechnicianPush $job) => $job->technicianId === $tech->id
+                && $job->event === PushEvent::OrderAssigned
+                && $job->orderId === $order->id
+                // اثرِ انگشت همان اثرِ انگشتِ پیامک است تا دو کانال یک
+                // تعریف از «همان تخصیصِ قبلی» داشته باشند.
+                && str_starts_with((string) $job->fingerprint, 'assign:')
+        );
     }
 
     public function test_rotation_continues_where_it_left_off_in_the_next_run(): void

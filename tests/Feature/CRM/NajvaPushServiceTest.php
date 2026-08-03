@@ -39,6 +39,7 @@ class NajvaPushServiceTest extends TestCase
             'Modules/CRM/Database/Migrations/2026_07_29_130000_create_crm_technician_push_tokens_table.php',
             'Modules/CRM/Database/Migrations/2026_08_03_100000_add_najva_columns_to_crm_technician_push_tokens_table.php',
             'Modules/CRM/Database/Migrations/2026_08_03_110000_create_crm_push_logs_table.php',
+            'Modules/CRM/Database/Migrations/2026_08_03_120000_add_fingerprint_to_crm_push_logs_table.php',
         ] as $path) {
             Artisan::call('migrate', ['--path' => $path, '--force' => true]);
         }

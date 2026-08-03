@@ -19,7 +19,7 @@ class PushLog extends Model
 
     protected $fillable = [
         'technician_id', 'push_token_id', 'token',
-        'event_key', 'order_id',
+        'event_key', 'fingerprint', 'order_id',
         'title', 'body', 'click_url',
         'status', 'cost', 'request_id',
         'error_code', 'response', 'sent_by',

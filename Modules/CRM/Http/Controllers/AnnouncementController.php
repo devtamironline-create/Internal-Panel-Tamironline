@@ -41,10 +41,26 @@ class AnnouncementController extends Controller
             'body.max' => 'متن اعلان حداکثر ۵۰۰۰ کاراکتر است.',
         ]);
 
-        Announcement::create($validated + [
+        $announcement = Announcement::create($validated + [
             'is_active' => true,
             'created_by' => auth()->id(),
         ]);
+
+        // اطلاعیه به همهٔ تکنسین‌های فعال پوش می‌شود — یک Job به ازای هر
+        // تکنسین، چون هر کدام مرورگرهای خودش را دارد و ضدِتکرار و ساعتِ
+        // مجاز هم فردی‌اند.
+        //
+        // این رویداد در پنجرهٔ ساعتِ مجاز است: اطلاعیه مهلت ندارد و نیمه‌شب
+        // بیدارکردنِ تکنسین برایش توجیه ندارد.
+        \Modules\CRM\Models\Technician::query()
+            ->where('status', 'active')
+            ->pluck('id')
+            ->each(fn (int $technicianId) => \Modules\CRM\Jobs\SendTechnicianPush::queue(
+                \Modules\CRM\Enums\PushEvent::Announcement,
+                $technicianId,
+                ['title' => (string) $announcement->title],
+                sentBy: auth()->id(),
+            ));
 
         return redirect()->route('crm.announcements.index')
             ->with('success', 'اعلان ثبت شد و از همین لحظه برای تکنسین‌ها نمایش داده می‌شود.');

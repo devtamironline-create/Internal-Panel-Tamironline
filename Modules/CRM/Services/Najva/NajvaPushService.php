@@ -76,7 +76,7 @@ class NajvaPushService
      * نیست.
      *
      * @param  list<string>  $tokens
-     * @param  array{event_key?: string|null, order_id?: int|null, sent_by?: int|null}  $context
+     * @param  array{event_key?: string|null, fingerprint?: string|null, order_id?: int|null, sent_by?: int|null}  $context
      */
     public function sendToTokens(
         array $tokens,
@@ -167,7 +167,7 @@ class NajvaPushService
 
     /**
      * @param  list<string>  $chunk
-     * @param  array{event_key?: string|null, order_id?: int|null, sent_by?: int|null}  $context
+     * @param  array{event_key?: string|null, fingerprint?: string|null, order_id?: int|null, sent_by?: int|null}  $context
      */
     protected function sendChunk(
         array $chunk,
@@ -246,7 +246,7 @@ class NajvaPushService
      * پردازشِ `Entries.tokens[]` — بخش ۳.۳ سند.
      *
      * @param  list<string>  $chunk
-     * @param  array{event_key?: string|null, order_id?: int|null, sent_by?: int|null}  $context
+     * @param  array{event_key?: string|null, fingerprint?: string|null, order_id?: int|null, sent_by?: int|null}  $context
      */
     protected function consume(
         Response $response,
@@ -296,6 +296,7 @@ class NajvaPushService
                 'push_token_id' => $subscriber?->id,
                 'token' => $token,
                 'event_key' => $context['event_key'] ?? null,
+                'fingerprint' => $context['fingerprint'] ?? null,
                 'order_id' => $context['order_id'] ?? null,
                 'title' => $title,
                 'body' => $body,
@@ -361,7 +362,7 @@ class NajvaPushService
      * سطحِ توکن شکست خورده است.
      *
      * @param  list<string>  $chunk
-     * @param  array{event_key?: string|null, order_id?: int|null, sent_by?: int|null}  $context
+     * @param  array{event_key?: string|null, fingerprint?: string|null, order_id?: int|null, sent_by?: int|null}  $context
      */
     protected function logChunk(
         array $chunk,
@@ -386,6 +387,7 @@ class NajvaPushService
                 'push_token_id' => $subscriber?->id,
                 'token' => $token,
                 'event_key' => $context['event_key'] ?? null,
+                'fingerprint' => $context['fingerprint'] ?? null,
                 'order_id' => $context['order_id'] ?? null,
                 'title' => $title,
                 'body' => $body,

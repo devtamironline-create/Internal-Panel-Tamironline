@@ -78,6 +78,24 @@ return [
         'api_key' => env('NAJVA_API_KEY'),
         'website_id' => env('NAJVA_WEBSITE_ID'),
         'base_url' => env('NAJVA_BASE_URL', 'https://push.najva.com'),
+
+        // صفِ ارسالِ پوش — عمداً از `QUEUE_CONNECTION` سراسری جداست.
+        //
+        // خالی (پیش‌فرض) یعنی «بعد از ارسالِ پاسخ، در همین پروسه». پروژه
+        // امروز هیچ زیرساختِ صفی ندارد — نه `config/queue.php`، نه مهاجرتِ
+        // جدولِ `jobs`، و `QUEUE_CONNECTION=sync` است. با `sync` هر Job
+        // درجا اجرا می‌شود، یعنی تایم‌اوتِ نجوا ثبتِ سفارش را معطل می‌کند؛
+        // دقیقاً همان چیزی که صف قرار بود جلویش را بگیرد.
+        //
+        // اگر روزی worker راه افتاد، فقط همین مقدار را پر کنید
+        // (مثلاً `database` یا `redis`) — بدونِ دست‌زدن به بقیهٔ سایت.
+        'queue_connection' => env('NAJVA_QUEUE_CONNECTION', ''),
+    ],
+
+    // اپِ تکنسین — مقصدِ کلیکِ اعلان. باید کاملِ https باشد، وگرنه نجوا
+    // لینک را باز نمی‌کند.
+    'tech_app' => [
+        'url' => env('TECH_APP_URL', 'https://tg.tamironline.com'),
     ],
 
 ];
