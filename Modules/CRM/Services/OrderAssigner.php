@@ -101,6 +101,23 @@ final class OrderAssigner
             Log::warning('assign SMS failed', ['order' => $order->id, 'err' => $e->getMessage()]);
         }
 
+        // پوش هم می‌رود، «علاوه بر» پیامک نه به‌جایش: مرورگرِ بسته یا
+        // آیفونِ بدونِ PWA اعلان نمی‌گیرد و تخصیص نباید از دست برود.
+        // اثرِ انگشت همان اثرِ انگشتِ پیامک است تا دو کانال یک تعریف از
+        // «همان تخصیصِ قبلی» داشته باشند.
+        \Modules\CRM\Jobs\SendTechnicianPush::queue(
+            \Modules\CRM\Enums\PushEvent::OrderAssigned,
+            $technician->id,
+            [
+                'order_code' => (string) $order->order_code,
+                'customer_name' => (string) $order->customer_name,
+                'device_name' => (string) ($order->device->name ?? ''),
+                'technician_name' => (string) ($technician->firstname_tech ?? $technician->first_name ?? ''),
+            ],
+            $order->id,
+            \Modules\CRM\Support\TechPushPolicy::assignmentFingerprint($order),
+        );
+
         return $order;
     }
 

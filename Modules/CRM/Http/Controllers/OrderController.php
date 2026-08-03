@@ -1184,6 +1184,26 @@ class OrderController extends Controller
             $this->smsNotifier->notifyStatusChange($order->refresh(), $newStatus, auth()->id());
         }
 
+        // اعلانِ تغییر وضعیت به تکنسینِ سفارش. این مسیر فقط از پنلِ
+        // ادمین/اپراتور صدا زده می‌شود؛ تکنسین وضعیتِ خودش را از API عوض
+        // می‌کند، پس این‌جا کسی اعلانِ کارِ خودش را نمی‌گیرد.
+        if ($order->technician_id) {
+            \Modules\CRM\Jobs\SendTechnicianPush::queue(
+                \Modules\CRM\Enums\PushEvent::OrderStatusChanged,
+                (int) $order->technician_id,
+                [
+                    'order_code' => (string) $order->order_code,
+                    'status_label' => $newStatus->label(),
+                    'technician_name' => (string) ($order->technician->firstname_tech ?? ''),
+                ],
+                $order->id,
+                // وضعیت به‌تنهایی کافی نیست: رفت‌وبرگشت بینِ دو وضعیت
+                // رویدادِ تازه‌ای است و باید اعلانِ تازه بگیرد.
+                \Modules\CRM\Support\TechPushPolicy::statusFingerprint($order),
+                auth()->id(),
+            );
+        }
+
         $response = back()->with('success', 'وضعیت به "'.$newStatus->label().'" تغییر کرد.');
 
         if ($draftWarning) {

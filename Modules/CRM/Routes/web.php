@@ -422,6 +422,43 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('sms/logs', [SmsTemplateController::class, 'logs'])->name('sms.logs');
     });
 
+    // ─── پوش نوتیفیکیشن (نجوا) ─────────────────────────────────
+    Route::middleware('can:manage-crm-push')->prefix('push')->name('push.')->group(function () {
+        $mgmt = \Modules\CRM\Http\Controllers\PushManagementController::class;
+        $campaign = \Modules\CRM\Http\Controllers\PushCampaignController::class;
+        $report = \Modules\CRM\Http\Controllers\PushReportController::class;
+
+        // ۵.۱ داشبورد
+        Route::get('/', [$mgmt, 'index'])->name('index');
+
+        // ۵.۲ رویدادها
+        Route::get('events', [$mgmt, 'events'])->name('events');
+        Route::post('events/{event}', [$mgmt, 'updateEvent'])->name('events.update');
+        Route::post('events/{event}/toggle', [$mgmt, 'toggleEvent'])->name('events.toggle');
+
+        // ۵.۳ ارسال دستی
+        Route::get('campaign', [$campaign, 'create'])->name('campaign.create');
+        Route::post('campaign', [$campaign, 'store'])->name('campaign.store');
+        Route::post('campaign/cancel', [$campaign, 'cancel'])->name('campaign.cancel');
+        Route::post('subscribers/{technician}/test', [$campaign, 'test'])
+            ->whereNumber('technician')->name('subscribers.test');
+
+        // ۵.۴ گزارش‌ها
+        Route::get('logs', [$report, 'logs'])->name('logs');
+        Route::get('logs/export', [$report, 'export'])->name('logs.export');
+        Route::post('logs/trace', [$report, 'trace'])->name('logs.trace');
+
+        // ۵.۵ مشترکین
+        Route::get('subscribers', [$report, 'subscribers'])->name('subscribers');
+        Route::get('subscribers/{technician}/devices', [$report, 'devices'])
+            ->whereNumber('technician')->name('subscribers.devices');
+
+        // ۵.۶ تنظیمات
+        Route::get('settings', [$mgmt, 'settings'])->name('settings');
+        Route::post('settings', [$mgmt, 'updateSettings'])->name('settings.update');
+        Route::post('settings/test-connection', [$mgmt, 'testConnection'])->name('settings.test');
+    });
+
     // ─── کیف‌پول تکنسین ────────────────────────────────────────
     Route::middleware('can:view-crm-financial')->group(function () {
         Route::get('wallet', [WalletController::class, 'index'])->name('wallet.index');
