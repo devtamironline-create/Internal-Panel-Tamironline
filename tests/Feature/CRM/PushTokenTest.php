@@ -45,6 +45,33 @@ class PushTokenTest extends TestCase
         ] as $path) {
             Artisan::call('migrate', ['--path' => $path, '--force' => true]);
         }
+
+        TechnicianPushToken::flushSchemaCache();
+    }
+
+    /**
+     * schemaِ پیش از نجوا — شبیه‌سازیِ «کد رفته، migrate نخورده».
+     *
+     * جدول دستی ساخته می‌شود نه با اجرای دوبارهٔ مهاجرت: لاراول آن مهاجرت
+     * را «اجراشده» ثبت کرده و دوباره اجرایش نمی‌کند.
+     */
+    private function rollBackToPreNajvaSchema(): void
+    {
+        Schema::dropIfExists('crm_technician_push_tokens');
+
+        Schema::create('crm_technician_push_tokens', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('technician_id')->index();
+            $t->string('token', 255)->unique();
+            $t->string('provider', 20)->default('expo');
+            $t->string('platform', 10)->nullable();
+            $t->string('device_name', 120)->nullable();
+            $t->string('app_version', 20)->nullable();
+            $t->timestamp('last_seen_at')->nullable();
+            $t->timestamps();
+        });
+
+        TechnicianPushToken::flushSchemaCache();
     }
 
     // ───────────────────────── helpers
@@ -222,5 +249,50 @@ class PushTokenTest extends TestCase
         $body = $this->store($this->technician(), $this->najvaPayload());
 
         $this->assertTrue($body['data']['push_enabled']);
+    }
+
+    // ───────────────────────── دیپلوی بدون مهاجرت
+
+    /**
+     * قلبِ این بخش: کد و مهاجرت با هم دیپلوی نمی‌شوند.
+     *
+     * وقتی `git pull` انجام شده ولی `artisan migrate` نه، این اندپوینت
+     * پیش‌تر با خطای SQL می‌خوابید — و چون اپِ تکنسین در هر بار اجرا
+     * صدایش می‌زند، عملاً کلِ اپ از کار می‌افتاد.
+     */
+    public function test_the_app_still_registers_before_the_migration_has_run(): void
+    {
+        $this->rollBackToPreNajvaSchema();
+        $tech = $this->technician();
+
+        $body = $this->store($tech, $this->najvaPayload());
+
+        $this->assertTrue($body['data']['registered']);
+
+        $row = TechnicianPushToken::firstOrFail();
+        $this->assertSame('najva', $row->provider);
+        $this->assertSame('web', $row->platform);
+        $this->assertSame($tech->id, $row->technician_id);
+    }
+
+    public function test_logging_out_still_works_before_the_migration_has_run(): void
+    {
+        $this->rollBackToPreNajvaSchema();
+        $tech = $this->technician();
+        $this->store($tech, $this->najvaPayload());
+
+        $body = $this->destroy($tech, '9615c2ea-9d2d-4343-b880-4e79cb115384');
+
+        // بدونِ ستونِ حذفِ نرم، به رفتارِ قبلی برمی‌گردیم.
+        $this->assertSame(1, $body['data']['deleted']);
+        $this->assertSame(0, TechnicianPushToken::count());
+    }
+
+    public function test_the_active_scope_does_not_reference_a_missing_column(): void
+    {
+        $this->rollBackToPreNajvaSchema();
+        $this->store($this->technician(), $this->najvaPayload());
+
+        $this->assertSame(1, TechnicianPushToken::query()->active()->count());
     }
 }

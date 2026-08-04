@@ -49,9 +49,12 @@ class PushTokenController extends Controller
         // ثبتِ دوباره یعنی مرورگر زنده است، پس `revoked_at` و شمارندهٔ خطا
         // صفر می‌شوند — وگرنه کسی که خارج و دوباره وارد شده برای همیشه
         // باطل می‌ماند.
+        // `writable()` ستون‌هایی را که هنوز مهاجرت نشده‌اند کنار می‌گذارد.
+        // اپ این مسیر را در هر بار اجرا صدا می‌زند؛ عقب‌ماندنِ یک مهاجرت
+        // نباید ورودِ تکنسین را بخواباند.
         TechnicianPushToken::updateOrCreate(
             ['token' => $validated['token']],
-            [
+            TechnicianPushToken::writable([
                 'technician_id' => $tech->id,
                 'provider' => $validated['provider'] ?? 'najva',
                 'platform' => $validated['platform'] ?? null,
@@ -61,7 +64,7 @@ class PushTokenController extends Controller
                 'last_seen_at' => now(),
                 'failed_count' => 0,
                 'revoked_at' => null,
-            ]
+            ])
         );
 
         return response()->json([
@@ -80,15 +83,19 @@ class PushTokenController extends Controller
     {
         $validated = $request->validate(['token' => 'required|string|max:255']);
 
+        // شرطِ `technician_id` یعنی هر کس فقط توکنِ خودش را باطل می‌کند.
+        $query = TechnicianPushToken::query()
+            ->where('token', $validated['token'])
+            ->where('technician_id', $request->user()->id);
+
         // حذفِ نرم: ردیف می‌ماند تا در گزارشِ «چه کسی اعلان را خاموش کرد»
         // دیده شود، ولی دیگر هدفِ هیچ ارسالی نیست.
         //
-        // شرطِ `technician_id` یعنی هر کس فقط توکنِ خودش را باطل می‌کند.
-        $revoked = TechnicianPushToken::query()
-            ->where('token', $validated['token'])
-            ->where('technician_id', $request->user()->id)
-            ->whereNull('revoked_at')
-            ->update(['revoked_at' => now()]);
+        // پیش از مهاجرت ستونی برای حذفِ نرم وجود ندارد؛ آن‌جا به رفتارِ
+        // قبلی (حذفِ واقعی) برمی‌گردیم تا خروج از حساب همچنان کار کند.
+        $revoked = TechnicianPushToken::supportsNajvaColumns()
+            ? $query->whereNull('revoked_at')->update(['revoked_at' => now()])
+            : $query->delete();
 
         // کلیدِ `deleted` عمداً حفظ شده: قراردادِ فعلیِ اپ است و تغییرش
         // بدونِ انتشارِ نسخهٔ جدید، مسیرِ خروج را می‌شکند.
