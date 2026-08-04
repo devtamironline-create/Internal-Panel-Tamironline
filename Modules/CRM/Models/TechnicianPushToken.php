@@ -5,6 +5,7 @@ namespace Modules\CRM\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * توکنِ پوشِ یک مرورگر/نصبِ اپِ تکنسین.
@@ -40,6 +41,58 @@ class TechnicianPushToken extends Model
     /** بسترهایی که توکنشان پذیرفته می‌شود. */
     public const PLATFORMS = ['web', 'ios', 'android'];
 
+    /** @var bool|null نتیجهٔ بررسیِ schema — یک‌بار در هر پروسه. */
+    private static ?bool $najvaColumns = null;
+
+    /**
+     * آیا ستون‌های نجوا روی جدول وجود دارند؟
+     *
+     * چرا لازم است: کد و مهاجرت با هم دیپلوی نمی‌شوند. اگر `git pull`
+     * انجام شود ولی `artisan migrate` نه، این اندپوینت — که اپِ تکنسین در
+     * هر بار اجرا صدایش می‌زند — با خطای SQL می‌خوابد. اعلان یک امکانِ
+     * جانبی است؛ نباید ورودِ تکنسین را از کار بیندازد.
+     */
+    public static function supportsNajvaColumns(): bool
+    {
+        if (self::$najvaColumns !== null) {
+            return self::$najvaColumns;
+        }
+
+        try {
+            return self::$najvaColumns = Schema::hasColumn('crm_technician_push_tokens', 'revoked_at');
+        } catch (\Throwable) {
+            return self::$najvaColumns = false;
+        }
+    }
+
+    /** لازمِ تست‌ها — schema بینِ تست‌ها عوض می‌شود. */
+    public static function flushSchemaCache(): void
+    {
+        self::$najvaColumns = null;
+    }
+
+    /**
+     * ستون‌هایی که فقط بعد از مهاجرتِ نجوا وجود دارند.
+     *
+     * @return list<string>
+     */
+    public const NAJVA_COLUMNS = ['najva_script_id', 'last_status', 'failed_count', 'revoked_at'];
+
+    /**
+     * صفاتِ نوشتنی را با schemaِ واقعی هماهنگ می‌کند.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    public static function writable(array $attributes): array
+    {
+        if (self::supportsNajvaColumns()) {
+            return $attributes;
+        }
+
+        return array_diff_key($attributes, array_flip(self::NAJVA_COLUMNS));
+    }
+
     public function technician(): BelongsTo
     {
         return $this->belongsTo(Technician::class, 'technician_id');
@@ -48,11 +101,12 @@ class TechnicianPushToken extends Model
     /** فقط توکن‌هایی که هنوز باطل نشده‌اند — تنها چیزی که باید پوش بگیرد. */
     public function scopeActive(Builder $query): Builder
     {
-        return $query->whereNull('revoked_at');
+        // پیش از مهاجرت، «باطل‌شده» وجود ندارد؛ پس همه فعال‌اند.
+        return self::supportsNajvaColumns() ? $query->whereNull('revoked_at') : $query;
     }
 
     public function isRevoked(): bool
     {
-        return $this->revoked_at !== null;
+        return self::supportsNajvaColumns() && $this->revoked_at !== null;
     }
 }
