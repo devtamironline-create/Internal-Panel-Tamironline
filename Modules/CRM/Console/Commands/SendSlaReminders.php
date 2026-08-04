@@ -86,7 +86,7 @@ class SendSlaReminders extends Command
             // callbackهای `afterResponse` را موقعِ پایانِ دستور اجرا
             // می‌کند، پس ارسال انجام می‌شود.
             if ($trigger === SmsTrigger::TechSlaDue && $order->technician_id) {
-                \Modules\CRM\Jobs\SendTechnicianPush::queue(
+                \Modules\CRM\Jobs\SendTechnicianPush::dispatchFor(
                     \Modules\CRM\Enums\PushEvent::SlaDue,
                     (int) $order->technician_id,
                     [

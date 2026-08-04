@@ -55,7 +55,7 @@ class AnnouncementController extends Controller
         \Modules\CRM\Models\Technician::query()
             ->where('status', 'active')
             ->pluck('id')
-            ->each(fn (int $technicianId) => \Modules\CRM\Jobs\SendTechnicianPush::queue(
+            ->each(fn (int $technicianId) => \Modules\CRM\Jobs\SendTechnicianPush::dispatchFor(
                 \Modules\CRM\Enums\PushEvent::Announcement,
                 $technicianId,
                 ['title' => (string) $announcement->title],

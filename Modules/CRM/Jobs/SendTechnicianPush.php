@@ -49,8 +49,13 @@ class SendTechnicianPush implements ShouldQueue
     /**
      * تنها راهِ درستِ صدازدن — تصمیمِ «صف یا بعد از پاسخ» این‌جاست تا در
      * شش نقطهٔ فراخوانی تکرار نشود.
+     *
+     * نامِ `queue` عمداً استفاده نمی‌شود: لاراول در `Dispatcher` با
+     * `method_exists($command, 'queue')` دنبالِ «هندلرِ صفِ سفارشی» می‌گردد
+     * و اگر پیدا کند، خودِ صف را به‌عنوان آرگومانِ اول پاس می‌دهد. متدی با
+     * آن نام — حتی static — هر دیسپچ را با TypeError می‌شکند.
      */
-    public static function queue(
+    public static function dispatchFor(
         PushEvent $event,
         int $technicianId,
         array $vars = [],

@@ -495,4 +495,73 @@ class TechnicianPushEventsTest extends TestCase
         $this->assertTrue(TechPushPolicy::withinWindow(PushEvent::OrderReturned, $night));
         $this->assertTrue(TechPushPolicy::withinWindow(PushEvent::OrderStatusChanged, $night));
     }
+
+    // ───────────────────────── مسیرِ واقعیِ دیسپچ
+
+    /**
+     * دیسپچِ واقعی نباید خطا بدهد — بدونِ `Bus::fake`.
+     *
+     * این تست وجود دارد چون یک باگِ پروداکشن از دستِ همهٔ تست‌های قبلی در
+     * رفت: متدِ کارخانه‌ایِ Job `queue` نام داشت، و لاراول در
+     * `Dispatcher::dispatchToQueue()` با `method_exists($command, 'queue')`
+     * دنبالِ «هندلرِ صفِ سفارشی» می‌گردد و خودِ صف را به‌عنوان آرگومانِ اول
+     * پاس می‌دهد. نتیجه: `TypeError` روی هر دیسپچ.
+     *
+     * تست‌های دیگر یا `handle()` را مستقیم صدا می‌زدند یا `Bus::fake`
+     * داشتند — هر دو پیش از رسیدن به آن نقطه متوقف می‌شوند.
+     */
+    public function test_dispatching_for_real_does_not_blow_up(): void
+    {
+        $this->token('tok-a');
+        $this->accept(['tok-a']);
+
+        SendTechnicianPush::dispatchFor(
+            PushEvent::OrderAssigned,
+            7,
+            ['order_code' => 'OR-11'],
+            orderId: 11,
+            fingerprint: 'assign:5',
+        );
+
+        // `afterResponse` روی callbackهای terminating می‌نشیند؛ در تست
+        // باید صریح اجرا شوند.
+        $this->app->terminate();
+
+        $this->assertSame(1, PushLog::query()->succeeded()->count());
+    }
+
+    /** همان مسیر، ولی وقتی صفِ اختصاصی تنظیم شده باشد. */
+    public function test_dispatching_onto_a_real_queue_connection_does_not_blow_up(): void
+    {
+        config(['services.najva.queue_connection' => 'sync']);
+        $this->token('tok-a');
+        $this->accept(['tok-a']);
+
+        SendTechnicianPush::dispatchFor(
+            PushEvent::OrderAssigned,
+            7,
+            ['order_code' => 'OR-11'],
+            orderId: 11,
+            fingerprint: 'assign:6',
+        );
+
+        $this->assertSame(1, PushLog::query()->succeeded()->count());
+    }
+
+    /**
+     * هیچ متدی روی Job نباید با قراردادهای رزروشدهٔ لاراول هم‌نام باشد.
+     *
+     * `queue` صف را تحویل می‌گیرد، `failed`/`middleware`/`retryUntil`/
+     * `displayName` هم امضای مشخصی دارند. هم‌نامیِ تصادفی با هرکدام، همان
+     * شکستِ خاموش را می‌سازد.
+     */
+    public function test_the_job_does_not_collide_with_a_reserved_laravel_hook(): void
+    {
+        foreach (['queue', 'displayName', 'retryUntil', 'middleware'] as $reserved) {
+            $this->assertFalse(
+                method_exists(SendTechnicianPush::class, $reserved),
+                "متدِ «{$reserved}» یک قراردادِ رزروشدهٔ لاراول است و نباید روی این Job تعریف شود."
+            );
+        }
+    }
 }

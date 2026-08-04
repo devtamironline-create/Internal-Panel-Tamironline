@@ -303,7 +303,7 @@ class Order extends Model
             // این هوک جدا از try بالاست: شکستِ پیامک نباید پوش را هم
             // ببرد؛ دقیقاً برای همین دو کانال داریم.
             try {
-                \Modules\CRM\Jobs\SendTechnicianPush::queue(
+                \Modules\CRM\Jobs\SendTechnicianPush::dispatchFor(
                     \Modules\CRM\Enums\PushEvent::OrderReturned,
                     (int) $order->technician_id,
                     [

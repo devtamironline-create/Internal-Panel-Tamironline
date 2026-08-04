@@ -199,7 +199,7 @@ class TechChatController extends Controller
         //
         // بدونِ ضدِتکرار — هر پیام یک اعلانِ مستقل است — ولی داخلِ پنجرهٔ
         // ساعتِ مجاز، چون پیامِ پشتیبانی مهلت ندارد.
-        \Modules\CRM\Jobs\SendTechnicianPush::queue(
+        \Modules\CRM\Jobs\SendTechnicianPush::dispatchFor(
             \Modules\CRM\Enums\PushEvent::OperatorMessage,
             $technician->id,
             ['excerpt' => \Illuminate\Support\Str::limit($validated['body'], 120)],
