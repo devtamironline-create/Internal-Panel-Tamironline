@@ -88,6 +88,16 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($e instanceof \Illuminate\Validation\ValidationException) {
                 return null; // Laravel خودش 422 با ساختار درست برمی‌گرداند
             }
+            // این دو نه ValidationException هستند نه HttpException — بدونِ
+            // این شرط به شاخهٔ آخر می‌افتادند و «توکنِ منقضی/نداشتنِ دسترسی»
+            // به‌جای 401/403 پاسخِ 500 می‌گرفت. اپ نمی‌تواند 500 را از خرابیِ
+            // واقعی تشخیص بدهد و کاربر را به login نمی‌برد؛ و چون این
+            // استثناها در فهرستِ dontReport لاراول‌اند، هیچ لاگی هم نمی‌ماند —
+            // یک 500 ساختگیِ کاملاً بی‌ردپا.
+            if ($e instanceof \Illuminate\Auth\AuthenticationException
+                || $e instanceof \Illuminate\Auth\Access\AuthorizationException) {
+                return null; // Laravel خودش 401/403 با ساختار درست برمی‌گرداند
+            }
             if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface) {
                 return response()->json(
                     ['message' => $e->getMessage() ?: 'Error'],
