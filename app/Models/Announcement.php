@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Chat\Conversation;
+use App\Models\Chat\Message;
 use Illuminate\Database\Eloquent\Model;
 
 class Announcement extends Model
