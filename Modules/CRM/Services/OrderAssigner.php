@@ -105,7 +105,7 @@ final class OrderAssigner
         // آیفونِ بدونِ PWA اعلان نمی‌گیرد و تخصیص نباید از دست برود.
         // اثرِ انگشت همان اثرِ انگشتِ پیامک است تا دو کانال یک تعریف از
         // «همان تخصیصِ قبلی» داشته باشند.
-        \Modules\CRM\Jobs\SendTechnicianPush::queue(
+        \Modules\CRM\Jobs\SendTechnicianPush::dispatchFor(
             \Modules\CRM\Enums\PushEvent::OrderAssigned,
             $technician->id,
             [

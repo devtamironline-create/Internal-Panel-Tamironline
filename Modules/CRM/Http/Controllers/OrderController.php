@@ -1188,7 +1188,7 @@ class OrderController extends Controller
         // ادمین/اپراتور صدا زده می‌شود؛ تکنسین وضعیتِ خودش را از API عوض
         // می‌کند، پس این‌جا کسی اعلانِ کارِ خودش را نمی‌گیرد.
         if ($order->technician_id) {
-            \Modules\CRM\Jobs\SendTechnicianPush::queue(
+            \Modules\CRM\Jobs\SendTechnicianPush::dispatchFor(
                 \Modules\CRM\Enums\PushEvent::OrderStatusChanged,
                 (int) $order->technician_id,
                 [
