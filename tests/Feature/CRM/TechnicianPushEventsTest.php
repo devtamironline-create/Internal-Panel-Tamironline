@@ -48,6 +48,19 @@ class TechnicianPushEventsTest extends TestCase
             'services.najva.website_id' => '45290',
             'services.tech_app.url' => 'https://tg.tamironline.com',
         ]);
+
+        // ساعت پین می‌شود، وسطِ پنجرهٔ مجاز (۸ تا ۲۲): رویدادهای اطلاعیه و
+        // پیامِ کارشناس تابعِ ساعت‌اند و بدونِ پین، همین تست‌ها هر شب بعد از
+        // ۲۲ به وقتِ تهران قرمز می‌شدند. تست‌هایی که خودِ پنجره را می‌سنجند،
+        // زمانِ خودشان را صریح ست می‌کنند.
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-08-03 12:00', config('app.timezone')));
+    }
+
+    protected function tearDown(): void
+    {
+        CarbonImmutable::setTestNow();
+
+        parent::tearDown();
     }
 
     // ───────────────────────── helpers
