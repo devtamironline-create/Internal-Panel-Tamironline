@@ -131,7 +131,11 @@ return [
             'slug' => 'slug',
             'url' => '/forum/{slug}',
             'title_attr' => 'title',
-            'excerpt_attr' => null,
+            // %excerpt% از متنِ خودِ سؤال — با null، هر ۸۹ سؤالِ فروم یک
+            // دیسکریپشنِ یکسان می‌گرفتند: excerpt خالی رندر می‌شد و
+            // MetaResolver بی‌سروصدا site_description ثابت را جایش می‌گذاشت.
+            // clean() و سقفِ طول از قبل در مسیرند، پس body خام امن است.
+            'excerpt_attr' => 'body',
             'published' => 'published_at',
             'sitemap' => true,
             'default_schema' => 'QAPage',

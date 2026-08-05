@@ -205,6 +205,18 @@ class MetaResolver
 
         $title = (string) ($model->getAttribute($titleAttr) ?? '');
         $excerpt = $excerptAttr ? $this->clean((string) ($model->getAttribute($excerptAttr) ?? '')) : '';
+
+        // تورِ ایمنی: excerpt پیکربندی شده ولی خالی درآمده — یعنی fallback
+        // به site_description فعال می‌شود و این صفحه دیسکریپشنِ تکراری
+        // می‌گیرد. همین الگو یک‌بار ۸۹ صفحهٔ فروم را در SEMrush تکراری کرد،
+        // بی‌هیچ ردی. فقط برای نوع‌هایی که excerpt_attr دارند لاگ می‌شود تا
+        // resolve‌های عادیِ دستگاه/برند لاگ را پر نکنند.
+        if ($excerptAttr && $excerpt === '') {
+            \Illuminate\Support\Facades\Log::info('seo.meta.excerpt_empty_fallback', [
+                'type' => $type,
+                'id' => $model->getKey(),
+            ]);
+        }
         $slug = (string) ($model->getAttribute($cfg['slug'] ?? 'slug') ?? '');
         $year = (string) (int) date('Y');
 
