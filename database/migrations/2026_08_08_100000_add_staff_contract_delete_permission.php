@@ -1,0 +1,46 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
+
+/**
+ * دسترسی «حذف قرارداد کارمند» — تا حالا حذف به manage-permissions گره خورده
+ * بود و در صفحهٔ دسترسی‌ها چیزی برای واگذاری وجود نداشت. به نقش‌هایی که
+ * manage-permissions دارند خودکار داده می‌شود تا دسترسی فعلی مدیر کل با
+ * جداشدنِ مجوز قطع نشود. (نقش admin از طریق Gate::before همیشه دسترسی دارد.)
+ */
+return new class extends Migration
+{
+    private const KEY = 'delete-staff-contracts';
+
+    public function up(): void
+    {
+        if (! class_exists(Permission::class)) {
+            return;
+        }
+
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        $permission = Permission::firstOrCreate(['name' => self::KEY, 'guard_name' => 'web']);
+
+        foreach (Role::all() as $role) {
+            if ($role->hasPermissionTo('manage-permissions') && ! $role->hasPermissionTo(self::KEY)) {
+                $role->givePermissionTo($permission);
+            }
+        }
+
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+    }
+
+    public function down(): void
+    {
+        if (! class_exists(Permission::class)) {
+            return;
+        }
+
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        Permission::where('name', self::KEY)->delete();
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+    }
+};

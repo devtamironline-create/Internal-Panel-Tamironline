@@ -96,11 +96,13 @@ class StaffContractAdminTest extends TestCase
             'is_staff' => true,
         ]);
 
-        // موضوعِ این تست نقش‌ها نیست؛ هر دو مجوزِ لازم مستقیم داده می‌شوند.
-        foreach (['manage-staff-contracts', 'manage-permissions'] as $name) {
+        // موضوعِ این تست نقش‌ها نیست؛ مجوزها مستقیم داده می‌شوند. عمداً
+        // manage-permissions در کار نیست: حذف باید با خودِ
+        // delete-staff-contracts ممکن باشد، نه با سوپر-ادمین بودن.
+        foreach (['manage-staff-contracts', 'delete-staff-contracts'] as $name) {
             \Spatie\Permission\Models\Permission::findOrCreate($name, 'web');
         }
-        $admin->givePermissionTo(['manage-staff-contracts', 'manage-permissions']);
+        $admin->givePermissionTo(['manage-staff-contracts', 'delete-staff-contracts']);
 
         return $this->adminUser = $admin;
     }
@@ -217,6 +219,35 @@ class StaffContractAdminTest extends TestCase
         ])->save();
 
         return $contract;
+    }
+
+    /**
+     * دسترسیِ حذف جداست: manage-staff-contracts برای دیدن و تأیید کافی است،
+     * ولی بدونِ delete-staff-contracts هیچ‌کدام از دو مسیرِ حذف باز نیست.
+     */
+    public function test_a_manager_without_the_delete_permission_cannot_delete(): void
+    {
+        $contract = $this->contractWithFiles();
+
+        $manager = User::forceCreate([
+            'first_name' => 'ناظر',
+            'email' => 'manager@example.test',
+            'password' => bcrypt('secret'),
+            'mobile' => '09129998877',
+            'mobile_verified_at' => now(),
+            'is_staff' => true,
+        ]);
+        $manager->givePermissionTo('manage-staff-contracts');
+
+        $this->actingAs($manager)
+            ->post(route('admin.staff-contracts.delete-code', $contract))
+            ->assertForbidden();
+
+        $this->actingAs($manager)
+            ->delete(route('admin.staff-contracts.destroy', $contract), ['confirmation_code' => '000000'])
+            ->assertForbidden();
+
+        $this->assertSame(1, StaffContract::count());
     }
 
     public function test_deleting_without_a_code_is_refused(): void

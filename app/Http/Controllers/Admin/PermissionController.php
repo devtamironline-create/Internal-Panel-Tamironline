@@ -25,21 +25,52 @@ class PermissionController extends Controller
         $permissions = Permission::all()->groupBy(function ($permission) {
             // Group permissions by category
             $name = $permission->name;
-            if (str_contains($name, 'staff')) return 'پرسنل';
-            if (str_contains($name, 'attendance')) return 'حضور و غیاب';
-            if (str_contains($name, 'leave')) return 'مرخصی';
-            if (str_contains($name, 'task')) return 'تسک';
-            if (str_contains($name, 'team')) return 'تیم';
-            if (str_contains($name, 'report')) return 'گزارش';
-            if (str_contains($name, 'okr')) return 'OKR';
-            if (str_contains($name, 'salary')) return 'حقوق';
-            if (str_contains($name, 'warehouse')) return 'انبار';
-            if (str_contains($name, 'technician')) return 'تکنسین';
-            if (str_contains($name, 'messenger')) return 'پیام‌رسان';
-            if (str_contains($name, 'forum')) return 'انجمن';
-            if (str_contains($name, 'site')) return 'مدیریت سایت';
-            if (str_contains($name, 'crm') || str_contains($name, 'invoice')) return 'CRM';
-            if (str_contains($name, 'setting') || str_contains($name, 'permission')) return 'تنظیمات';
+            if (str_contains($name, 'staff')) {
+                return 'پرسنل';
+            }
+            if (str_contains($name, 'attendance')) {
+                return 'حضور و غیاب';
+            }
+            if (str_contains($name, 'leave')) {
+                return 'مرخصی';
+            }
+            if (str_contains($name, 'task')) {
+                return 'تسک';
+            }
+            if (str_contains($name, 'team')) {
+                return 'تیم';
+            }
+            if (str_contains($name, 'report')) {
+                return 'گزارش';
+            }
+            if (str_contains($name, 'okr')) {
+                return 'OKR';
+            }
+            if (str_contains($name, 'salary')) {
+                return 'حقوق';
+            }
+            if (str_contains($name, 'warehouse')) {
+                return 'انبار';
+            }
+            if (str_contains($name, 'technician')) {
+                return 'تکنسین';
+            }
+            if (str_contains($name, 'messenger')) {
+                return 'پیام‌رسان';
+            }
+            if (str_contains($name, 'forum')) {
+                return 'انجمن';
+            }
+            if (str_contains($name, 'site')) {
+                return 'مدیریت سایت';
+            }
+            if (str_contains($name, 'crm') || str_contains($name, 'invoice')) {
+                return 'CRM';
+            }
+            if (str_contains($name, 'setting') || str_contains($name, 'permission')) {
+                return 'تنظیمات';
+            }
+
             return 'سایر';
         });
 
@@ -54,21 +85,52 @@ class PermissionController extends Controller
         $roles = Role::all();
         $permissions = Permission::all()->groupBy(function ($permission) {
             $name = $permission->name;
-            if (str_contains($name, 'staff')) return 'پرسنل';
-            if (str_contains($name, 'attendance')) return 'حضور و غیاب';
-            if (str_contains($name, 'leave')) return 'مرخصی';
-            if (str_contains($name, 'task')) return 'تسک';
-            if (str_contains($name, 'team')) return 'تیم';
-            if (str_contains($name, 'report')) return 'گزارش';
-            if (str_contains($name, 'okr')) return 'OKR';
-            if (str_contains($name, 'salary')) return 'حقوق';
-            if (str_contains($name, 'warehouse')) return 'انبار';
-            if (str_contains($name, 'technician')) return 'تکنسین';
-            if (str_contains($name, 'messenger')) return 'پیام‌رسان';
-            if (str_contains($name, 'forum')) return 'انجمن';
-            if (str_contains($name, 'site')) return 'مدیریت سایت';
-            if (str_contains($name, 'crm') || str_contains($name, 'invoice')) return 'CRM';
-            if (str_contains($name, 'setting') || str_contains($name, 'permission')) return 'تنظیمات';
+            if (str_contains($name, 'staff')) {
+                return 'پرسنل';
+            }
+            if (str_contains($name, 'attendance')) {
+                return 'حضور و غیاب';
+            }
+            if (str_contains($name, 'leave')) {
+                return 'مرخصی';
+            }
+            if (str_contains($name, 'task')) {
+                return 'تسک';
+            }
+            if (str_contains($name, 'team')) {
+                return 'تیم';
+            }
+            if (str_contains($name, 'report')) {
+                return 'گزارش';
+            }
+            if (str_contains($name, 'okr')) {
+                return 'OKR';
+            }
+            if (str_contains($name, 'salary')) {
+                return 'حقوق';
+            }
+            if (str_contains($name, 'warehouse')) {
+                return 'انبار';
+            }
+            if (str_contains($name, 'technician')) {
+                return 'تکنسین';
+            }
+            if (str_contains($name, 'messenger')) {
+                return 'پیام‌رسان';
+            }
+            if (str_contains($name, 'forum')) {
+                return 'انجمن';
+            }
+            if (str_contains($name, 'site')) {
+                return 'مدیریت سایت';
+            }
+            if (str_contains($name, 'crm') || str_contains($name, 'invoice')) {
+                return 'CRM';
+            }
+            if (str_contains($name, 'setting') || str_contains($name, 'permission')) {
+                return 'تنظیمات';
+            }
+
             return 'سایر';
         });
 
@@ -109,6 +171,8 @@ class PermissionController extends Controller
             // پرسنل / حضور / مرخصی
             'view-staff' => 'مشاهده پرسنل',
             'manage-staff' => 'مدیریت پرسنل',
+            'manage-staff-contracts' => 'مدیریت قرارداد کارمندان (صدور، بررسی، تأیید)',
+            'delete-staff-contracts' => 'حذف قرارداد کارمند (با تأیید پیامکی)',
             'view-attendance' => 'مشاهده حضور و غیاب',
             'manage-attendance' => 'مدیریت حضور و غیاب',
             'view-leave' => 'مشاهده مرخصی',

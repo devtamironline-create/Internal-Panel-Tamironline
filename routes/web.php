@@ -150,12 +150,12 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::get('/{staffContract}/download', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'download'])->name('download');
         Route::get('/{staffContract}/file/{field}', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'document'])
             ->where('field', '[a-z0-9_]+')->name('file');
-        // حذفِ قرارداد — فقط مدیرِ کل، و با تأییدِ پیامکی.
+        // حذفِ قرارداد — دسترسیِ جداگانهٔ delete-staff-contracts، و با تأییدِ پیامکی.
         //
         // قرارداد سندی امضاشده همراه با مدارکِ هویتیِ کارمند است؛ `manage-staff-contracts`
         // برای دیدن و تأیید کافی است ولی برای پاک‌کردن نه. کد از سرویسِ احراز
-        // هویتِ پنل به موبایلِ خودِ مدیر می‌رود.
-        Route::middleware('can:manage-permissions')->group(function () {
+        // هویتِ پنل به موبایلِ خودِ حذف‌کننده می‌رود.
+        Route::middleware('can:delete-staff-contracts')->group(function () {
             Route::post('/{staffContract}/delete-code', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'requestDeleteCode'])->name('delete-code');
             Route::delete('/{staffContract}', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'destroy'])->name('destroy');
         });
