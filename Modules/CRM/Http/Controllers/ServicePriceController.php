@@ -94,10 +94,16 @@ class ServicePriceController extends Controller
 
         $isFree = $request->boolean('is_free');
 
+        // validate() فقط کلیدهای موجود در درخواست را برمی‌گرداند؛ فرمِ
+        // «افزودن» فیلدِ قیمتِ قبلی را اصلاً ندارد و input قیمت هم با تیکِ
+        // «رایگان» disabled (=ارسال‌نشده) است. کلیدِ غایب نباید ۵۰۰ بسازد.
+        $price = $v['price'] ?? null;
+        $compareAt = $v['compare_at_price'] ?? null;
+
         return [
             'title' => $v['title'],
-            'price' => $isFree ? null : ($v['price'] !== null && $v['price'] !== '' ? (int) $v['price'] : null),
-            'compare_at_price' => $v['compare_at_price'] !== null && $v['compare_at_price'] !== '' ? (int) $v['compare_at_price'] : null,
+            'price' => $isFree ? null : ($price !== null && $price !== '' ? (int) $price : null),
+            'compare_at_price' => $compareAt !== null && $compareAt !== '' ? (int) $compareAt : null,
             'is_free' => $isFree,
             'note' => $v['note'] ?? null,
             'sort_order' => (int) ($v['sort_order'] ?? 0),

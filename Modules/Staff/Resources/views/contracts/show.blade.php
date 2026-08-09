@@ -125,10 +125,10 @@
                 </div>
             @endif
 
-            {{-- حذفِ قرارداد — فقط مدیرِ کل، و فقط با کدِ پیامکی.
+            {{-- حذفِ قرارداد — فقط با دسترسیِ delete-staff-contracts و کدِ پیامکی.
                  برای قراردادهای تستی یا اشتباهی. رکورد و همهٔ فایل‌هایش
                  (مدارک هویتی، امضا، ویدیو، PDF) با هم پاک می‌شوند. --}}
-            @can('manage-permissions')
+            @can('delete-staff-contracts')
                 <div class="bg-white dark:bg-gray-800 rounded-xl border-2 border-red-200 dark:border-red-900/60 p-4 space-y-3">
                     <h2 class="text-sm font-bold text-red-700 dark:text-red-300">حذف قرارداد</h2>
 

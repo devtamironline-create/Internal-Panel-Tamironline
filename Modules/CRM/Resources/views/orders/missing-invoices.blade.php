@@ -66,11 +66,19 @@
                                 <a href="{{ route('crm.orders.show', $o) }}" target="_blank" class="text-brand-700 hover:underline">
                                     {{ $o->order_code }}
                                 </a>
+                                {{-- این دو حالت قبلاً بی‌صدا از لیست حذف می‌شدند و سفارشِ
+                                     بی‌فاکتور نامرئی می‌ماند؛ حالا با برچسب دیده می‌شوند. --}}
+                                @if($o->save_as_draft)
+                                    <div class="mt-1"><span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700" dir="rtl">تکمیل پیش‌نویس</span></div>
+                                @endif
+                                @if($o->is_legacy_closed)
+                                    <div class="mt-1"><span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-200 text-gray-600" dir="rtl">بستن قدیمی</span></div>
+                                @endif
                             </td>
                             <td class="p-3 text-gray-500" dir="ltr">
-                                @jdatetime($o->completed_at ?? $o->updated_at)
+                                @jdatetime($o->completed_at ?? $o->status_changed_at)
                                 @if(! $o->completed_at)
-                                    <div class="text-[10px] text-amber-600" dir="rtl">تاریخ تکمیل ثبت نشده — آخرین تغییر</div>
+                                    <div class="text-[10px] text-amber-600" dir="rtl">تاریخ تکمیل ثبت نشده — تاریخ تغییر وضعیت</div>
                                 @endif
                             </td>
                             <td class="p-3">

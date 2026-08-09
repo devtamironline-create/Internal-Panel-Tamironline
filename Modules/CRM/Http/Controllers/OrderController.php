@@ -376,20 +376,21 @@ class OrderController extends Controller
     }
 
     /**
-     * لیست سفارش‌های تکمیل‌شده در ۲ هفتهٔ گذشته که فاکتور فعال ندارند.
+     * لیست سفارش‌های تکمیل‌شده در بازهٔ اخیر که فاکتور فعال ندارند.
      * برای جبران سفارش‌هایی که به هر دلیل خودکار فاکتور برایشان ساخته
      * نشده — اپراتور می‌تواند با یک کلیک فاکتور را صادر کند.
      */
     public function missingInvoices(Request $request)
     {
-        $sinceDays = (int) $request->query('days', 14);
+        $sinceDays = (int) $request->query('days', 30);
         if ($sinceDays <= 0 || $sinceDays > 90) {
-            $sinceDays = 14;
+            $sinceDays = 30;
         }
         $since = now()->subDays($sinceDays);
 
         // ID همهٔ سفارش‌هایی که فاکتور فعال (superseded نباشد) دارند —
-        // اینها از لیست خارج می‌شوند.
+        // اینها از لیست خارج می‌شوند. (global scope مدلِ Invoice خودش
+        // superseded ها را حذف می‌کند.)
         $orderIdsWithActiveInvoice = \Modules\CRM\Models\Invoice::query()
             ->whereNotNull('order_id')
             ->pluck('order_id')
@@ -403,26 +404,25 @@ class OrderController extends Controller
             ])
             ->where('status', OrderStatus::Completed->value)
             // completed_at بعضی سفارش‌ها NULL است (مثلاً سفارش‌هایی که از
-            // ابتدا «انجام کار» از WP رسیده‌اند) — این‌ها نباید از چشم
-            // detector پنهان بمانند؛ برای پنجرهٔ زمانی به updated_at
-            // (آخرین تغییر) fallback می‌کنیم.
+            // ابتدا «انجام کار» از WP رسیده‌اند). fallback عمداً
+            // status_changed_at است و نه updated_at: سینکِ WP و jobهای
+            // دسته‌جمعی مدام updated_at را تازه می‌کنند و با آن fallback،
+            // سفارش‌های ایمپورتیِ چندسال‌پیشِ بی‌فاکتور هر هفته دوباره
+            // «تازه» به نظر می‌رسیدند و کلِ لیست را پر می‌کردند.
             ->where(function ($q) use ($since) {
                 $q->where('completed_at', '>=', $since)
                     ->orWhere(function ($qq) use ($since) {
                         $qq->whereNull('completed_at')
-                            ->where('updated_at', '>=', $since);
+                            ->where('status_changed_at', '>=', $since);
                     });
             })
-            ->where(function ($q) {
-                $q->where('is_legacy_closed', false)
-                    ->orWhereNull('is_legacy_closed');
-            })
             ->whereNotIn('id', $orderIdsWithActiveInvoice)
-            ->where(function ($q) {
-                $q->where('save_as_draft', false)
-                    ->orWhereNull('save_as_draft');
-            })
-            ->orderByRaw('COALESCE(completed_at, updated_at) DESC')
+            // save_as_draft و is_legacy_closed دیگر «حذف» نمی‌شوند: حذفِ
+            // خاموش یعنی سفارشِ بی‌فاکتوری که اپراتور با تیکِ پیش‌نویس یا
+            // جریانِ بستنِ قدیمی تکمیل کرده، از چشمِ همین صفحه‌ای که برای
+            // پیداکردنش ساخته شده پنهان بماند. حالا با برچسب نشان داده
+            // می‌شوند تا تصمیم با اپراتور باشد.
+            ->orderByRaw('COALESCE(completed_at, status_changed_at) DESC')
             ->paginate(50)
             ->withQueryString();
 
