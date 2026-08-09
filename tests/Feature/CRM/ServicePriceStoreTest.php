@@ -82,4 +82,35 @@ class ServicePriceStoreTest extends TestCase
         $this->assertTrue($price->is_free);
         $this->assertNull($price->price);
     }
+
+    /**
+     * آدرسِ POST بعد از یک submit ناموفق در history مرورگر می‌ماند؛
+     * بازکردنش با GET باید به صفحهٔ تعرفه‌های همان دستگاه برود، نه 405.
+     */
+    public function test_opening_the_post_url_with_get_redirects_instead_of_405(): void
+    {
+        \Illuminate\Support\Facades\Artisan::call('migrate', [
+            '--path' => 'database/migrations/0001_01_01_000000_create_users_table.php',
+            '--force' => true,
+        ]);
+        \Illuminate\Support\Facades\Artisan::call('migrate', [
+            '--path' => 'database/migrations/2025_12_19_195120_create_permission_tables.php',
+            '--force' => true,
+        ]);
+
+        $user = \App\Models\User::forceCreate([
+            'first_name' => 'مدیر',
+            'email' => 'admin@example.test',
+            'mobile' => '09123456789',
+            'password' => bcrypt('secret'),
+        ]);
+        \Spatie\Permission\Models\Permission::findOrCreate('manage-crm-devices', 'web');
+        $user->givePermissionTo('manage-crm-devices');
+
+        $device = Device::forceCreate(['name' => 'یخچال', 'slug' => 'fridge']);
+
+        $this->actingAs($user)
+            ->get('/admin/crm/devices/'.$device->id.'/service-prices')
+            ->assertRedirect(route('crm.service-prices.index', ['device' => $device->id]));
+    }
 }

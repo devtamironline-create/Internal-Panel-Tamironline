@@ -150,6 +150,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('service-prices', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'index'])->name('service-prices.index');
         Route::put('service-prices/disclaimer', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'updateDisclaimer'])->name('service-prices.disclaimer');
         Route::post('devices/{device}/service-prices', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'store'])->name('service-prices.store');
+        // بازکردنِ مستقیمِ آدرسِ POST بالا (مثلاً از history مرورگر بعد از یک
+        // submit ناموفق) نباید 405 بدهد — به صفحهٔ تعرفه‌های همان دستگاه برو.
+        Route::get('devices/{device}/service-prices', fn (\Modules\CRM\Models\Device $device) => redirect()->route('crm.service-prices.index', ['device' => $device->id]))->name('service-prices.store.get');
         Route::put('service-prices/{price}', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'update'])->whereNumber('price')->name('service-prices.update');
         Route::delete('service-prices/{price}', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'destroy'])->whereNumber('price')->name('service-prices.destroy');
     });
