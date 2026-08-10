@@ -216,6 +216,19 @@ class TechOrderDetailResource extends JsonResource
      */
     private function allowedTransitions(?OrderStatus $status): array
     {
+        // پیش‌نویسِ تکمیل‌شده: تنها گذارِ مجاز، ثبتِ نهاییِ همان «تکمیل شده»
+        // است تا فاکتور و بدهی ساخته شود (هم‌سو با allowedStatusesFor).
+        if ($status === OrderStatus::Completed && $this->save_as_draft) {
+            $canFinalize = CrmSetting::get('tech_panel_readonly') !== '1';
+
+            return $canFinalize ? [[
+                'value' => OrderStatus::Completed->value,
+                'label' => OrderStatus::Completed->label(),
+                'action_label' => 'ثبت نهایی فاکتور (خروج از پیش‌نویس)',
+                'badge' => OrderStatus::Completed->badgeClass(),
+            ]] : [];
+        }
+
         if (! $status || $status->isFinal()) {
             return [];
         }

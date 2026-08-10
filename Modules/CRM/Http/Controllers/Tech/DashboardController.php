@@ -463,11 +463,12 @@ class DashboardController extends Controller
         }
 
         // SMS خودکار طبق وضعیت — هم‌ارز TechDashboardController قدیمی.
-        // در تکمیل مجدد سفارش‌های بازگشتی (return_type != null) پیامک
-        // اطلاع‌رسانی به مشتری ارسال نمی‌شود؛ مشتری قبلاً موقع تکمیل اول
-        // اطلاع گرفته بود و این مرحله ادامه/تصحیح همان کار است.
+        // در تکمیل مجدد سفارش‌های بازگشتی (return_type != null) و در
+        // نهایی‌سازیِ پیش‌نویس (Completed→Completed) پیامک اطلاع‌رسانی به
+        // مشتری ارسال نمی‌شود؛ مشتری قبلاً موقع تکمیل اول اطلاع گرفته بود.
         if ($trigger = SmsTrigger::fromOrderStatus($newStatus)) {
-            $skipForReturned = $newStatus === OrderStatus::Completed && ! is_null($order->return_type);
+            $skipForReturned = $newStatus === OrderStatus::Completed
+                && (! is_null($order->return_type) || $previous === OrderStatus::Completed->value);
             if (! $skipForReturned) {
                 $this->smsNotifier->notify($order->refresh(), $trigger, $tech->user_id);
             }
@@ -787,6 +788,15 @@ class DashboardController extends Controller
      */
     protected function allowedStatusesFor(Order $order): array
     {
+        // پیش‌نویسِ تکمیل‌شده هنوز فاکتور و بدهی ندارد — تنها گذارِ مجاز،
+        // ثبتِ نهاییِ همان «تکمیل شده» (بدون save_as_draft) است؛ وگرنه
+        // isFinal پایین راهِ نهایی‌سازی را برای همیشه می‌بست.
+        if ($order->status === OrderStatus::Completed && $order->save_as_draft) {
+            return \Modules\CRM\Models\CrmSetting::get('tech_panel_readonly') === '1'
+                ? []
+                : [OrderStatus::Completed];
+        }
+
         if ($order->status->isFinal()) {
             return [];
         }

@@ -135,9 +135,11 @@ class OrderActionController extends Controller
             $this->invoiceService->generateForOrder($order->refresh(), $tech->user_id, true);
         }
 
-        // SMS خودکارِ وضعیت.
+        // SMS خودکارِ وضعیت. نهایی‌سازیِ پیش‌نویس (Completed→Completed) پیامک
+        // ندارد — مشتری موقعِ تکمیلِ اول خبردار شده.
         if ($trigger = SmsTrigger::fromOrderStatus($newStatus)) {
-            $skip = $newStatus === OrderStatus::Completed && ! is_null($order->return_type);
+            $skip = $newStatus === OrderStatus::Completed
+                && (! is_null($order->return_type) || $previous === OrderStatus::Completed->value);
             if (! $skip) {
                 try {
                     $this->smsNotifier->notify($order->refresh(), $trigger, $tech->user_id);
@@ -427,6 +429,13 @@ class OrderActionController extends Controller
      */
     private function allowedStatusesFor(Order $order): array
     {
+        // پیش‌نویسِ تکمیل‌شده هنوز فاکتور و بدهی ندارد — تنها گذارِ مجاز،
+        // ثبتِ نهاییِ همان «تکمیل شده» (بدون save_as_draft) است؛ وگرنه
+        // isFinal پایین راهِ نهایی‌سازی را برای همیشه می‌بست.
+        if ($order->status === OrderStatus::Completed && $order->save_as_draft) {
+            return CrmSetting::get('tech_panel_readonly') === '1' ? [] : [OrderStatus::Completed];
+        }
+
         if ($order->status->isFinal()) {
             return [];
         }
