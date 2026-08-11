@@ -176,12 +176,13 @@ class TechSyncEndpointTest extends TestCase
         $this->assertSame(2, $this->sync($tech)['orders']['actionable_count']);
     }
 
-    public function test_transit_still_counts_because_it_still_has_a_deadline(): void
+    /** سفارشِ بسته‌شده با «ایاب و ذهاب» نباید در بجِ «در انتظار تصمیم» بشمارد. */
+    public function test_transit_is_settled_and_does_not_count(): void
     {
         $tech = $this->technician();
         $this->order($tech, ['status' => 'transit']);
 
-        $this->assertSame(1, $this->sync($tech)['orders']['actionable_count']);
+        $this->assertSame(0, $this->sync($tech)['orders']['actionable_count']);
     }
 
     public function test_another_technicians_orders_are_invisible(): void

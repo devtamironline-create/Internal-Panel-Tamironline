@@ -38,7 +38,6 @@ final class SlaPolicy
         'awaiting_part' => 168,
         'awaiting_customer_approval' => 24,
         'repair_started' => 120,
-        'transit' => 336,
     ];
 
     /** برچسبِ فارسیِ هر مهلت برای فرمِ تنظیمات. */
@@ -50,7 +49,6 @@ final class SlaPolicy
         'awaiting_part' => 'در انتظار قطعه',
         'awaiting_customer_approval' => 'در انتظار تأیید مشتری',
         'repair_started' => 'شروع تعمیر',
-        'transit' => 'انتقال به تعمیرگاه (سقف تخمین)',
     ];
 
     private static ?array $hours = null;
@@ -99,10 +97,11 @@ final class SlaPolicy
             ? $order->status
             : OrderStatus::tryFrom((string) $order->status);
 
-        // عمداً از isFinal() استفاده نمی‌کنیم: «انتقال به تعمیرگاه» در آن
-        // متد نهایی محسوب می‌شود (برای قفلِ UI و هدفِ برگشتی) ولی از نظر
-        // عملیاتی هنوز تصمیمِ تکنسین را طلب می‌کند و مهلت دارد. هر وضعیتی
-        // که در match زیر نیاید خودبه‌خود بی‌مهلت است.
+        // هر وضعیتی که در match زیر نیاید خودبه‌خود بی‌مهلت است — از جمله
+        // transit («ایاب و ذهاب»): آن یک وضعیتِ بستنِ سفارش است (مراجعه شده،
+        // تعمیری نبوده، فقط هزینهٔ ایاب و ذهاب) و هیچ تصمیمی از تکنسین
+        // نمی‌خواهد. estimated_ready_at قدیمیِ باقی‌مانده روی این سفارش‌ها
+        // نباید مهلت بسازد — اپ روی مهلتِ گذشته قفلِ تمام‌صفحه می‌گذارد.
         if (! $status) {
             return null;
         }
@@ -119,10 +118,6 @@ final class SlaPolicy
 
             // زمانِ توافق‌شده با مشتری خودش مهلت است.
             OrderStatus::Coordinated => self::at($order->visit_scheduled_at),
-
-            // تخمینِ خودِ تکنسین مرجع است؛ اگر ثبت نشده، سقفِ پیش‌فرض.
-            OrderStatus::Transit => self::at($order->estimated_ready_at)
-                ?? self::offset($order->status_changed_at, $hours['transit']),
 
             OrderStatus::Suspended => self::offset($order->status_changed_at, $hours['suspended']),
             OrderStatus::AwaitingPart => self::at($order->estimated_ready_at)

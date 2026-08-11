@@ -138,8 +138,10 @@ class SyncController extends Controller
      */
     private function settledStatuses(): array
     {
+        // transit («ایاب و ذهاب») هم مثل بقیهٔ نهایی‌ها تسویه‌شده است —
+        // سفارشِ بسته نباید در بجِ «در انتظار تصمیم» بشمارد.
         return collect(OrderStatus::cases())
-            ->filter(fn (OrderStatus $s) => $s->isFinal() && $s !== OrderStatus::Transit)
+            ->filter(fn (OrderStatus $s) => $s->isFinal())
             ->map(fn (OrderStatus $s) => $s->value)
             ->push(OrderStatus::Declined->value)
             ->unique()
