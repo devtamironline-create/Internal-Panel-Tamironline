@@ -792,6 +792,12 @@ Route::prefix('tech')->name('tech.')->group(function () {
     });
 
     // Authenticated — با training gate middleware + freeze read-only mode
+    // ارسال لینک دانلود اپ با پیامک — از صفحهٔ «آپدیت اجباری». عمداً خارج از
+    // gate آموزش/فریز: تکنسینِ پشتِ آن صفحه هم باید بتواند لینک را بگیرد.
+    Route::middleware(['auth:tech', 'throttle:3,60'])
+        ->post('app-update-sms', [TechAuthController::class, 'sendAppUpdateSms'])
+        ->name('app-update.sms');
+
     Route::middleware(['auth:tech',
         \Modules\CRM\Http\Middleware\TechPanelReadOnly::class,
         \Modules\CRM\Http\Middleware\RequireTrainingCompleted::class,

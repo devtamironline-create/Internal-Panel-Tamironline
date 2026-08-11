@@ -195,6 +195,33 @@ class AuthController extends Controller
         return redirect()->route('tech.login');
     }
 
+    /**
+     * ارسال لینک دانلود نسخهٔ جدید اپ اندروید با پیامک به موبایل خودِ تکنسین.
+     *
+     * WebView اپ قدیمی دانلود مستقیم، target=_blank و حتی intent:// را
+     * نادیده می‌گیرد؛ ولی لینکِ داخل پیامک همیشه در مرورگر سیستم باز
+     * می‌شود. throttle در route محدودش می‌کند.
+     */
+    public function sendAppUpdateSms()
+    {
+        $mobile = trim((string) Auth::guard('tech')->user()->mobile);
+
+        if ($mobile === '') {
+            return back()->with('app_update_sms_error', 'برای حساب شما شماره موبایلی ثبت نشده است.');
+        }
+
+        $result = $this->sms->send(
+            $mobile,
+            "تعمیرآنلاین\nلینک دانلود نسخه جدید اپ تکنسین:\nhttps://panel.tamironline.com/karbalad-ver4.apk"
+        );
+
+        if (! ($result['success'] ?? false)) {
+            return back()->with('app_update_sms_error', $result['message'] ?? 'ارسال پیامک ناموفق بود.');
+        }
+
+        return back()->with('app_update_sms_sent', 'لینک دانلود پیامک شد — پیامک را باز کنید و روی لینک بزنید.');
+    }
+
     /** ورود تکنسین پس از موفقیت OTP/پسورد. */
     protected function loginTechnician(string $mobile)
     {
