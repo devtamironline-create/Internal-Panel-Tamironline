@@ -110,9 +110,36 @@
                     برای استفاده از اپ تکنسین، نسخهٔ اندروید نرم‌افزار را آپدیت کنید.
                     ادامهٔ کار فقط بعد از نصب نسخهٔ جدید ممکن است.
                 </p>
-                {{-- target=_blank تا در پوستهٔ PWA/WebView (که دانلودِ مستقیم را
-                     نادیده می‌گیرد) لینک به مرورگر/Custom Tab پاس داده شود. --}}
+                {{-- زنجیرهٔ فرار از پوسته: ۱) window.open — در مرورگر/PWA همان‌جا
+                     دانلود می‌شود؛ ۲) intent:// عمومی — WebView را وادار می‌کند
+                     آدرس را به مرورگر سیستم بدهد؛ ۳) intent با package کروم.
+                     اگر هیچ‌کدام نگرفت، fallback کپی لینک پایین سر جایش است. --}}
+                <script>
+                function techApkOpen() {
+                    var url = 'https://panel.tamironline.com/karbalad-ver4.apk';
+                    var host = 'panel.tamironline.com/karbalad-ver4.apk';
+                    try {
+                        var w = window.open(url, '_blank');
+                        if (w) { return false; }
+                    } catch (e) {}
+                    try {
+                        window.location.href = 'intent://' + host
+                            + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end';
+                    } catch (e) {}
+                    // اگر بعد از یک‌ونیم ثانیه هنوز همین‌جاییم، کروم را صریح صدا بزن.
+                    setTimeout(function () {
+                        if (document.visibilityState === 'visible') {
+                            try {
+                                window.location.href = 'intent://' + host
+                                    + '#Intent;scheme=https;package=com.android.chrome;action=android.intent.action.VIEW;end';
+                            } catch (e) {}
+                        }
+                    }, 1500);
+                    return false;
+                }
+                </script>
                 <a href="https://panel.tamironline.com/karbalad-ver4.apk" target="_blank" rel="noopener"
+                   onclick="return techApkOpen();"
                    style="display:inline-block; background:#059669; color:#fff; font-weight:700;
                           padding:.75rem 2.5rem; border-radius:.75rem; text-decoration:none; font-size:1rem;">
                     دانلود نسخهٔ جدید
