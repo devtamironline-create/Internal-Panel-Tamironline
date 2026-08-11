@@ -94,19 +94,25 @@
 </head>
 <body>
     <div class="app-frame">
-        {{-- بنرِ آپدیت اپ اندروید — روی هر دو میزبانِ پنل تکنسین (panel و
-             karbalad). عمداً دکمهٔ بستن ندارد: تا وقتی تکنسین با دستگاه
-             اندرویدی از نسخهٔ وب استفاده می‌کند، باید یادآوری آپدیت را ببیند. --}}
+        {{-- آپدیت اجباری اپ اندروید — روی هر دو میزبانِ پنل تکنسین (panel و
+             karbalad). تمام‌صفحه و بدون راهِ رد شدن: تکنسینِ اندرویدی تا
+             نسخهٔ جدید را نصب نکند نمی‌تواند با پنل کار کند.
+             استایل‌ها عمداً inline هستند تا به build تیل‌ویند وابسته نباشند. --}}
         @if(str_contains(request()->userAgent() ?? '', 'Android'))
-            <div class="bg-emerald-50 border-b border-emerald-200 px-4 py-2.5 flex items-center justify-between gap-3 text-xs" dir="rtl">
-                <div class="flex items-center gap-2 text-emerald-800 min-w-0">
-                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
-                    </svg>
-                    <span>برای استفاده از اپ تکنسین، نسخهٔ اندروید نرم‌افزار را آپدیت کنید.</span>
-                </div>
+            <div dir="rtl" style="position:fixed; inset:0; z-index:99999; background:#fff;
+                        display:flex; flex-direction:column; align-items:center; justify-content:center;
+                        text-align:center; padding:2rem; gap:1rem;">
+                <svg style="width:56px; height:56px; color:#059669;" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                </svg>
+                <h1 style="font-size:1.25rem; font-weight:800; color:#111827; margin:0;">آپدیت اجباری اپ تکنسین</h1>
+                <p style="font-size:.9rem; color:#4b5563; line-height:1.9; max-width:22rem; margin:0;">
+                    برای استفاده از اپ تکنسین، نسخهٔ اندروید نرم‌افزار را آپدیت کنید.
+                    ادامهٔ کار فقط بعد از نصب نسخهٔ جدید ممکن است.
+                </p>
                 <a href="https://tamironline.com/Karbalad.apk"
-                   class="flex-shrink-0 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium keep-latin" dir="rtl">
+                   style="display:inline-block; background:#059669; color:#fff; font-weight:700;
+                          padding:.75rem 2.5rem; border-radius:.75rem; text-decoration:none; font-size:1rem;">
                     دانلود نسخهٔ جدید
                 </a>
             </div>

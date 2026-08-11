@@ -6,11 +6,12 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * بنرِ «آپدیت اپ اندروید» در پنل تکنسین.
+ * آپدیتِ اجباری اپ اندروید در پنل تکنسین.
  *
  * قاعده: هر صفحهٔ پنل تکنسین (روی هر دو میزبان — panel و karbalad، چون هر دو
- * همین layout را render می‌کنند) وقتی از دستگاه اندرویدی باز شود باید
- * یادآوریِ آپدیت + لینک APK را نشان دهد؛ روی دسکتاپ و iOS نه.
+ * همین layout را render می‌کنند) وقتی از دستگاه اندرویدی باز شود باید صفحهٔ
+ * تمام‌صفحهٔ «آپدیت اجباری» + لینک APK را نشان دهد — بدون راهِ رد شدن؛
+ * روی دسکتاپ و iOS نه.
  */
 class TechPanelAndroidBannerTest extends TestCase
 {
@@ -37,11 +38,12 @@ class TechPanelAndroidBannerTest extends TestCase
         }
     }
 
-    public function test_android_visitors_see_the_update_banner_with_the_apk_link(): void
+    public function test_android_visitors_get_the_blocking_update_screen_with_the_apk_link(): void
     {
         $this->withHeaders(['User-Agent' => self::ANDROID_UA])
             ->get('/tech')
             ->assertOk()
+            ->assertSee('آپدیت اجباری اپ تکنسین')
             ->assertSee('نسخهٔ اندروید نرم‌افزار را آپدیت کنید')
             ->assertSee(self::APK, false);
     }
