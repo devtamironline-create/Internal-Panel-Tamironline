@@ -43,6 +43,14 @@ Route::get('/file/{path}', [\App\Http\Controllers\StorageProxyController::class,
     ->where('path', '.+')
     ->name('storage.proxy');
 
+// ─── آدرس کوتاهِ دانلود اپ تکنسین ────────────────────────────────
+// «panel.tamironline.com/app» (و همین مسیر روی ساب‌دامین karbalad) →
+// فایل APK. برای وقتی که تکنسین باید آدرس را دستی در مرورگر تایپ کند؛
+// TechSubdomainScope هم 'app' را عبور می‌دهد.
+Route::get('/app', function () {
+    return redirect()->away('https://panel.tamironline.com/karbalad-ver4.apk');
+})->name('app.download');
+
 // ─── ساب‌دامین اختصاصی پنل تکنسین ─────────────────────────────────
 // اگر TECH_SUBDOMAIN در .env ست شده باشد، root آن ساب‌دامین مستقیم به
 // صفحه لاگین/داشبورد تکنسین می‌رود تا تکنسین‌ها مجبور نباشند /tech را

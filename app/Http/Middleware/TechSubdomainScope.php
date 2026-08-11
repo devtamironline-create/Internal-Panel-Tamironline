@@ -38,6 +38,7 @@ class TechSubdomainScope
     ];
 
     private const ALLOWED_EXACT = [
+        'app',           // آدرس کوتاه دانلود APK اپ تکنسین
         'manifest.json',
         'sw.js',
         'favicon.ico',

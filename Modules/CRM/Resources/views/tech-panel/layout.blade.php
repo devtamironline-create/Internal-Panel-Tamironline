@@ -144,6 +144,29 @@
                           padding:.75rem 2.5rem; border-radius:.75rem; text-decoration:none; font-size:1rem;">
                     دانلود نسخهٔ جدید
                 </a>
+                {{-- راهِ مطمئن برای WebViewهای کاملاً بسته: پیامک همیشه در
+                     مرورگر سیستم باز می‌شود. فقط برای تکنسینِ لاگین‌شده. --}}
+                @if(\Illuminate\Support\Facades\Auth::guard('tech')->check())
+                    @if(session('app_update_sms_sent'))
+                        <p style="font-size:.8rem; color:#059669; font-weight:700; margin:0;">✓ {{ session('app_update_sms_sent') }}</p>
+                    @elseif(session('app_update_sms_error'))
+                        <p style="font-size:.8rem; color:#dc2626; margin:0;">{{ session('app_update_sms_error') }}</p>
+                    @else
+                        <form method="POST" action="{{ route('tech.app-update.sms') }}" style="margin:0;">
+                            @csrf
+                            <button type="submit"
+                                    style="background:#fff; color:#059669; border:2px solid #059669; font-weight:700;
+                                           padding:.65rem 2rem; border-radius:.75rem; font-size:.9rem; cursor:pointer;">
+                                ارسال لینک دانلود با پیامک 📱
+                            </button>
+                        </form>
+                    @endif
+                @endif
+
+                <p style="font-size:.75rem; color:#6b7280; margin:0;">
+                    یا در مرورگر (Chrome) این آدرس را باز کنید:
+                    <b dir="ltr" class="keep-latin" style="color:#111827;">panel.tamironline.com/app</b>
+                </p>
                 <p style="font-size:.75rem; color:#6b7280; margin:0;">
                     اگر دانلود شروع نشد، لینک را کپی و در مرورگر (Chrome) باز کنید:
                 </p>
