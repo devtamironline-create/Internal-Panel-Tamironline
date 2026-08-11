@@ -53,6 +53,7 @@ class User extends Authenticatable
             'birth_date' => 'date',
             'is_active' => 'boolean',
             'is_staff' => 'boolean',
+            'investment_access' => 'boolean',
             'last_login_at' => 'datetime',
             'password' => 'hashed',
         ];

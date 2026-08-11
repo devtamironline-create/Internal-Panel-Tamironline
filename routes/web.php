@@ -169,6 +169,16 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         });
     });
 
+    // صندوق سرمایه — فقط فلگ investment_access (روشن‌شدنی فقط با کامند
+    // «investment:access grant»). برای بقیه 404 است و هیچ‌جا لیست نمی‌شود.
+    Route::middleware(\App\Http\Middleware\EnsureInvestmentAccess::class)
+        ->prefix('investment')->name('investment.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\InvestmentController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Admin\InvestmentController::class, 'store'])->name('store');
+            Route::put('/{investmentAsset}', [\App\Http\Controllers\Admin\InvestmentController::class, 'update'])->name('update');
+            Route::delete('/{investmentAsset}', [\App\Http\Controllers\Admin\InvestmentController::class, 'destroy'])->name('destroy');
+        });
+
     // گزارش فعالیت (فایل‌محور، نگهداری ۱۵ روزه) — فقط مدیر کل
     Route::middleware('can:manage-permissions')->group(function () {
         Route::get('/activity-log', [\App\Http\Controllers\Admin\ActivityLogController::class, 'index'])->name('activity-log.index');
