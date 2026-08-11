@@ -15,7 +15,7 @@ use Tests\TestCase;
  */
 class TechPanelAndroidBannerTest extends TestCase
 {
-    private const APK = 'https://tamironline.com/Karbalad.apk';
+    private const APK = 'https://panel.tamironline.com/karbalad-ver4.apk';
 
     private const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 13; SM-A525F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36';
 
