@@ -94,6 +94,24 @@
 </head>
 <body>
     <div class="app-frame">
+        {{-- بنرِ آپدیت اپ اندروید — روی هر دو میزبانِ پنل تکنسین (panel و
+             karbalad). عمداً دکمهٔ بستن ندارد: تا وقتی تکنسین با دستگاه
+             اندرویدی از نسخهٔ وب استفاده می‌کند، باید یادآوری آپدیت را ببیند. --}}
+        @if(str_contains(request()->userAgent() ?? '', 'Android'))
+            <div class="bg-emerald-50 border-b border-emerald-200 px-4 py-2.5 flex items-center justify-between gap-3 text-xs" dir="rtl">
+                <div class="flex items-center gap-2 text-emerald-800 min-w-0">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                    </svg>
+                    <span>برای استفاده از اپ تکنسین، نسخهٔ اندروید نرم‌افزار را آپدیت کنید.</span>
+                </div>
+                <a href="https://tamironline.com/Karbalad.apk"
+                   class="flex-shrink-0 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-medium keep-latin" dir="rtl">
+                    دانلود نسخهٔ جدید
+                </a>
+            </div>
+        @endif
+
         @if(session('tech_impersonator_user_id') && \Illuminate\Support\Facades\Auth::guard('tech')->check())
             @php $impersonatedTech = \Illuminate\Support\Facades\Auth::guard('tech')->user(); @endphp
             <div class="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-center justify-between gap-2 text-xs">
