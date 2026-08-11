@@ -110,11 +110,32 @@
                     برای استفاده از اپ تکنسین، نسخهٔ اندروید نرم‌افزار را آپدیت کنید.
                     ادامهٔ کار فقط بعد از نصب نسخهٔ جدید ممکن است.
                 </p>
-                <a href="https://tamironline.com/Karbalad.apk"
+                {{-- target=_blank تا در پوستهٔ PWA/WebView (که دانلودِ مستقیم را
+                     نادیده می‌گیرد) لینک به مرورگر/Custom Tab پاس داده شود. --}}
+                <a href="https://tamironline.com/Karbalad.apk" target="_blank" rel="noopener"
                    style="display:inline-block; background:#059669; color:#fff; font-weight:700;
                           padding:.75rem 2.5rem; border-radius:.75rem; text-decoration:none; font-size:1rem;">
                     دانلود نسخهٔ جدید
                 </a>
+                <p style="font-size:.75rem; color:#6b7280; margin:0;">
+                    اگر دانلود شروع نشد، لینک را کپی و در مرورگر (Chrome) باز کنید:
+                </p>
+                <div style="display:flex; align-items:center; gap:.5rem; max-width:100%;">
+                    <code id="apk-link" dir="ltr" class="keep-latin"
+                          style="font-size:.7rem; color:#374151; background:#f3f4f6; border:1px solid #e5e7eb;
+                                 border-radius:.5rem; padding:.5rem .75rem; user-select:all; overflow-x:auto; white-space:nowrap;">https://tamironline.com/Karbalad.apk</code>
+                    <button type="button" onclick="
+                        var t='https://tamironline.com/Karbalad.apk';
+                        (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).catch(function(){
+                            var i=document.createElement('textarea'); i.value=t; document.body.appendChild(i);
+                            i.select(); document.execCommand('copy'); document.body.removeChild(i);
+                        });
+                        this.textContent='کپی شد ✓';"
+                        style="flex-shrink:0; background:#f3f4f6; border:1px solid #d1d5db; border-radius:.5rem;
+                               padding:.5rem .75rem; font-size:.75rem; color:#374151; cursor:pointer;">
+                        کپی لینک
+                    </button>
+                </div>
             </div>
         @endif
 
