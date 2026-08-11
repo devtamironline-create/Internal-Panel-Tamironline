@@ -88,22 +88,23 @@ class OrderSlaTest extends TestCase
         $this->assertTrue($visit->equalTo(SlaPolicy::deadlineFor($order)));
     }
 
-    public function test_transit_deadline_is_the_technician_estimate(): void
+    /**
+     * «ایاب و ذهاب» بستنِ سفارش است (مراجعه شده، تعمیری نبوده) — نه
+     * «انتقال به تعمیرگاه». estimated_ready_atِ قدیمیِ باقی‌مانده نباید
+     * مهلت بسازد؛ اپ روی مهلتِ گذشته قفلِ تمام‌صفحه می‌گذاشت.
+     */
+    public function test_transit_is_a_closed_state_and_has_no_deadline(): void
     {
-        $order = $this->order('transit', [
+        $withEstimate = $this->order('transit', [
             'status_changed_at' => CarbonImmutable::parse('2026-07-01 09:00:00'),
             'estimated_ready_at' => '2026-07-05',
         ]);
+        $withoutEstimate = $this->order('transit', [
+            'status_changed_at' => CarbonImmutable::parse('2026-07-01 09:00:00'),
+        ]);
 
-        $this->assertSame('2026-07-05', SlaPolicy::deadlineFor($order)->format('Y-m-d'));
-    }
-
-    public function test_transit_without_an_estimate_falls_back_to_the_ceiling(): void
-    {
-        $entered = CarbonImmutable::parse('2026-07-01 09:00:00');
-        $order = $this->order('transit', ['status_changed_at' => $entered]);
-
-        $this->assertTrue($entered->addHours(336)->equalTo(SlaPolicy::deadlineFor($order)));
+        $this->assertNull(SlaPolicy::deadlineFor($withEstimate));
+        $this->assertNull(SlaPolicy::deadlineFor($withoutEstimate));
     }
 
     public static function statusHoursProvider(): array
@@ -127,7 +128,7 @@ class OrderSlaTest extends TestCase
 
     public function test_final_statuses_have_no_deadline(): void
     {
-        foreach (['completed', 'cancelled', 'declined'] as $status) {
+        foreach (['completed', 'cancelled', 'declined', 'transit'] as $status) {
             $order = $this->order($status, ['status_changed_at' => now()]);
             $this->assertNull(SlaPolicy::deadlineFor($order), $status);
         }
