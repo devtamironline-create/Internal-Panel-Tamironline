@@ -25,6 +25,13 @@ class NavasanService
         return (string) config('investment.navasan.api_key') !== '';
     }
 
+    /** دور انداختنِ کشِ تازه و گرفتنِ قیمتِ نو — برای زمان‌بندِ روزانه. */
+    public static function refresh(): void
+    {
+        Cache::forget(self::CACHE_KEY);
+        app(self::class)->prices();
+    }
+
     /**
      * @return array{prices: array<string, int>, fetched_at: string|null}
      *                                                                    prices: item نوسان => قیمت به تومان
