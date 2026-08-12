@@ -41,7 +41,16 @@ class OrderController extends Controller
             $query->ofStatus($statusFilter);
         }
 
-        $orders = $query->latest()->paginate(15)->withQueryString();
+        // ?actionable=1 — فقط سفارش‌های تصمیم‌خواه (همان مجموعه‌ای که
+        // actionable_count در /me/sync می‌شمارد؛ مرجع مشترک: settledValues).
+        // با سقفِ ۵۰ در صفحه تا گاردِ SLA اپ سفارش‌های صفحه‌های بعدی را
+        // هم ببیند.
+        $actionable = $request->boolean('actionable');
+        if ($actionable) {
+            $query->whereNotIn('status', OrderStatus::settledValues());
+        }
+
+        $orders = $query->latest()->paginate($actionable ? 50 : 15)->withQueryString();
 
         return response()->json([
             'success' => true,
