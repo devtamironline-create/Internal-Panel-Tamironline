@@ -18,13 +18,16 @@ return [
         'cache_seconds' => (int) env('NAVASAN_CACHE_SECONDS', 300),
     ],
 
+    // «multiplier» = ضریبِ تبدیلِ مقدارِ خامِ نوسان به تومان. نوسان قیمتِ
+    // سکه‌ها را به «هزار تومان» می‌دهد (مثلاً 189500 یعنی ۱۸۹٫۵ میلیون تومان)؛
+    // اگر در پلن شما واحدِ آیتمی فرق داشت فقط همین ضریب را اصلاح کنید.
     'assets' => [
-        'gold_18k' => ['label' => 'طلای ۱۸ عیار', 'unit' => 'گرم', 'item' => '18ayar', 'step' => '0.001'],
-        'sekkeh_emami' => ['label' => 'سکهٔ امامی', 'unit' => 'عدد', 'item' => 'sekkeh', 'step' => '1'],
-        'nim_sekkeh' => ['label' => 'نیم‌سکه', 'unit' => 'عدد', 'item' => 'nim', 'step' => '1'],
-        'rob_sekkeh' => ['label' => 'ربع‌سکه', 'unit' => 'عدد', 'item' => 'rob', 'step' => '1'],
-        'usd' => ['label' => 'دلار', 'unit' => 'دلار', 'item' => 'usd_sell', 'step' => '0.01'],
-        'usdt' => ['label' => 'تتر', 'unit' => 'تتر', 'item' => 'usdt', 'step' => '0.01'],
-        'btc' => ['label' => 'بیت‌کوین', 'unit' => 'BTC', 'item' => 'btc', 'step' => '0.00000001'],
+        'gold_18k' => ['label' => 'طلای ۱۸ عیار', 'unit' => 'گرم', 'item' => '18ayar', 'step' => '0.001', 'multiplier' => 1],
+        'sekkeh_emami' => ['label' => 'سکهٔ امامی', 'unit' => 'عدد', 'item' => 'sekkeh', 'step' => '1', 'multiplier' => 1000],
+        'nim_sekkeh' => ['label' => 'نیم‌سکه', 'unit' => 'عدد', 'item' => 'nim', 'step' => '1', 'multiplier' => 1000],
+        'rob_sekkeh' => ['label' => 'ربع‌سکه', 'unit' => 'عدد', 'item' => 'rob', 'step' => '1', 'multiplier' => 1000],
+        'usd' => ['label' => 'دلار', 'unit' => 'دلار', 'item' => 'usd_sell', 'step' => '0.01', 'multiplier' => 1],
+        'usdt' => ['label' => 'تتر', 'unit' => 'تتر', 'item' => 'usdt', 'step' => '0.01', 'multiplier' => 1],
+        'btc' => ['label' => 'بیت‌کوین', 'unit' => 'BTC', 'item' => 'btc', 'step' => '0.00000001', 'multiplier' => 1],
     ],
 ];

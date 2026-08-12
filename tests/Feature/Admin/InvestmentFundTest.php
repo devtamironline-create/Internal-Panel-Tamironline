@@ -120,6 +120,19 @@ class InvestmentFundTest extends TestCase
         return app(InvestmentController::class)->index(app(NavasanService::class))->getData();
     }
 
+    /** نوسان قیمتِ سکه را به «هزار تومان» می‌دهد — ضریبِ config باید اعمال شود. */
+    public function test_coin_prices_are_scaled_by_the_configured_multiplier(): void
+    {
+        Http::fake(['*' => Http::response(['sekkeh' => ['value' => '189500']], 200)]);
+
+        InvestmentAsset::create(['asset' => 'sekkeh_emami', 'amount' => 1, 'buy_unit_price' => 150_000_000]);
+
+        $coin = collect($this->indexData()['positions'])->firstWhere('asset', 'sekkeh_emami');
+
+        $this->assertSame(189_500_000, $coin['unit_price']);
+        $this->assertSame(189_500_000 - 150_000_000, $coin['profit']);
+    }
+
     public function test_positions_are_valued_with_live_navasan_prices(): void
     {
         Http::fake(['*' => Http::response([

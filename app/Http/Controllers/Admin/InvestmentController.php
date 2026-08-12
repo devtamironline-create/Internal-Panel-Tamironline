@@ -27,7 +27,10 @@ class InvestmentController extends Controller
             $meta = $registry[$asset] ?? ['label' => $asset, 'unit' => '', 'item' => null];
             $amount = (float) $group->sum(fn ($r) => (float) $r->amount);
             $cost = (int) $group->sum(fn ($r) => $r->cost());
-            $unitPrice = $meta['item'] !== null ? ($prices[$meta['item']] ?? null) : null;
+            // ضریبِ واحدِ نوسان (سکه‌ها به هزار تومان می‌آیند — config).
+            $unitPrice = $meta['item'] !== null && isset($prices[$meta['item']])
+                ? (int) ($prices[$meta['item']] * ($meta['multiplier'] ?? 1))
+                : null;
             $value = $unitPrice !== null ? (int) round($amount * $unitPrice) : null;
 
             return [

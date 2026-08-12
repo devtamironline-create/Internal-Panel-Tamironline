@@ -31,6 +31,13 @@ Schedule::command('ai:auto-reply --limit=20')
     ->onOneServer()
     ->withoutOverlapping();
 
+// قیمت‌های صندوق سرمایه — هر روز صبح از نوسان تازه می‌شود تا حتی بدونِ
+// بازدید از صفحه، کشِ قیمت (و fallback هفتگی‌اش) عقب نماند. بازدیدِ صفحه
+// هم خودش هر ۵ دقیقه قیمت را تازه می‌کند.
+Schedule::call(function () {
+    \App\Services\NavasanService::refresh();
+})->dailyAt('08:30')->name('investment-navasan-refresh')->onOneServer();
+
 // ضربانِ زمان‌بند — هر اجرای schedule:run این زمان را ثبت می‌کند تا ai:diagnose
 // بتواند قطعی بگوید cron کار می‌کند یا نه (مثلاً وقتی cron با phpِ اشتباه است).
 Schedule::call(function () {
