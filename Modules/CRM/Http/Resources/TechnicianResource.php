@@ -26,6 +26,10 @@ class TechnicianResource extends JsonResource
             'mobile' => $this->mobile,
             'avatar_url' => $this->img_personal ? storage_url($this->img_personal) : null,
             'status' => $this->status,
+            // «اعتبار» کیف‌پول — همان ستونِ running sum که پنل ادمین نشان
+            // می‌دهد. عمداً true_balance این‌جا نیست (کوئریِ جمعِ فاکتورها
+            // لازم دارد)؛ آن را از GET /wallet بخوانید.
+            'balance' => (int) ($this->wallet_balance ?? 0),
             'is_ready_for_delivery' => (bool) $this->ready_for_delivery,
             'training' => [
                 'completed' => $this->isTrainingCompleted(),

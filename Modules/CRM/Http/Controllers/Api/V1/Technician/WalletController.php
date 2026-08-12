@@ -62,6 +62,10 @@ class WalletController extends Controller
                 'total' => $tx->total(),
             ],
             'stats' => $stats,
+            // balance = «اعتبار» کیف‌پول (همان عددِ پنل ادمین — running sum
+            // تراکنش‌ها)؛ true_balance = balance منهای بدهی فاکتوری.
+            'balance' => (int) ($tech->wallet_balance ?? 0),
+            'true_balance' => (int) $tech->true_balance,
             'invoice_debt' => (int) ($tech->invoice_debt ?? 0),
         ]);
     }
