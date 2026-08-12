@@ -19,6 +19,7 @@ use Modules\CRM\Models\Order;
  *   در انتظار قطعه             ۱۶۸ ساعت (۷ روز)
  *   در انتظار تأیید مشتری      ۲۴ ساعت
  *   شروع تعمیر                 ۱۲۰ ساعت (۵ روز)
+ *   باز شده (انتقال تعمیرگاه)  ۳۳۶ ساعت (۱۴ روز) از ورود به وضعیت
  *
  * همهٔ اعداد از پنل ادمین قابل تغییرند (کلید crm_settings: app_sla_hours).
  * اگر مبنای زمانیِ لازم روی سفارش نباشد (مثلاً assigned_at خالی)، مهلت
@@ -38,6 +39,7 @@ final class SlaPolicy
         'awaiting_part' => 168,
         'awaiting_customer_approval' => 24,
         'repair_started' => 120,
+        'open' => 336,
     ];
 
     /** برچسبِ فارسیِ هر مهلت برای فرمِ تنظیمات. */
@@ -49,6 +51,7 @@ final class SlaPolicy
         'awaiting_part' => 'در انتظار قطعه',
         'awaiting_customer_approval' => 'در انتظار تأیید مشتری',
         'repair_started' => 'شروع تعمیر',
+        'open' => 'باز شده (انتقال به تعمیرگاه)',
     ];
 
     private static ?array $hours = null;
@@ -126,6 +129,10 @@ final class SlaPolicy
                 $order->status_changed_at, $hours['awaiting_customer_approval']
             ),
             OrderStatus::RepairStarted => self::offset($order->status_changed_at, $hours['repair_started']),
+
+            // قاعدهٔ عملیاتی جدید: «باز شده» (انتقال به تعمیرگاه) ۱۴ روز از
+            // ورود به وضعیت مهلت دارد — قبلاً بی‌مهلت بود.
+            OrderStatus::Open => self::offset($order->status_changed_at, $hours['open']),
 
             default => null,
         };
