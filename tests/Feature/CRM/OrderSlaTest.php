@@ -114,6 +114,7 @@ class OrderSlaTest extends TestCase
             'در انتظار قطعه — ۷ روز' => ['awaiting_part', 168],
             'در انتظار تأیید مشتری — ۲۴ ساعت' => ['awaiting_customer_approval', 24],
             'شروع تعمیر — ۵ روز' => ['repair_started', 120],
+            'باز شده (انتقال به تعمیرگاه) — ۱۴ روز' => ['open', 336],
         ];
     }
 
