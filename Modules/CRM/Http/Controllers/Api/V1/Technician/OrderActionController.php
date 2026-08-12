@@ -39,9 +39,6 @@ class OrderActionController extends Controller
         $request->merge(['description' => trim((string) $request->input('description', ''))]);
 
         // توضیح فقط برای این وضعیت‌ها الزامی است (Open اختیاری — رسیدِ انتقال).
-        // تخمینِ زمان فقط برای انتقال به تعمیرگاه اجباری است.
-        $needsEstimate = (string) $request->input('status') === OrderStatus::Transit->value;
-
         $needsDesc = in_array((string) $request->input('status'), [
             OrderStatus::Coordinated->value, OrderStatus::Suspended->value,
             OrderStatus::Declined->value, OrderStatus::Transit->value,
@@ -64,11 +61,11 @@ class OrderActionController extends Controller
             // upload_max_filesize سرور کوچک‌تر باشد، فایل پیش از رسیدن به
             // لاراول دور انداخته می‌شود و پیامِ خطا بی‌فایده می‌شود.
             'device_img1' => \Modules\CRM\Support\UploadLimits::imageRule(),
-            // تخمینِ آماده‌شدن دستگاه — برای «انتقال به تعمیرگاه» الزامی،
-            // برای «در انتظار قطعه» اختیاری. سقفِ ۱۴ روز همان قاعدهٔ فریزِ
-            // پنل است و سرور هم آن را enforce می‌کند، نه فقط اپ.
+            // تخمینِ آماده‌شدن دستگاه — اختیاری و فقط برای «در انتظار قطعه»
+            // معنا دارد. transit («ایاب و ذهاب») وضعیتِ بستن است و تخمین
+            // نمی‌خواهد. سقفِ ۱۴ روز همان قاعدهٔ فریزِ پنل است.
             'estimated_ready_at' => [
-                $needsEstimate ? 'required' : 'nullable',
+                'nullable',
                 'date_format:Y-m-d',
                 'after_or_equal:today',
                 'before_or_equal:'.\Modules\CRM\Support\SlaPolicy::maxEstimateDate()->format('Y-m-d'),
@@ -76,7 +73,6 @@ class OrderActionController extends Controller
         ], [
             'description.required' => 'برای ثبت تغییر این وضعیت، توضیحات الزامی است.',
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد.',
-            'estimated_ready_at.required' => 'تاریخ تخمینی آماده‌شدن دستگاه را انتخاب کنید.',
             'estimated_ready_at.after_or_equal' => 'تاریخ تخمینی نمی‌تواند در گذشته باشد.',
             'estimated_ready_at.before_or_equal' => 'تاریخ تخمینی حداکثر می‌تواند ۱۴ روز آینده باشد.',
             'device_img1.max' => \Modules\CRM\Support\UploadLimits::tooLargeMessage(),
@@ -95,11 +91,17 @@ class OrderActionController extends Controller
         $description = trim($validated['description'] ?? '');
         $updates = ['status' => $newStatus->value];
 
-        // فقط برای وضعیت‌هایی که تخمین معنا دارد ذخیره می‌شود؛ روی بقیه
+        // فقط برای وضعیتی که تخمین معنا دارد ذخیره می‌شود؛ روی بقیه
         // اگر اپ اشتباهی فرستاد، نادیده گرفته می‌شود.
-        if (! empty($validated['estimated_ready_at'])
-            && in_array($newStatus, [OrderStatus::Transit, OrderStatus::AwaitingPart], true)) {
+        if (! empty($validated['estimated_ready_at']) && $newStatus === OrderStatus::AwaitingPart) {
             $updates['estimated_ready_at'] = $validated['estimated_ready_at'];
+        }
+
+        // بستن با «ایاب و ذهاب»: هزینهٔ ایاب و ذهاب (تومان) اختیاری است و
+        // اگر بیاید روی خودِ سفارش می‌نشیند. فاکتور/بدهی ساخته نمی‌شود.
+        if ($newStatus === OrderStatus::Transit
+            && array_key_exists('transportation', $validated) && $validated['transportation'] !== null) {
+            $updates['transportation'] = (int) $validated['transportation'];
         }
         if ($description !== '') {
             $updates += match ($newStatus) {
