@@ -1,8 +1,8 @@
 @extends('layouts.admin')
 
-@section('title', 'صندوق سرمایه')
+@section('page-title', 'صندوق سرمایه')
 
-@section('content')
+@section('main')
 <div class="space-y-6" dir="rtl">
     <div class="flex items-center justify-between flex-wrap gap-2">
         <h1 class="text-xl font-bold text-gray-800 dark:text-gray-100">💰 صندوق سرمایه</h1>
