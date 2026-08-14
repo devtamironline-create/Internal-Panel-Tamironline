@@ -2,11 +2,14 @@
 
 namespace Modules\CRM\Http\Controllers;
 
+use App\Support\JalaliDate;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\BaleCampaign;
 use Modules\CRM\Models\BaleCampaignRecipient;
 use Modules\CRM\Models\Customer;
+use Modules\CRM\Models\Device;
 use Modules\CRM\Models\Order;
 use Modules\CustomerApp\Channels\BaleChannel;
 use Modules\CustomerApp\Support\BaleMessenger;
@@ -41,6 +44,72 @@ class BaleCampaignController extends Controller
         return view('crm::bale-campaigns.create', [
             'audiences' => BaleCampaign::AUDIENCES,
             'counts' => $this->audienceCounts(),
+            'devices' => Device::query()->orderBy('name')->get(['id', 'name']),
+        ]);
+    }
+
+    /**
+     * خروجیِ متنیِ شمارهٔ مشتری‌ها (هر خط یک شماره، فرمت 98912...) بر اساس
+     * سفارش‌ها: حداقل تعدادِ سفارش + نوعِ دستگاه + بازهٔ تاریخِ ثبتِ سفارش.
+     *
+     * قواعد: لیدها و سفارش‌های لغو/ردشده شمرده نمی‌شوند؛ مشتری‌های مسدود یا
+     * غیرفعال (مثل مخاطب‌های کمپین) در خروجی نمی‌آیند؛ شماره‌ها یکتا.
+     */
+    public function exportPhones(Request $request)
+    {
+        $jalali = function ($attr, $value, $fail) {
+            if (filled($value) && ! JalaliDate::isValid((string) $value)) {
+                $fail('تاریخ معتبر نیست (مثال: 1405/05/01).');
+            }
+        };
+
+        $v = $request->validate([
+            'device_id' => 'nullable|integer',
+            'min_orders' => 'nullable|integer|min:1|max:1000',
+            'from' => ['nullable', 'string', $jalali],
+            'to' => ['nullable', 'string', $jalali],
+        ]);
+
+        $min = (int) ($v['min_orders'] ?? 1);
+        $from = JalaliDate::toGregorian($v['from'] ?? null);
+        $to = JalaliDate::toGregorian($v['to'] ?? null);
+
+        $orders = Order::query()
+            ->whereNotNull('customer_id')
+            ->where('is_lead', false)
+            ->whereNotIn('status', [OrderStatus::Cancelled->value, OrderStatus::Declined->value]);
+
+        if (! empty($v['device_id'])) {
+            $orders->where('device_id', (int) $v['device_id']);
+        }
+        if ($from) {
+            $orders->whereDate('created_at', '>=', $from);
+        }
+        if ($to) {
+            $orders->whereDate('created_at', '<=', $to);
+        }
+
+        $customerIds = $orders
+            ->groupBy('customer_id')
+            ->havingRaw('COUNT(*) >= ?', [$min])
+            ->pluck('customer_id');
+
+        $phones = Customer::query()
+            ->whereIn('id', $customerIds)
+            ->where('is_active', true)
+            ->where('is_blocked', false)
+            ->whereNotNull('mobile')
+            ->pluck('mobile')
+            ->map(fn ($m) => \Modules\CustomerApp\Channels\BaleChannel::intlPhone((string) $m))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $filename = 'bale-phones-'.now()->format('Ymd-His').'-'.$phones->count().'.txt';
+
+        return response($phones->implode("\n"), 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }
 

@@ -63,4 +63,46 @@
         </div>
     </form>
 </div>
+
+    {{-- خروجی شماره‌ها بر اساس سفارش — برای ساخت لیست مخاطب یا استفادهٔ بیرونی --}}
+    <form method="GET" action="{{ route('crm.bale-campaigns.export-phones') }}" target="_blank"
+          class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 space-y-4">
+        <div>
+            <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">📤 خروجی شماره‌ها (بر اساس سفارش)</h2>
+            <p class="text-[11px] text-gray-400 mt-1 leading-6">
+                فایل متنی، هر خط یک شماره با فرمت <code dir="ltr">989121234567</code> — یکتا.
+                لیدها و سفارش‌های لغو/ردشده شمرده نمی‌شوند؛ مشتری‌های مسدود/غیرفعال در خروجی نمی‌آیند.
+                مبنای تاریخ، تاریخِ ثبتِ سفارش است.
+            </p>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">نوع دستگاه</label>
+                <select name="device_id" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                    <option value="">همهٔ دستگاه‌ها</option>
+                    @foreach($devices as $d)
+                        <option value="{{ $d->id }}">{{ $d->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">حداقل تعداد سفارش</label>
+                <input type="number" name="min_orders" value="1" min="1" max="1000" dir="ltr"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm text-center">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">از تاریخ (شمسی)</label>
+                <input type="text" name="from" placeholder="1405/01/01" dir="ltr" autocomplete="off"
+                       class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm text-center">
+            </div>
+            <div>
+                <label class="block text-xs text-gray-500 mb-1">تا تاریخ (شمسی)</label>
+                <input type="text" name="to" placeholder="1405/05/31" dir="ltr" autocomplete="off"
+                       class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm text-center">
+            </div>
+        </div>
+        <button class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">
+            ⬇️ دانلود خروجی شماره‌ها
+        </button>
+    </form>
 @endsection

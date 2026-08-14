@@ -598,6 +598,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:manage-crm-settings')->prefix('bale-campaigns')->name('bale-campaigns.')->group(function () {
         Route::get('/', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'index'])->name('index');
         Route::get('create', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'create'])->name('create');
+        Route::get('export-phones', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'exportPhones'])->name('export-phones');
         Route::post('/', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'store'])->name('store');
         Route::get('{baleCampaign}', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'show'])->name('show')->whereNumber('baleCampaign');
         Route::post('{baleCampaign}/process', [\Modules\CRM\Http\Controllers\BaleCampaignController::class, 'process'])->name('process')->whereNumber('baleCampaign');
