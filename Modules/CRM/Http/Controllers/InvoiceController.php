@@ -82,16 +82,22 @@ class InvoiceController extends Controller
         return $this->streamSpreadsheet('crm-invoices-'.date('Ymd-His'), $format, $headers, $rows);
     }
 
-    public function show(Invoice $invoice)
+    public function show(int $invoice)
     {
+        // withSuperseded: فاکتورِ بایگانی‌شدهٔ سفارشِ برگشتی (superseded)
+        // باید همچنان بازشدنی بماند — لینکش در صفحهٔ سفارش و تاریخچه هست
+        // و ۴۰۴شدنش یعنی گم‌شدنِ سندِ مالی. اکشن‌های تغییردهنده
+        // (paid/cancel/push-to-wp) عمداً فقط فاکتورِ فعال را می‌بینند.
+        $invoice = Invoice::withSuperseded()->findOrFail($invoice);
         $invoice->load(['order.items', 'customer', 'technician', 'creator', 'walletTransactions']);
 
         return view('crm::invoices.show', compact('invoice'));
     }
 
     /** نمای چاپی صورتحساب — برای مشتری. */
-    public function print(Invoice $invoice)
+    public function print(int $invoice)
     {
+        $invoice = Invoice::withSuperseded()->findOrFail($invoice);
         $invoice->load(['order.items', 'customer']);
 
         return view('crm::invoices.print', compact('invoice'));
@@ -160,8 +166,11 @@ class InvoiceController extends Controller
      * برمی‌گرداند — اگر تمپلیت غیرفعال است یا API خطا داد، پیام دقیق
      * در صفحه نمایش داده می‌شود.
      */
-    public function sendSms(Invoice $invoice, \Modules\SMS\Services\KavenegarService $sms)
+    public function sendSms(int $invoice, \Modules\SMS\Services\KavenegarService $sms)
     {
+        // فاکتورِ superseded هم قابلِ ارسال است — مشتری ممکن است لینکِ
+        // فاکتورِ اصلیِ سفارشِ برگشتی را دوباره بخواهد.
+        $invoice = Invoice::withSuperseded()->findOrFail($invoice);
         $invoice->loadMissing('customer', 'order.customer', 'order.technician');
         $order = $invoice->order;
         if (! $order) {

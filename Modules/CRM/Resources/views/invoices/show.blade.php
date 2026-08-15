@@ -8,6 +8,12 @@
         <div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">فاکتور <span dir="ltr">{{ $invoice->invoice_code }}</span></h1>
             <span class="inline-block mt-2 px-2.5 py-1 text-xs font-medium rounded-full {{ $invoice->statusBadge() }}">{{ $invoice->statusLabel() }}</span>
+            @if($invoice->superseded_at)
+                <span class="inline-block mt-2 px-2.5 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800"
+                      title="این فاکتور با تکمیل مجدد سفارش بایگانی شده و فاکتور جدیدی جایگزین آن است.">
+                    بایگانی‌شده (جایگزین دارد) — {{ \Morilog\Jalali\Jalalian::fromDateTime($invoice->superseded_at)->format('Y/m/d') }}
+                </span>
+            @endif
         </div>
         <div class="flex items-center gap-2 flex-wrap">
             @can('manage-crm-financial')
