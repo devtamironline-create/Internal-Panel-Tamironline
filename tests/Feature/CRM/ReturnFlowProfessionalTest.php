@@ -134,7 +134,14 @@ class ReturnFlowProfessionalTest extends TestCase
             $t->json('buy_price_list')->nullable();
             $t->json('customer_price_list')->nullable();
             $t->string('device_img1')->nullable();
+            $t->string('device_image_input')->nullable();
             $t->json('wp_notes')->nullable();
+            // مسیرِ legacy «بازگشت سفارش» این‌ها را هم لمس می‌کند.
+            $t->string('status_internal_order')->nullable();
+            $t->text('cancel_reason')->nullable();
+            $t->integer('negative_invoice')->default(0);
+            $t->text('log_return')->nullable();
+            $t->text('order_description_content')->nullable();
             $t->timestamps();
         });
 
@@ -261,6 +268,99 @@ class ReturnFlowProfessionalTest extends TestCase
         $order->refresh();
         $this->assertSame(OrderStatus::Completed, $order->status);
         $this->assertFalse((bool) $order->return_review_pending);
+    }
+
+    // ───────────────────────── ۱ب) مسیرِ legacy «بازگشت سفارش» هم دورِ بررسی باز می‌کند
+
+    /** هم‌ارزِ سفارشِ تستیِ تیمِ فرانت (ORD-2608-02176): برگشتِ کارِ انجام‌شده. */
+    public function test_legacy_return_of_done_work_opens_a_review_round(): void
+    {
+        $tech = $this->technician();
+        $order = Order::forceCreate([
+            'order_code' => 'RF-LEGACY', 'technician_id' => $tech->id,
+            'status' => OrderStatus::Completed->value,
+            'visit_scheduled_at' => now()->subDays(15),
+            'price_customer' => 1_200_000, 'total_invoice' => 1_200_000,
+        ]);
+
+        $request = Request::create('/admin/crm/orders/'.$order->id.'/return', 'POST', [
+            'return_type' => '1', 'return_description' => 'مشتری می‌گوید همان ایراد برگشته است.',
+        ]);
+        app(AdminOrderController::class)->returnOrder($request, $order);
+
+        $order->refresh();
+        $this->assertSame(OrderStatus::New, $order->status);
+        $this->assertTrue((bool) $order->return_review_pending);
+        $this->assertNull($order->return_reviewed_at);
+        $this->assertNull($order->visit_scheduled_at);
+
+        // گذارها: هیچ وضعیتِ نهایی‌ای نیست و فازِ هماهنگی باز است.
+        $allowed = (new \ReflectionMethod(OrderActionController::class, 'allowedStatusesFor'))
+            ->invoke(app(OrderActionController::class), $order);
+        $this->assertContains(OrderStatus::Coordinated, $allowed);
+        foreach ($allowed as $s) {
+            $this->assertFalse($s->isFinal(), '«'.$s->value.'» نباید قبل از ثبتِ بررسی در گذارها باشد.');
+        }
+
+        // و گیتِ ۴۲۲ هم برای همین مسیر برقرار است.
+        try {
+            $this->callUpdateStatus($order, $tech, ['status' => OrderStatus::Completed->value]);
+            $this->fail('بستنِ برگشتیِ بررسی‌نشده نباید ممکن باشد.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('بررسی برگشتی', $e->errors()['status'][0]);
+        }
+    }
+
+    public function test_legacy_return_of_cancelled_work_skips_the_review_round(): void
+    {
+        $tech = $this->technician();
+        $order = Order::forceCreate([
+            'order_code' => 'RF-LEGACY2', 'technician_id' => $tech->id,
+            'status' => OrderStatus::Cancelled->value,
+        ]);
+
+        $request = Request::create('/admin/crm/orders/'.$order->id.'/return', 'POST', [
+            'return_type' => '2', 'return_description' => 'مشتری دوباره درخواست سرویس داده است.',
+        ]);
+        app(AdminOrderController::class)->returnOrder($request, $order);
+
+        // کارِ قبلی انجام نشده — سؤالِ «ایراد از تعمیرِ قبل؟» بی‌معناست.
+        $this->assertFalse((bool) $order->fresh()->return_review_pending);
+    }
+
+    public function test_a_second_return_reopens_the_review_round(): void
+    {
+        $tech = $this->technician();
+        $order = Order::forceCreate([
+            'order_code' => 'RF-TWICE', 'technician_id' => $tech->id,
+            'status' => OrderStatus::Completed->value,
+            // دورِ قبلی بررسی شده بود.
+            'return_type' => 1, 'return_reviewed_at' => now()->subDays(5),
+            'return_review_approved' => true, 'return_review_days' => 2,
+        ]);
+
+        $request = Request::create('/admin/crm/orders/'.$order->id.'/return', 'POST', [
+            'return_type' => '1', 'return_description' => 'برای بار دوم برگشت خورد.',
+        ]);
+        app(AdminOrderController::class)->returnOrder($request, $order);
+
+        $order->refresh();
+        $this->assertTrue((bool) $order->return_review_pending);
+        $this->assertNull($order->return_reviewed_at);
+        $this->assertNull($order->return_review_days);
+    }
+
+    public function test_return_log_types_are_ints_like_the_main_field(): void
+    {
+        $tech = $this->technician();
+        $order = $this->pendingReturnedOrder($tech, [
+            'log_return' => json_encode([['return_type' => '1', 'date' => '1405/05/24']], JSON_UNESCAPED_UNICODE),
+        ]);
+
+        $payload = (new TechOrderDetailResource($order))
+            ->toArray(Request::create('/v1/technician/orders/'.$order->id));
+
+        $this->assertSame(1, $payload['return_logs'][0]['return_type']);
     }
 
     // ───────────────────────── ۲) گیتِ بستن تا قبل از ثبتِ بررسی

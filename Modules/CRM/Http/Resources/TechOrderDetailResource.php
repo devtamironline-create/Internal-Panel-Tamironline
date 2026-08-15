@@ -144,7 +144,16 @@ class TechOrderDetailResource extends JsonResource
                 'created_at' => $tr->created_at?->utc()->toIso8601String(),
             ])->values()),
 
-            'return_logs' => is_array($this->wp_return_logs) ? $this->wp_return_logs : [],
+            // return_type داخلِ لاگ‌ها هم مثل فیلدِ اصلی int برمی‌گردد —
+            // در JSON قدیمیِ WP رشته ذخیره شده و اپ نباید دو نوع ببیند.
+            'return_logs' => collect(is_array($this->wp_return_logs) ? $this->wp_return_logs : [])
+                ->map(function ($log) {
+                    if (is_array($log) && isset($log['return_type'])) {
+                        $log['return_type'] = (int) $log['return_type'];
+                    }
+
+                    return $log;
+                })->values()->all(),
 
             'created_at' => $this->created_at?->utc()->toIso8601String(),
             'updated_at' => $this->updated_at?->utc()->toIso8601String(),
