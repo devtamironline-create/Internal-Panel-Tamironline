@@ -1315,19 +1315,33 @@ class OrderController extends Controller
         $order->update([
             'status' => OrderStatus::Coordinated->value,
             'qc_status' => 'approved',
+            // شروعِ دورِ «بررسیِ برگشتی» تکنسین: تصمیمِ رایگان/عادی با
+            // تکنسین است که بعد از هماهنگی و مراجعه در محل ثبت می‌کند —
+            // نه پشتِ تلفن و نه همین حالا. تا آن موقع بستنِ سفارش از اپ/
+            // پنلِ تکنسین بلاک است ولی هماهنگی و مراجعه آزاد.
+            'return_review_pending' => true,
+            'return_reviewed_at' => null,
+            'return_review_approved' => null,
+            'return_review_days' => null,
+            'return_type' => null,
+            // زمانِ مراجعه و تخمینِ سرویسِ قبلی دیگر معتبر نیستند — اگر
+            // بمانند، مهلتِ SLA از همان لحظهٔ گذشته حساب می‌شود و اپِ
+            // تکنسین بی‌دلیل قفل می‌شود.
+            'visit_scheduled_at' => null,
+            'estimated_ready_at' => null,
         ]);
 
         OrderStatusLog::create([
             'order_id' => $order->id,
             'from_status' => OrderStatus::Returned->value,
             'to_status' => OrderStatus::Coordinated->value,
-            'note' => 'تأیید برگشتیِ گارانتی — ارجاع دوباره به تکنسین.'
+            'note' => 'تأیید برگشتیِ گارانتی — ارجاع دوباره به تکنسین برای هماهنگی، مراجعه و بررسی در محل.'
                 .(($n = trim((string) $request->input('note'))) !== '' ? ' '.$n : ''),
             'changed_by' => auth()->id(),
             'created_at' => now(),
         ]);
 
-        return back()->with('success', 'برگشتی تأیید شد و سفارش برای انجام خدمات به تکنسین ارجاع شد.');
+        return back()->with('success', 'برگشتی تأیید شد و سفارش برای هماهنگی، مراجعه و بررسی در محل به تکنسین ارجاع شد.');
     }
 
     /**
@@ -1358,6 +1372,8 @@ class OrderController extends Controller
         $order->update([
             'status' => OrderStatus::Completed->value,
             'qc_status' => 'rejected',
+            // برگشتی پذیرفته نشد — هیچ بررسی‌ای از تکنسین معلق نمی‌ماند.
+            'return_review_pending' => false,
         ]);
 
         OrderStatusLog::create([

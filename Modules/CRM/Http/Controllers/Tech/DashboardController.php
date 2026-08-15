@@ -311,6 +311,12 @@ class DashboardController extends Controller
             return back()->with('error', 'وضعیت نامعتبر است.');
         }
 
+        // خطِ قرمزِ برگشتی: تا وقتی نتیجهٔ بررسیِ برگشتی ثبت نشده، بستنِ
+        // سفارش ممکن نیست — هماهنگی و مراجعه آزاد است (هم‌ارز API).
+        if ($order->return_review_pending && $newStatus->isFinal()) {
+            return back()->with('error', 'این سفارش برگشتی است؛ قبل از بستن، ابتدا نتیجهٔ بررسی برگشتی (تأیید یا رد) را پس از مراجعه در محل ثبت کنید.');
+        }
+
         $allowed = $this->allowedStatusesFor($order);
         if (! in_array($newStatus, $allowed, true)) {
             return back()->with('error', 'تغییر به این وضعیت در شرایط فعلی مجاز نیست.');
@@ -445,9 +451,13 @@ class DashboardController extends Controller
         // پیش‌نویس‌ها فاکتور صادر نمی‌کنند — تکنسین می‌تواند بعداً دوباره ثبت
         // کند بدون save_as_draft تا فاکتور نهایی بخورد.
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
-            // forceRegenerate=true → اگر فاکتور قبلی برای این سفارش هست،
+            // forceRegenerate → اگر فاکتور قبلی برای این سفارش هست،
             // superseded شود و فاکتور جدید با قیمت/قطعات فعلی ساخته شود.
-            $invoice = $this->invoiceService->generateForOrder($order->refresh(), $tech->user_id, true);
+            // استثنا: تکمیلِ رایگانِ برگشتیِ تأییدشده (return_type=1) —
+            // فاکتورِ اصلی سندِ مالیِ کارِ اول است و باید فعال بماند.
+            $order->refresh();
+            $forceRegenerate = (int) ($order->return_type ?? 0) !== 1;
+            $invoice = $this->invoiceService->generateForOrder($order, $tech->user_id, $forceRegenerate);
 
             // پاپ‌آپِ بدهی: اگر این فاکتور سهمِ شرکت (بدهیِ تکنسین) ایجاد کرد،
             // بلافاصله بعدِ اتمامِ سفارش به تکنسین یادآوری شود که کیف‌پول را شارژ
@@ -494,6 +504,62 @@ class DashboardController extends Controller
         return redirect()
             ->route('tech.orders.show', $order)
             ->with('success', 'وضعیت سفارش به «'.$newStatus->label().'» تغییر کرد.');
+    }
+
+    /**
+     * ثبتِ نتیجهٔ «بررسیِ برگشتی» از پنلِ وبِ تکنسین — هم‌ارزِ
+     * POST /v1/technician/orders/{id}/return-review در API اپ.
+     * تأیید (ایراد از خدمات قبلی) → return_type=1 و ادامهٔ رایگان؛
+     * رد (ایراد جدید) → سفارش مثل سفارش عادی با قیمت‌گذاری معمول.
+     */
+    public function submitReturnReview(Request $request, Order $order)
+    {
+        $tech = Auth::guard('tech')->user();
+        $this->ensureOwnership($order, $tech);
+
+        if (! $order->return_review_pending) {
+            return back()->with('error', $order->return_reviewed_at !== null
+                ? 'بررسی برگشتی این سفارش قبلاً ثبت شده است.'
+                : 'این سفارش در انتظار بررسی برگشتی نیست.');
+        }
+
+        $validated = $request->validate([
+            'approved' => 'required|boolean',
+            'days' => 'required_if:approved,1,true|nullable|integer|min:1|max:'.\Modules\CRM\Support\SlaPolicy::MAX_ESTIMATE_DAYS,
+            'note' => 'nullable|string|max:1000',
+        ], [
+            'approved.required' => 'نتیجهٔ بررسی (تأیید یا رد) را مشخص کنید.',
+            'days.required_if' => 'برای تأییدِ برگشتی، زمان تخمینی انجام کار (روز) الزامی است.',
+            'days.max' => 'تخمین حداکثر می‌تواند ۱۴ روز باشد.',
+        ]);
+
+        $approved = filter_var($validated['approved'], FILTER_VALIDATE_BOOLEAN);
+
+        $order->update([
+            'return_review_pending' => false,
+            'return_reviewed_at' => now(),
+            'return_review_approved' => $approved,
+            'return_review_days' => $approved ? (int) $validated['days'] : null,
+            'return_type' => $approved ? 1 : null,
+        ]);
+
+        $note = trim((string) ($validated['note'] ?? ''));
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => $order->status?->value ?? '',
+            'to_status' => $order->status?->value ?? '',
+            'note' => 'بررسی برگشتی: '.($approved
+                ? 'تأیید — ایراد از خدمات قبلی، ادامهٔ رایگان ('.(int) $validated['days'].' روز)'
+                : 'رد — ایراد جدید، ادامه مانند سفارش عادی')
+                .($note !== '' ? ' — '.$note : ''),
+            'changed_by' => $tech->user_id,
+            ...OrderStatusLog::technicianActor($tech),
+            'created_at' => now(),
+        ]);
+
+        return back()->with('success', $approved
+            ? 'برگشتی تأیید شد — خدمات جدید بدون هزینه برای مشتری ثبت می‌شود.'
+            : 'برگشتی رد شد — سفارش مانند سفارش جدید ادامه پیدا می‌کند.');
     }
 
     /**
@@ -799,6 +865,15 @@ class DashboardController extends Controller
 
         if ($order->status->isFinal()) {
             return [];
+        }
+
+        // برگشتیِ در انتظارِ بررسی: وضعیت‌های بستن اصلاً در لیست نمی‌آیند
+        // تا فرم آن‌ها را نشان ندهد — گیتِ updateOrderStatus هم پشتش ایستاده.
+        if ($order->return_review_pending) {
+            return array_values(array_filter(
+                $order->status->technicianTransitions(),
+                fn (OrderStatus $s) => ! $s->isFinal() && $s !== $order->status
+            ));
         }
 
         $returnType = (int) ($order->return_type ?? 0);
