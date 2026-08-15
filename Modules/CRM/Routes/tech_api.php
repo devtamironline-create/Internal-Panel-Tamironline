@@ -61,6 +61,7 @@ Route::prefix('v1/technician')->group(function () {
         Route::post('/orders/{id}/notes', [OrderActionController::class, 'addNote'])->whereNumber('id')->name('api.tech.orders.notes');
         Route::post('/orders/{id}/deliver-sms', [OrderActionController::class, 'sendDeliverSms'])->whereNumber('id')->name('api.tech.orders.deliver-sms');
         Route::post('/orders/{id}/call-result', [OrderActionController::class, 'callResult'])->whereNumber('id')->name('api.tech.orders.call-result');
+        Route::post('/orders/{id}/return-review', [OrderActionController::class, 'returnReview'])->whereNumber('id')->name('api.tech.orders.return-review');
         // رسیدِ انتقالِ دستی
         Route::post('/orders/{id}/transfer-receipt', [TransferReceiptController::class, 'store'])->whereNumber('id')->name('api.tech.orders.transfer-receipt');
 

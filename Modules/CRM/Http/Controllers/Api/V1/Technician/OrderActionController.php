@@ -356,6 +356,93 @@ class OrderActionController extends Controller
     }
 
     /**
+     * POST /v1/technician/orders/{id}/return-review — تصمیمِ تکنسین دربارهٔ
+     * سفارشِ برگشتی: «ایراد از خدماتِ قبلی بود» (تأیید → ادامهٔ رایگان،
+     * return_type=1) یا «ایرادِ جدید است» (رد → سفارش مثل سفارشِ عادی با
+     * قیمت‌گذاریِ معمول ادامه می‌یابد).
+     *
+     * یک UPDATE اتمی و بدونِ کارِ جانبیِ سنگین. idempotent: ثبتِ دوباره روی
+     * سفارشِ قبلاً بررسی‌شده، بدونِ اثرِ مجدد، همان وضعیتِ فعلی را با 200
+     * برمی‌گرداند — چون کلاینت بعد از خطای شبکه دوباره تلاش می‌کند.
+     */
+    public function returnReview(Request $request, int $id): JsonResponse
+    {
+        $tech = $request->user();
+        $order = Order::query()->whereKey($id)->firstOrFail();
+        $this->authorizeOwnership($order, $tech);
+
+        // قبلاً بررسی شده → پاسخِ تمیزِ idempotent، بدونِ دست‌زدن به چیزی.
+        if (! $order->return_review_pending && $order->return_reviewed_at !== null) {
+            return response()->json([
+                'success' => true,
+                'message' => 'بررسی برگشتی قبلاً ثبت شده بود.',
+                'data' => [
+                    'return_review_pending' => false,
+                    'approved' => (bool) $order->return_review_approved,
+                    'days' => $order->return_review_days !== null ? (int) $order->return_review_days : null,
+                    'reviewed_at' => $order->return_reviewed_at?->utc()->toIso8601String(),
+                ],
+            ]);
+        }
+
+        if (! $order->return_review_pending) {
+            throw ValidationException::withMessages([
+                'order' => 'این سفارش در انتظار بررسی برگشتی نیست.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'approved' => 'required|boolean',
+            // تخمینِ انجامِ کار فقط برای تأیید معنا دارد — سقف همان قاعدهٔ ۱۴ روز.
+            'days' => 'required_if:approved,1,true|nullable|integer|min:1|max:'.\Modules\CRM\Support\SlaPolicy::MAX_ESTIMATE_DAYS,
+            'note' => 'nullable|string|max:1000',
+        ], [
+            'approved.required' => 'نتیجهٔ بررسی (تأیید یا رد) را مشخص کنید.',
+            'days.required_if' => 'برای تأییدِ برگشتی، زمان تخمینی انجام کار (روز) الزامی است.',
+            'days.max' => 'تخمین حداکثر می‌تواند ۱۴ روز باشد.',
+        ]);
+
+        $approved = filter_var($validated['approved'], FILTER_VALIDATE_BOOLEAN);
+
+        $order->update([
+            'return_review_pending' => false,
+            'return_reviewed_at' => now(),
+            'return_review_approved' => $approved,
+            'return_review_days' => $approved ? (int) $validated['days'] : null,
+            // تأیید = ایراد از خدماتِ قبلی → ادامهٔ رایگان (فقط تکمیل).
+            // رد = ایرادِ جدید → سفارشِ عادی، بدونِ مسیرِ برگشتی.
+            'return_type' => $approved ? 1 : null,
+        ]);
+
+        $note = trim((string) ($validated['note'] ?? ''));
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => $order->status?->value ?? '',
+            'to_status' => $order->status?->value ?? '',
+            'note' => 'بررسی برگشتی: '.($approved
+                ? 'تأیید — ایراد از خدمات قبلی، ادامهٔ رایگان ('.(int) $validated['days'].' روز)'
+                : 'رد — ایراد جدید، ادامه مانند سفارش عادی')
+                .($note !== '' ? ' — '.$note : ''),
+            'changed_by' => $tech->user_id,
+            ...OrderStatusLog::technicianActor($tech),
+            'created_at' => now(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $approved
+                ? 'برگشتی تأیید شد — خدمات جدید بدون هزینه برای مشتری ثبت می‌شود.'
+                : 'برگشتی رد شد — سفارش مانند سفارش جدید ادامه پیدا می‌کند.',
+            'data' => [
+                'return_review_pending' => false,
+                'approved' => $approved,
+                'days' => $approved ? (int) $validated['days'] : null,
+                'reviewed_at' => $order->fresh()->return_reviewed_at?->utc()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
      * بلاکِ فاکتورِ Completed — اعتبارسنجی + محاسبهٔ total_invoice + قطعات + عکس.
      *
      * @param  array<string, mixed>  $validated
