@@ -27,6 +27,7 @@ enum SmsTrigger: string
     case TechSlaWarning = 'tech_sla_warning';    // یک ساعت مانده به مهلت
     case TechSlaDue = 'tech_sla_due';            // مهلت رسید
     case TechOrderReturned = 'tech_order_returned'; // برگشتی، منتظر تأیید تکنسین
+    case TechInvoicePaidOnline = 'tech_invoice_paid_online'; // مشتری فاکتور را آنلاین پرداخت
 
     // ── مشتری (فاکتور/Happy Call) ────────────────────────────
     case CustomerInvoiceIssued = 'customer_invoice_issued';
@@ -53,6 +54,7 @@ enum SmsTrigger: string
             self::TechSlaWarning => 'یادآور مهلت تعیین وضعیت (تکنسین)',
             self::TechSlaDue => 'رسیدن مهلت تعیین وضعیت (تکنسین)',
             self::TechOrderReturned => 'برگشت خوردن سفارش (تکنسین)',
+            self::TechInvoicePaidOnline => 'پرداخت آنلاین فاکتور (تکنسین)',
             self::CustomerInvoiceIssued => 'صدور فاکتور (مشتری)',
             self::CustomerHappyCall => 'رضایت‌سنجی (مشتری)',
             self::CustomerInvoicePayLink => 'لینک پرداخت فاکتور (مشتری)',
