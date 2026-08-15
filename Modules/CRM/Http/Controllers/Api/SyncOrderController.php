@@ -223,7 +223,8 @@ class SyncOrderController extends Controller
                 $sot = $order->source_of_truth ?: 'auto';
                 $reason = $sot === 'auto'
                     ? 'blocked_by_technician_sync_direction'
-                    : 'blocked_by_order_source_of_truth:' . $sot;
+                    : 'blocked_by_order_source_of_truth:'.$sot;
+
                 return [
                     'action' => 'skipped',
                     'id' => $order->id,
@@ -256,6 +257,7 @@ class SyncOrderController extends Controller
                     'return_type', 'return_description',
                     'status_internal_order', 'qc_status',
                     'order_note_content', 'log_return',
+                    'assigned_at',
                 ];
                 foreach ($laravelManaged as $key) {
                     unset($payload[$key]);
@@ -269,6 +271,8 @@ class SyncOrderController extends Controller
                     $resolved = $this->resolveId(Technician::class, $payload['technician_wp_id']);
                     if ($resolved) {
                         $order->technician_id = $resolved;
+                        // بدونِ این، SLA فاز هماهنگی مبنای زمانی ندارد.
+                        $order->assigned_at = $order->assigned_at ?? now();
                     }
                 }
 
@@ -328,7 +332,7 @@ class SyncOrderController extends Controller
         $customer = Customer::where('wp_id', (int) $data['customer_wp_id'])->first();
         if (! $customer) {
             throw new \RuntimeException(
-                'customer not synced yet (wp_id=' . $data['customer_wp_id'] . ')'
+                'customer not synced yet (wp_id='.$data['customer_wp_id'].')'
             );
         }
 
@@ -342,7 +346,9 @@ class SyncOrderController extends Controller
             // technician_wp_id خام را هم ذخیره می‌کنیم تا اگر تکنسین
             // هنوز sync نشده باشد، بعد از sync تکنسین‌ها بتوان با
             // backfill این سفارش‌های یتیم را وصل کرد.
-            'technician_id' => $this->resolveId(Technician::class, $data['technician_wp_id'] ?? null),
+            'technician_id' => $syncTechId = $this->resolveId(Technician::class, $data['technician_wp_id'] ?? null),
+            // سفارشی که با تکنسین وارد می‌شود، از همین لحظه «تخصیص‌یافته» است.
+            'assigned_at' => $syncTechId ? now() : null,
             'technician_wp_id' => isset($data['technician_wp_id']) && (int) $data['technician_wp_id'] > 0
                 ? (int) $data['technician_wp_id']
                 : null,
@@ -426,7 +432,7 @@ class SyncOrderController extends Controller
         if (! empty($data['_debug_all_meta']) && ! $payload['visit_scheduled_at']) {
             \Illuminate\Support\Facades\Log::info('crm.sync.order.meta_dump', [
                 'wp_id' => $data['wp_id'] ?? null,
-                'meta'  => $data['_debug_all_meta'],
+                'meta' => $data['_debug_all_meta'],
             ]);
         }
 
@@ -496,35 +502,43 @@ class SyncOrderController extends Controller
         // ساعت ممکن است '09:00:00'، '9:00'، '9' یا حتی '۹' (Persian digits) باشد.
         $normalizedTime = $this->normalizeTime($time);
 
-        return $gregorianDate . ' ' . $normalizedTime;
+        return $gregorianDate.' '.$normalizedTime;
     }
 
     /** نرمال‌سازی رشتهٔ تاریخ به YYYY-MM-DD میلادی. */
     protected function normalizeDate(string $date): ?string
     {
         // ارقام فارسی/عربی → لاتین
-        $date = strtr($date, ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']);
+        $date = strtr($date, ['۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9', '٠' => '0', '١' => '1', '٢' => '2', '٣' => '3', '٤' => '4', '٥' => '5', '٦' => '6', '٧' => '7', '٨' => '8', '٩' => '9']);
         $date = str_replace(['/', '\\', '.'], '-', $date);
         if (! preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})$/', $date, $m)) {
             return null;
         }
-        $year = (int) $m[1]; $mo = (int) $m[2]; $day = (int) $m[3];
+        $year = (int) $m[1];
+        $mo = (int) $m[2];
+        $day = (int) $m[3];
 
         // اگر سال < 1700، شمسی است — به میلادی تبدیل کن.
         if ($year < 1700 && class_exists(\Morilog\Jalali\CalendarUtils::class)) {
             try {
                 [$gy, $gm, $gd] = \Morilog\Jalali\CalendarUtils::toGregorian($year, $mo, $day);
+
                 return sprintf('%04d-%02d-%02d', $gy, $gm, $gd);
-            } catch (\Throwable $e) { return null; }
+            } catch (\Throwable $e) {
+                return null;
+            }
         }
+
         return sprintf('%04d-%02d-%02d', $year, $mo, $day);
     }
 
     /** نرمال‌سازی رشتهٔ ساعت به HH:MM:SS. خالی → 09:00:00 (پیش‌فرض). */
     protected function normalizeTime(string $time): string
     {
-        $time = strtr($time, ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9']);
-        if ($time === '') return '09:00:00';
+        $time = strtr($time, ['۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4', '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9']);
+        if ($time === '') {
+            return '09:00:00';
+        }
         // اگر بازهٔ متنی است (مثلاً '9 تا 12 ظهر')، ساعت اول را بگیر.
         if (preg_match('/(\d{1,2})/', $time, $m)) {
             $h = max(0, min(23, (int) $m[1]));
@@ -532,8 +546,10 @@ class SyncOrderController extends Controller
             if (preg_match('/^(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?/', $time, $hm)) {
                 return sprintf('%02d:%02d:%02d', (int) $hm[1], (int) $hm[2], (int) ($hm[3] ?? 0));
             }
+
             return sprintf('%02d:00:00', $h);
         }
+
         return '09:00:00';
     }
 
@@ -552,11 +568,13 @@ class SyncOrderController extends Controller
                 fn ($v) => is_string($v) ? trim($v) : null,
                 $value
             ), fn ($v) => $v !== null && $v !== '');
+
             return empty($items) ? null : implode('، ', $items);
         }
         if (is_string($value)) {
             return trim($value) === '' ? null : trim($value);
         }
+
         return null;
     }
 
@@ -577,6 +595,7 @@ class SyncOrderController extends Controller
         if (is_string($value)) {
             return $value === '' ? null : $value;
         }
+
         return null;
     }
 

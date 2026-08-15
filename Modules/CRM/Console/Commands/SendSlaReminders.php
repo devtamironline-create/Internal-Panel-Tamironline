@@ -27,7 +27,8 @@ class SendSlaReminders extends Command
 {
     protected $signature = 'crm:orders:sla-reminders
                             {--dry-run : فقط گزارش بده، پیامک نزن}
-                            {--window=20 : پنجرهٔ تحملِ عقب‌ماندگی (دقیقه)}';
+                            {--window=20 : پنجرهٔ تحملِ عقب‌ماندگی (دقیقه)}
+                            {--max-due=40 : سقفِ پیامکِ «سررسید» در هر اجرا (تخلیهٔ تدریجی عقب‌افتاده‌ها)}';
 
     protected $description = 'ارسال یادآور مهلت تعیین وضعیت به تکنسین (پیش از سررسید و در سررسید)';
 
@@ -41,6 +42,7 @@ class SendSlaReminders extends Command
         // یک اجرای ازدست‌رفته (ری‌استارتِ سرور، کندیِ صف) سررسید را
         // برای همیشه نسوزاند. ضدِتکرار جلوی ارسالِ دوباره را می‌گیرد.
         $window = max(1, (int) $this->option('window'));
+        $maxDue = max(1, (int) $this->option('max-due'));
         $dryRun = (bool) $this->option('dry-run');
 
         $sent = ['warning' => 0, 'due' => 0];
@@ -60,6 +62,13 @@ class SendSlaReminders extends Command
             }
 
             $key = $trigger === SmsTrigger::TechSlaDue ? 'due' : 'warning';
+
+            // سقفِ هر اجرا برای «سررسید» — وقتی عقب‌افتاده زیاد است (مثلاً
+            // بعد از افزودنِ قاعدهٔ SLA به یک وضعیت)، به‌جای رگبارِ یک‌جا،
+            // در چند اجرای ۱۵دقیقه‌ای تخلیه می‌شود.
+            if ($key === 'due' && $sent['due'] >= $maxDue) {
+                continue;
+            }
 
             if ($dryRun) {
                 $sent[$key]++;
@@ -119,7 +128,11 @@ class SendSlaReminders extends Command
     {
         $minutesLeft = $now->diffInMinutes($deadline, false);
 
-        if ($minutesLeft <= 0 && $minutesLeft > -$window) {
+        // سررسید حدِ پایین ندارد: مهلتی که «از قبل منقضی» به دنیا آمده
+        // (مثل افزودنِ قاعدهٔ open به سفارش‌های قدیمی) هم باید یک‌بار
+        // اعلان بگیرد. ضدتکرار (وضعیت + خودِ مهلت) جلوی ارسالِ دوباره را
+        // می‌گیرد، پس برداشتنِ حد پایین رگبار نمی‌سازد.
+        if ($minutesLeft <= 0) {
             return SmsTrigger::TechSlaDue;
         }
 
