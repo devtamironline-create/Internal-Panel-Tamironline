@@ -47,6 +47,10 @@ Route::middleware('web')->group(function () {
 Route::middleware('web')->group(function () {
     Route::get('/crm/pay/{invoiceCode}', [PaymentController::class, 'pay'])->name('crm.payment.pay');
     Route::post('/crm/pay/{invoiceCode}', [PaymentController::class, 'initiate'])->name('crm.payment.initiate');
+    // وضعیتِ پرداخت برای اپِ مشتری — poll بعد از برگشت از درگاه. throttle
+    // تا با توکنِ تصادفی هم نشود endpoint را بمباران کرد.
+    Route::get('/crm/pay/{invoiceCode}/status', [PaymentController::class, 'status'])
+        ->middleware('throttle:30,1')->name('crm.payment.status');
     Route::match(['get', 'post'], '/crm/payment/callback', [PaymentController::class, 'callback'])->name('crm.payment.callback');
 
     // ─── لینک عمومی صورتحساب — برای ارسال به مشتری از طریق پیامک ────

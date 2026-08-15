@@ -20,6 +20,7 @@ enum PushEvent: string
     case Announcement = 'announcement';
     case SlaDue = 'tech_sla_due';
     case OperatorMessage = 'operator_message';
+    case InvoicePaid = 'tech_invoice_paid_online';
 
     public function label(): string
     {
@@ -30,6 +31,7 @@ enum PushEvent: string
             self::Announcement => 'اطلاعیهٔ ادمین',
             self::SlaDue => 'سررسید مهلت ثبت وضعیت',
             self::OperatorMessage => 'پیام جدید کارشناس',
+            self::InvoicePaid => 'پرداخت آنلاین فاکتور توسط مشتری',
         };
     }
 
@@ -42,6 +44,7 @@ enum PushEvent: string
             self::Announcement => 'اطلاعیهٔ جدید',
             self::SlaDue => 'مهلت ثبت وضعیت رسید',
             self::OperatorMessage => 'پیام جدید از پشتیبانی',
+            self::InvoicePaid => 'فاکتور پرداخت شد',
         };
     }
 
@@ -54,6 +57,7 @@ enum PushEvent: string
             self::Announcement => '{title}',
             self::SlaDue => 'وضعیت {order_code} را همین حالا ثبت کنید.',
             self::OperatorMessage => '{excerpt}',
+            self::InvoicePaid => 'فاکتور {order_code} آنلاین پرداخت شد؛ {amount} تومان به کیف‌پول شما اضافه شد.',
         };
     }
 
@@ -86,6 +90,7 @@ enum PushEvent: string
             self::OrderAssigned => ['order_code', 'customer_name', 'device_name', 'technician_name'],
             self::OrderStatusChanged => ['order_code', 'status_label', 'technician_name'],
             self::OrderReturned, self::SlaDue => ['order_code', 'technician_name'],
+            self::InvoicePaid => ['order_code', 'amount', 'technician_name'],
             self::Announcement => ['title'],
             self::OperatorMessage => ['excerpt'],
         };
