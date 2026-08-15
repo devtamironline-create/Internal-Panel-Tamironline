@@ -62,6 +62,15 @@ class TechOrderDetailResource extends JsonResource
             'sla_deadline_at' => \Modules\CRM\Support\SlaPolicy::deadlineFor($this->resource)?->utc()->toIso8601String(),
             'estimated_ready_at' => $this->estimated_ready_at?->format('Y-m-d'),
             'return_review_pending' => (bool) $this->return_review_pending,
+            // وضعیتِ کاملِ بررسیِ برگشتی — تا اپ بنر/فرم/نتیجه را بدون
+            // حدس‌زدن نشان دهد. تا وقتی pending=true بستنِ سفارش از سرور
+            // بلاک است (allowed_transitions هم وضعیت‌های نهایی را ندارد).
+            'return_review' => [
+                'pending' => (bool) $this->return_review_pending,
+                'reviewed_at' => $this->return_reviewed_at?->utc()->toIso8601String(),
+                'approved' => $this->return_reviewed_at !== null ? (bool) $this->return_review_approved : null,
+                'days' => $this->return_review_days !== null ? (int) $this->return_review_days : null,
+            ],
             'max_estimate_date' => \Modules\CRM\Support\SlaPolicy::maxEstimateDate()->format('Y-m-d'),
             // آیا تکنسین همین حالا مجاز است زمانِ مراجعه را تنظیم/تغییر/پاک کند؟
             // (سرور enforce می‌کند — فرانت نباید حدس بزند.)
@@ -234,7 +243,14 @@ class TechOrderDetailResource extends JsonResource
         }
 
         $returnType = (int) ($this->return_type ?? 0);
-        if ($returnType === 1) {
+        if ($this->return_review_pending) {
+            // برگشتیِ در انتظارِ بررسی: بستن ممنوع — فقط گذارهای غیرنهایی
+            // (هماهنگی/مراجعه) تا تکنسین در محل نتیجهٔ بررسی را ثبت کند.
+            $base = array_filter(
+                $status->technicianTransitions(),
+                fn (OrderStatus $s) => ! $s->isFinal()
+            );
+        } elseif ($returnType === 1) {
             $base = [OrderStatus::Completed];
         } elseif ($returnType === 2) {
             $base = [OrderStatus::Cancelled, OrderStatus::Completed];

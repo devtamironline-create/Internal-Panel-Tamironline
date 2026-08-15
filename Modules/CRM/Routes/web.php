@@ -812,6 +812,7 @@ Route::prefix('tech')->name('tech.')->group(function () {
         Route::post('orders/{order}/notes', [TechPanelDashboardController::class, 'addOrderNote'])->name('orders.add-note');
         Route::post('orders/{order}/schedule-visit', [TechPanelDashboardController::class, 'scheduleVisit'])->name('orders.schedule-visit');
         Route::post('orders/{order}/call-result', [TechPanelDashboardController::class, 'callResult'])->name('orders.call-result');
+        Route::post('orders/{order}/return-review', [TechPanelDashboardController::class, 'submitReturnReview'])->name('orders.return-review');
         Route::post('orders/{order}/deliver-sms', [TechPanelDashboardController::class, 'sendDeliverSms'])->name('orders.deliver-sms');
         // ارسالِ دستیِ پیامکِ رسیدِ انتقال به مشتری — فقط یک‌بار توسطِ تکنسین.
         Route::post('orders/{order}/transfer-receipt/{transferReceipt}/send-sms', [TechPanelDashboardController::class, 'sendTransferReceiptSms'])

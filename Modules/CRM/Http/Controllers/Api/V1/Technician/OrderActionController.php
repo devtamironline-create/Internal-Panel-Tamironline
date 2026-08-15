@@ -84,6 +84,17 @@ class OrderActionController extends Controller
         if (! $newStatus) {
             throw ValidationException::withMessages(['status' => 'وضعیت نامعتبر است.']);
         }
+
+        // خطِ قرمزِ برگشتی: تا وقتی نتیجهٔ بررسیِ برگشتی ثبت نشده، بستنِ
+        // سفارش (تکمیل/ایاب و ذهاب/کنسل/رد) ممکن نیست — هماهنگی و مراجعه
+        // آزاد است. قبل از چکِ allowedStatuses می‌آید تا پیامِ خطا دقیق
+        // باشد، نه «مجاز نیست»ِ عمومی.
+        if ($order->return_review_pending && $newStatus->isFinal()) {
+            throw ValidationException::withMessages([
+                'status' => 'این سفارش برگشتی است؛ قبل از بستن، ابتدا نتیجهٔ بررسی برگشتی (تأیید یا رد) را پس از مراجعه در محل ثبت کنید.',
+            ]);
+        }
+
         if (! in_array($newStatus, $this->allowedStatusesFor($order), true)) {
             throw ValidationException::withMessages(['status' => 'تغییر به این وضعیت در شرایط فعلی مجاز نیست.']);
         }
@@ -134,7 +145,12 @@ class OrderActionController extends Controller
         ]);
 
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
-            $this->invoiceService->generateForOrder($order->refresh(), $tech->user_id, true);
+            // تکمیلِ رایگانِ برگشتیِ تأییدشده (return_type=1) فاکتورِ قبلی را
+            // supersede نمی‌کند — فاکتورِ اصلی سندِ مالیِ معتبرِ کارِ اول است
+            // و باید فعال و قابلِ مشاهده بماند (نه بایگانی، نه ۴۰۴).
+            $order->refresh();
+            $forceRegenerate = (int) ($order->return_type ?? 0) !== 1;
+            $this->invoiceService->generateForOrder($order, $tech->user_id, $forceRegenerate);
         }
 
         // SMS خودکارِ وضعیت. نهایی‌سازیِ پیش‌نویس (Completed→Completed) پیامک
@@ -528,6 +544,16 @@ class OrderActionController extends Controller
         if ($order->status->isFinal()) {
             return [];
         }
+
+        // برگشتیِ در انتظارِ بررسی: وضعیت‌های بستن اصلاً در لیست نمی‌آیند
+        // تا اپ آن‌ها را نشان ندهد — گیتِ updateStatus هم پشتش ایستاده.
+        if ($order->return_review_pending) {
+            return array_values(array_filter(
+                $order->status->technicianTransitions(),
+                fn (OrderStatus $s) => ! $s->isFinal() && $s !== $order->status
+            ));
+        }
+
         $returnType = (int) ($order->return_type ?? 0);
         if ($returnType === 1) {
             return [OrderStatus::Completed];

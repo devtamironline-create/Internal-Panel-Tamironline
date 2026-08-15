@@ -514,6 +514,70 @@
             }
         @endphp
 
+        {{-- بررسیِ برگشتی — بعد از مراجعه در محل ثبت می‌شود. تا قبل از ثبت،
+             بستنِ سفارش (تکمیل/ایاب و ذهاب/…) سمتِ سرور بلاک است ولی هماهنگی
+             و مراجعه آزاد است، پس این کارت اطلاع‌رسان است نه مسدودکننده. --}}
+        @if($order->return_review_pending)
+            <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4 border-2 border-orange-200"
+                 x-data="{ rrApproved: '{{ old('approved', '') }}' }">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse"></span>
+                    <span class="text-sm font-bold text-orange-800">بررسی برگشتی — پس از مراجعه در محل</span>
+                </div>
+                <p class="text-[11px] text-gray-600 leading-6 mb-3">
+                    این سفارش برگشتی است. ابتدا مثل یک سفارش عادی با مشتری هماهنگ کنید و مراجعه کنید؛
+                    سپس بعد از دیدن دستگاه، همین‌جا مشخص کنید که ایراد از خدمات قبلی بوده یا ایراد جدیدی است.
+                    <strong class="text-orange-700">تا قبل از ثبت این بررسی، امکان بستن سفارش وجود ندارد.</strong>
+                </p>
+
+                <form method="POST" action="{{ route('tech.orders.return-review', $order) }}" class="space-y-2">
+                    @csrf
+                    <label class="flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition"
+                           :class="rrApproved === '1' ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200'">
+                        <input type="radio" name="approved" value="1" x-model="rrApproved" class="mt-1 accent-emerald-600" required>
+                        <span class="text-xs leading-6">
+                            <strong class="text-emerald-700 block">تأیید می‌کنم — ایراد از خدمات قبلی است</strong>
+                            خدمات جدید بدون هزینه برای مشتری انجام می‌شود (فقط «پایان سفارش» با مبلغ صفر).
+                        </span>
+                    </label>
+                    <label class="flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition"
+                           :class="rrApproved === '0' ? 'border-rose-400 bg-rose-50' : 'border-gray-200'">
+                        <input type="radio" name="approved" value="0" x-model="rrApproved" class="mt-1 accent-rose-600">
+                        <span class="text-xs leading-6">
+                            <strong class="text-rose-700 block">رد می‌کنم — ایراد جدید است</strong>
+                            سفارش مانند یک سفارش عادی با قیمت‌گذاری معمول ادامه پیدا می‌کند.
+                        </span>
+                    </label>
+
+                    <div x-show="rrApproved === '1'" x-cloak>
+                        <label class="text-[11px] text-gray-700 font-bold mb-1 block">زمان تخمینی انجام کار (روز) — اجباری *</label>
+                        <select name="days" :required="rrApproved === '1'"
+                                class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none">
+                            <option value="">انتخاب کنید…</option>
+                            @for($d = 1; $d <= \Modules\CRM\Support\SlaPolicy::MAX_ESTIMATE_DAYS; $d++)
+                                <option value="{{ $d }}" @selected((string) old('days') === (string) $d)>{{ $d }} روز</option>
+                            @endfor
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-[11px] text-gray-500 mb-1 block">توضیح (اختیاری)</label>
+                        <textarea name="note" rows="2" maxlength="1000"
+                                  class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none leading-7">{{ old('note') }}</textarea>
+                    </div>
+
+                    @error('approved')<p class="text-[10px] text-rose-600">{{ $message }}</p>@enderror
+                    @error('days')<p class="text-[10px] text-rose-600">{{ $message }}</p>@enderror
+
+                    <button type="submit" x-bind:disabled="rrApproved === ''"
+                            class="w-full py-3 rounded-xl text-white font-bold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            style="background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);">
+                        ثبت نتیجهٔ بررسی برگشتی
+                    </button>
+                </form>
+            </div>
+        @endif
+
         <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4"
              x-data="{
                 selected: '{{ old('status', '') }}',
