@@ -67,12 +67,16 @@ class OrphanOrdersController extends Controller
         $allCandidateWpIds = [];
         foreach ($unresolvedOrders as $o) {
             $events = $o->wp_events;
-            if (! is_array($events)) continue;
+            if (! is_array($events)) {
+                continue;
+            }
 
             $authors = []; // wp_id => [count, contexts[]]
             foreach ($events as $ev) {
                 $author = $ev['author'] ?? null;
-                if (! is_numeric($author) || (int) $author <= 0) continue;
+                if (! is_numeric($author) || (int) $author <= 0) {
+                    continue;
+                }
                 $wpId = (int) $author;
                 if (! isset($authors[$wpId])) {
                     $authors[$wpId] = ['count' => 0, 'contexts' => []];
@@ -80,14 +84,16 @@ class OrphanOrdersController extends Controller
                 $authors[$wpId]['count']++;
                 $status = (string) ($ev['status'] ?? '');
                 $subject = (string) ($ev['subject'] ?? '');
-                $ctx = trim($subject . ($status ? " ({$status})" : ''));
+                $ctx = trim($subject.($status ? " ({$status})" : ''));
                 if ($ctx !== '' && ! in_array($ctx, $authors[$wpId]['contexts'], true)) {
                     $authors[$wpId]['contexts'][] = $ctx;
                 }
                 $allCandidateWpIds[$wpId] = true;
             }
 
-            if (empty($authors)) continue;
+            if (empty($authors)) {
+                continue;
+            }
 
             arsort($authors);
             $unresolvedDetail[] = [
@@ -135,11 +141,13 @@ class OrphanOrdersController extends Controller
             ->where('is_lead', false)
             ->update([
                 'technician_id' => (int) $validated['technician_id'],
+                // بدونِ این، SLA فاز هماهنگی برای این سفارش‌ها کور می‌ماند.
+                'assigned_at' => now(),
                 'updated_at' => now(),
             ]);
 
         $tech = Technician::find($validated['technician_id']);
-        $techName = $tech ? trim($tech->firstname_tech ?: ($tech->first_name . ' ' . ($tech->last_name ?? ''))) : '—';
+        $techName = $tech ? trim($tech->firstname_tech ?: ($tech->first_name.' '.($tech->last_name ?? ''))) : '—';
 
         return back()->with('success',
             "{$updated} سفارش به تکنسین «{$techName}» منتقل شد (technician_wp_id={$validated['technician_wp_id']})."
@@ -176,6 +184,7 @@ class OrphanOrdersController extends Controller
             $events = $order->wp_events;
             if (empty($events) || ! is_array($events)) {
                 $skipped++;
+
                 continue;
             }
 
@@ -205,6 +214,7 @@ class OrphanOrdersController extends Controller
 
             if (empty($authors)) {
                 $skipped++;
+
                 continue;
             }
 
@@ -230,6 +240,7 @@ class OrphanOrdersController extends Controller
 
             if (! $resolved) {
                 $skipped++;
+
                 continue;
             }
 
@@ -244,7 +255,7 @@ class OrphanOrdersController extends Controller
 
         return back()->with('success',
             "بک‌فیل از لاگ: {$filled} سفارش technician_wp_id ست شد، {$skipped} سفارش لاگ مناسب نداشت. "
-            . "موارد چندگانه: ترجیح با match پنل، سپس رویداد «انجام کار»، سپس بیشترین فراوانی."
+            .'موارد چندگانه: ترجیح با match پنل، سپس رویداد «انجام کار»، سپس بیشترین فراوانی.'
         );
     }
 
@@ -267,7 +278,7 @@ class OrphanOrdersController extends Controller
             $wp = DB::connection('wp_crm');
             $wp->getPdo();
         } catch (\Throwable $e) {
-            return back()->with('error', 'اتصال به WP DB ناموفق: ' . $e->getMessage());
+            return back()->with('error', 'اتصال به WP DB ناموفق: '.$e->getMessage());
         }
 
         app()->instance('crm.suppress_outbound_push', true);
@@ -295,7 +306,7 @@ class OrphanOrdersController extends Controller
         $wpIds = $orders->pluck('wp_id')->all();
         $techMetas = [];
         foreach (array_chunk($wpIds, 500) as $chunk) {
-            $rows = $wp->table($prefix . 'postmeta')
+            $rows = $wp->table($prefix.'postmeta')
                 ->whereIn('post_id', $chunk)
                 ->where('meta_key', 'technician')
                 ->get(['post_id', 'meta_value']);
@@ -312,6 +323,7 @@ class OrphanOrdersController extends Controller
 
             if (! $wpTechId) {
                 $noMetaInWp++;
+
                 continue;
             }
 
@@ -342,22 +354,22 @@ class OrphanOrdersController extends Controller
 
         return back()->with('success',
             "خواندن از WP postmeta: {$updated} سفارش پردازش شد. "
-            . "wp_id تغییر کرد: {$changedWpId} — "
-            . "خودکار assign شد به تکنسین پنل: {$autoAssigned} — "
-            . "بدون postmeta در WP: {$noMetaInWp} — بدون تغییر: {$unchanged}."
+            ."wp_id تغییر کرد: {$changedWpId} — "
+            ."خودکار assign شد به تکنسین پنل: {$autoAssigned} — "
+            ."بدون postmeta در WP: {$noMetaInWp} — بدون تغییر: {$unchanged}."
         );
     }
 
     private function configureWpConnection(): void
     {
         config(['database.connections.wp_crm' => [
-            'driver'    => 'mysql',
-            'host'      => env('WP_DB_HOST', '127.0.0.1'),
-            'port'      => (int) env('WP_DB_PORT', 3306),
-            'database'  => env('WP_DB_NAME', 'crmtamironline_db_new'),
-            'username'  => env('WP_DB_USER', 'crmtamironline_db_new'),
-            'password'  => env('WP_DB_PASS', 'Rayanew_0935'),
-            'charset'   => 'utf8mb4',
+            'driver' => 'mysql',
+            'host' => env('WP_DB_HOST', '127.0.0.1'),
+            'port' => (int) env('WP_DB_PORT', 3306),
+            'database' => env('WP_DB_NAME', 'crmtamironline_db_new'),
+            'username' => env('WP_DB_USER', 'crmtamironline_db_new'),
+            'password' => env('WP_DB_PASS', 'Rayanew_0935'),
+            'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
         ]]);
     }
@@ -392,6 +404,7 @@ class OrphanOrdersController extends Controller
             $events = $order->wp_events;
             if (! is_array($events)) {
                 $unchanged++;
+
                 continue;
             }
 
@@ -400,7 +413,9 @@ class OrphanOrdersController extends Controller
             $priorityAuthor = null;
             foreach ($events as $ev) {
                 $author = $ev['author'] ?? null;
-                if (! is_numeric($author) || (int) $author <= 0) continue;
+                if (! is_numeric($author) || (int) $author <= 0) {
+                    continue;
+                }
                 $wpId = (int) $author;
                 $authors[$wpId] = ($authors[$wpId] ?? 0) + 1;
 

@@ -739,9 +739,13 @@ class OrderController extends Controller
             // فیلدهای اضافه‌شده — هم‌سو با OrderWizard هنگام ثبت
             'introduction' => $validated['introduction'] ?? $order->introduction,
             'order_type' => $validated['order_type'] ?? $order->order_type,
-            'technician_id' => array_key_exists('technician_id', $validated)
+            'technician_id' => $editTechId = (array_key_exists('technician_id', $validated)
                 ? ($validated['technician_id'] ?: null)
-                : $order->technician_id,
+                : $order->technician_id),
+            // تخصیص/تعویضِ تکنسین از فرم ویرایش هم باید مبنای SLA بسازد.
+            'assigned_at' => $editTechId && (int) $editTechId !== (int) $order->technician_id
+                ? now()
+                : $order->assigned_at,
             'subscription' => array_key_exists('subscription', $validated)
                 ? ($validated['subscription'] ?: null)
                 : $order->subscription,

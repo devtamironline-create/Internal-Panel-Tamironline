@@ -229,12 +229,34 @@ class TechAppNotificationSmsTest extends TestCase
         $this->assertSame(2, $this->sentOf('techsladue'));
     }
 
+    /**
+     * مهلتی که «از قبل منقضی» به دنیا آمده (مثل افزودنِ قاعدهٔ SLA به
+     * وضعیتی که سفارش‌های قدیمی دارد) هم باید یک‌بار اعلانِ سررسید بگیرد —
+     * قبلاً فقط مهلتی که در پنجرهٔ ۲۰ دقیقه‌ایِ اطرافِ اجرا می‌گذشت اعلان
+     * می‌گرفت و عقب‌افتاده‌ها برای همیشه ساکت می‌ماندند.
+     */
+    public function test_a_deadline_born_expired_still_gets_one_due_reminder(): void
+    {
+        $this->activate('tech_sla_due');
+        $tech = $this->technician();
+        // مهلتِ یک‌ساعتهٔ «جدید» ده روز پیش گذشته است.
+        $this->order($tech, ['assigned_at' => now()->subDays(10)]);
+
+        $this->runReminders();
+        $this->assertSame(1, $this->sentOf('techsladue'));
+
+        // ضدتکرار: اجرای دوباره پیامکِ دوم نمی‌زند.
+        $this->runReminders();
+        $this->assertSame(1, $this->sentOf('techsladue'));
+    }
+
     public function test_an_order_without_a_computable_deadline_is_left_alone(): void
     {
         $this->activate('tech_sla_due');
         $tech = $this->technician();
-        // assigned_at خالی ⇒ مهلتِ «جدید» قابل محاسبه نیست.
-        $this->order($tech, ['assigned_at' => null]);
+        // هر دو مبنای زمانی خالی ⇒ مهلت قابل محاسبه نیست (fallback هم ندارد).
+        $order = $this->order($tech, ['assigned_at' => null]);
+        $order->forceFill(['status_changed_at' => null])->save();
 
         $this->runReminders();
 

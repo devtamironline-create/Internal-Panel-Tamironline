@@ -135,13 +135,33 @@ class OrderSlaTest extends TestCase
         }
     }
 
-    public function test_a_missing_time_base_means_no_deadline_not_an_overdue_one(): void
+    /**
+     * سفارشی که از مسیرهای قدیمی بدونِ assigned_at تخصیص گرفته، نباید از
+     * SLA نامرئی بماند — مبنا به status_changed_at (که همیشه پر است)
+     * برمی‌گردد. فقط وقتی هر دو مبنا غایب‌اند، مهلت «قابل محاسبه نیست».
+     */
+    public function test_missing_assigned_at_falls_back_to_status_changed_at(): void
     {
-        // بدون assigned_at نمی‌شود مهلت را حساب کرد — نباید «گذشته» تلقی شود.
-        $order = $this->order('new');
+        $entered = CarbonImmutable::parse('2026-07-01 09:00:00');
+        $order = $this->order('new', ['status_changed_at' => $entered]);
+        $order->forceFill(['assigned_at' => null])->save();
 
-        $this->assertNull(SlaPolicy::deadlineFor($order));
-        $this->assertFalse(SlaPolicy::isOverdue($order));
+        $this->assertTrue($entered->addHours(1)->equalTo(SlaPolicy::deadlineFor($order->fresh())));
+
+        $bare = $this->order('new');
+        $bare->forceFill(['assigned_at' => null, 'status_changed_at' => null])->save();
+
+        $this->assertNull(SlaPolicy::deadlineFor($bare->fresh()));
+        $this->assertFalse(SlaPolicy::isOverdue($bare->fresh()));
+    }
+
+    /** «هماهنگ‌شده» بدونِ زمانِ مراجعه دیگر بی‌مهلت نیست — ۲۴ ساعت از ورود. */
+    public function test_coordinated_without_a_visit_time_gets_a_24h_deadline(): void
+    {
+        $entered = CarbonImmutable::parse('2026-07-01 09:00:00');
+        $order = $this->order('coordinated', ['status_changed_at' => $entered]);
+
+        $this->assertTrue($entered->addHours(24)->equalTo(SlaPolicy::deadlineFor($order)));
     }
 
     public function test_overdue_detection(): void

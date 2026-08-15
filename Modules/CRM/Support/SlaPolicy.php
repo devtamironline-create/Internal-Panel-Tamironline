@@ -40,6 +40,8 @@ final class SlaPolicy
         'awaiting_customer_approval' => 24,
         'repair_started' => 120,
         'open' => 336,
+        // «هماهنگ‌شده» که زمانِ مراجعه ثبت نشده — نباید بی‌مهلت بماند.
+        'coordinated_no_visit' => 24,
     ];
 
     /** برچسبِ فارسیِ هر مهلت برای فرمِ تنظیمات. */
@@ -52,6 +54,7 @@ final class SlaPolicy
         'awaiting_customer_approval' => 'در انتظار تأیید مشتری',
         'repair_started' => 'شروع تعمیر',
         'open' => 'باز شده (انتقال به تعمیرگاه)',
+        'coordinated_no_visit' => 'هماهنگ‌شده بدون زمانِ مراجعهٔ ثبت‌شده',
     ];
 
     private static ?array $hours = null;
@@ -114,13 +117,20 @@ final class SlaPolicy
         return match ($status) {
             // فاز هماهنگی: مبنا لحظهٔ تخصیص است، نه ورود به وضعیت — وگرنه
             // تکنسینی که مدام وضعیت را جابه‌جا می‌کند مهلتش تازه می‌شود.
+            // fallback به status_changed_at (که همیشه پر است): سفارش‌هایی
+            // که از مسیرهای قدیمیِ بدونِ assigned_at تخصیص گرفته‌اند نباید
+            // از SLA نامرئی بمانند.
             OrderStatus::New, OrderStatus::AwaitingCoordination => self::offset(
-                $order->assigned_at, $hours[$status->value] ?? 1
+                $order->assigned_at ?? $order->status_changed_at, $hours[$status->value] ?? 1
             ),
-            OrderStatus::NoAnswer => self::offset($order->assigned_at, $hours['no_answer']),
+            OrderStatus::NoAnswer => self::offset(
+                $order->assigned_at ?? $order->status_changed_at, $hours['no_answer']
+            ),
 
-            // زمانِ توافق‌شده با مشتری خودش مهلت است.
-            OrderStatus::Coordinated => self::at($order->visit_scheduled_at),
+            // زمانِ توافق‌شده با مشتری خودش مهلت است؛ اگر ثبت نشده،
+            // «هماهنگ‌شده» نباید بی‌مهلت بماند.
+            OrderStatus::Coordinated => self::at($order->visit_scheduled_at)
+                ?? self::offset($order->status_changed_at, $hours['coordinated_no_visit']),
 
             OrderStatus::Suspended => self::offset($order->status_changed_at, $hours['suspended']),
             OrderStatus::AwaitingPart => self::at($order->estimated_ready_at)
