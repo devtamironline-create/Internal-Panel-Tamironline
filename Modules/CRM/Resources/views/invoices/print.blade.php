@@ -231,8 +231,25 @@
     </style>
 </head>
 <body>
-    <div class="toolbar">
+    @php
+        // دکمهٔ پرداخت آنلاین — فقط برای فاکتورِ فعالِ پرداخت‌نشدهٔ مبلغ‌دار.
+        // فاکتورِ لغوشده/جایگزین‌شده (superseded) یا رایگان دکمه نمی‌گیرد.
+        $isPayable = $invoice->superseded_at === null
+            && ! in_array($invoice->status, ['paid', 'cancelled'], true)
+            && (int) $invoice->total_amount > 0;
+    @endphp
+    <div class="toolbar" style="gap: 10px;">
         <button class="btn-print" onclick="window.print()">پرینت / دانلود</button>
+        @if($isPayable)
+            <a href="{{ route('crm.payment.pay', $invoice->public_token) }}"
+               class="btn-print" style="background:#2563eb; text-decoration:none; display:inline-flex; align-items:center;">
+                پرداخت آنلاین فاکتور
+            </a>
+        @elseif($invoice->status === 'paid')
+            <span class="btn-print" style="background:#0d9488; cursor:default; display:inline-flex; align-items:center;">
+                ✓ پرداخت شده
+            </span>
+        @endif
     </div>
 
     <div class="page">
