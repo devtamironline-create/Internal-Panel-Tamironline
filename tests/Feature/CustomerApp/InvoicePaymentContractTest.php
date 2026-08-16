@@ -56,6 +56,8 @@ class InvoicePaymentContractTest extends TestCase
         // pay_url = صفحهٔ پرداختِ پنل با public_token — تأییدِ فرضِ اپ.
         $this->assertStringEndsWith('/crm/pay/'.str_repeat('a', 40), $payment['pay_url']);
         $this->assertSame($payment['payment_url'], $payment['pay_url']);
+        // یک‌کلیکه — مستقیم به درگاه.
+        $this->assertStringEndsWith('/crm/pay/'.str_repeat('a', 40).'/go', $payment['direct_pay_url']);
     }
 
     public function test_a_paid_invoice_still_exposes_the_token_but_no_pay_url(): void
@@ -70,6 +72,7 @@ class InvoicePaymentContractTest extends TestCase
 
         $this->assertSame(str_repeat('b', 40), $payment['public_token']);
         $this->assertNull($payment['pay_url']);
+        $this->assertNull($payment['direct_pay_url']);
         $this->assertTrue($payment['is_paid']);
     }
 }
