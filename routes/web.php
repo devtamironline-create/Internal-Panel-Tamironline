@@ -169,6 +169,14 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         });
     });
 
+    // ─── Marketing → Ads Tracking — زیرساخت ردیابی تماس تبلیغات گوگل ───
+    Route::middleware('can:view-ads-tracking')
+        ->prefix('marketing/ads-tracking')->name('marketing.ads-tracking.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\AdsTrackingController::class, 'index'])->name('index');
+            Route::get('/events/{event}', [\App\Http\Controllers\Admin\AdsTrackingController::class, 'show'])
+                ->whereNumber('event')->name('event');
+        });
+
     // صندوق سرمایه — فقط فلگ investment_access (روشن‌شدنی فقط با کامند
     // «investment:access grant»). برای بقیه 404 است و هیچ‌جا لیست نمی‌شود.
     Route::middleware(\App\Http\Middleware\EnsureInvestmentAccess::class)
