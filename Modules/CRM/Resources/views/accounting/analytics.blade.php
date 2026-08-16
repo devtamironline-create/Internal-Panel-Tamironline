@@ -98,49 +98,85 @@
                 <div class="text-center text-gray-400 text-sm py-10">در این بازه داده‌ای نیست.</div>
             @else
                 <?php
-                    // محورِ ثابتِ ۰ تا ۵ میلیارد (خواستِ مدیر) — اگر داده‌ای از
-                    // سقف بزرگ‌تر یا سودِ خالص منفی بود، محور کش می‌آید تا
-                    // هیچ نقطه‌ای بیرون نیفتد.
+                    // مقیاسِ خودکار: سقف = عددِ گردِ (۱/۲/۲.۵/۵ × توانِ ده) بالای
+                    // بیشینهٔ خودِ داده‌ها + پنج خطِ راهنما. (سقفِ ثابتِ ۵ میلیارد
+                    // حذف شد — نمای روزانه را له می‌کرد.)
                     $all = [];
                     foreach ($buckets as $b) { foreach (array_keys($series) as $k) { $all[] = $b[$k]; } }
+                    $dataMax = max(max($all), 1);
+                    $pow = 10 ** floor(log10($dataMax));
+                    $maxV = collect([1, 2, 2.5, 5, 10])->map(fn ($m) => (int) ($m * $pow))->first(fn ($v) => $v >= $dataMax);
                     $minV = min(min($all), 0);
-                    $maxV = max(max($all), 5_000_000_000);
+                    $gridStep = max(1, (int) ($maxV / 5)); // صفر نشود — حلقهٔ بی‌پایان
                     $n = count($buckets);
                     $plotW = 700.0; $plotH = 210.0; $x0 = 46.0; $y0 = 224.0;
                     $px = fn ($i) => $n > 1 ? $x0 + $i * ($plotW / ($n - 1)) : $x0 + $plotW / 2;
                     $py = fn ($val) => $y0 - (($val - $minV) / ($maxV - $minV)) * $plotH;
                     $labelStep = max(1, (int) ceil($n / 12));
+                    // دادهٔ tooltip برای Alpine: برچسب + مقادیر + موقعیتِ x به درصد.
+                    $tipData = collect($buckets)->map(fn ($b, $i) => [
+                        'label' => $b['label'],
+                        'x' => round($px($i) / 760 * 100, 2),
+                        'values' => collect($series)->map(fn ($s, $k) => number_format($b[$k]))->all(),
+                    ])->values();
                 ?>
-                <div class="overflow-x-auto">
-                    <svg viewBox="0 0 760 252" class="w-full min-w-[680px]" style="direction: ltr;">
-                        {{-- خطوطِ راهنمای کم‌رنگِ هر ۱ میلیارد — مینیمال، سبکِ Google Ads --}}
-                        @for($g = 0; $g <= 5_000_000_000 && $g <= $maxV; $g += 1_000_000_000)
-                            <line x1="{{ $x0 }}" y1="{{ round($py($g), 1) }}" x2="{{ $x0 + $plotW }}" y2="{{ round($py($g), 1) }}"
-                                  stroke="currentColor" class="text-gray-200 dark:text-gray-700" stroke-width="{{ $g === 0 ? 1 : 0.5 }}"/>
-                            <text x="4" y="{{ round($py($g), 1) + 3 }}" font-size="9" class="fill-gray-400">{{ $g === 0 ? '0' : $fmtShort($g) }}</text>
-                        @endfor
+                <div class="relative" x-data="{ tip: null, tips: {{ \Illuminate\Support\Js::from($tipData) }} }" @mouseleave="tip = null">
+                    <div class="overflow-x-auto">
+                        <svg viewBox="0 0 760 252" class="w-full min-w-[680px]" style="direction: ltr;">
+                            {{-- خطوطِ راهنمای کم‌رنگ — پنج تقسیمِ گرد، سبکِ Google Ads --}}
+                            @for($g = 0; $g <= $maxV; $g += $gridStep)
+                                <line x1="{{ $x0 }}" y1="{{ round($py($g), 1) }}" x2="{{ $x0 + $plotW }}" y2="{{ round($py($g), 1) }}"
+                                      stroke="currentColor" class="text-gray-200 dark:text-gray-700" stroke-width="{{ $g === 0 ? 1 : 0.5 }}"/>
+                                <text x="4" y="{{ round($py($g), 1) + 3 }}" font-size="9" class="fill-gray-400">{{ $g === 0 ? '0' : $fmtShort($g) }}</text>
+                            @endfor
 
+                            {{-- خطِ عمودیِ راهنمای hover --}}
+                            <template x-if="tip !== null">
+                                <line :x1="tips[tip].x * 7.6" :x2="tips[tip].x * 7.6" y1="14" y2="{{ $y0 }}"
+                                      stroke="currentColor" class="text-gray-300 dark:text-gray-600" stroke-width="1" stroke-dasharray="3 3"/>
+                            </template>
+
+                            @foreach($series as $key => $s)
+                                <g x-show="on.{{ $key }}">
+                                    <polyline fill="none" stroke="{{ $s['color'] }}" stroke-width="1.5"
+                                              stroke-linejoin="round" stroke-linecap="round"
+                                              points="{{ collect($buckets)->map(fn ($b, $i) => round($px($i), 1).','.round($py($b[$key]), 1))->implode(' ') }}"/>
+                                    @foreach($buckets as $i => $b)
+                                        <circle cx="{{ round($px($i), 1) }}" cy="{{ round($py($b[$key]), 1) }}" r="1.8" fill="{{ $s['color'] }}"
+                                                :r="tip === {{ $i }} ? 3.5 : 1.8"/>
+                                    @endforeach
+                                </g>
+                            @endforeach
+
+                            {{-- ستون‌های نامرئیِ hover — هر ستون یک دوره --}}
+                            @foreach($buckets as $i => $b)
+                                <rect x="{{ round($px($i) - ($n > 1 ? $plotW / ($n - 1) / 2 : $plotW / 2), 1) }}" y="8"
+                                      width="{{ round($n > 1 ? $plotW / ($n - 1) : $plotW, 1) }}" height="{{ $y0 - 8 }}"
+                                      fill="transparent" @mouseenter="tip = {{ $i }}"/>
+                            @endforeach
+
+                            @foreach($buckets as $i => $b)
+                                @if($i % $labelStep === 0 || $i === $n - 1)
+                                    <text x="{{ round($px($i), 1) }}" y="{{ $y0 + 14 }}" text-anchor="middle" font-size="9" class="fill-gray-400">{{ $b['label'] }}</text>
+                                @endif
+                            @endforeach
+                        </svg>
+                    </div>
+
+                    {{-- tooltip شناور — مقادیرِ همهٔ سری‌های روشن برای دورهٔ زیرِ موس --}}
+                    <div x-show="tip !== null" x-cloak
+                         class="absolute top-2 pointer-events-none bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg px-3 py-2 text-xs space-y-1 z-10"
+                         :style="tip !== null ? (tips[tip].x > 65 ? `right: ${100 - tips[tip].x + 2}%` : `left: ${tips[tip].x + 2}%`) : ''">
+                        <div class="font-bold text-gray-700 dark:text-gray-200" x-text="tip !== null ? tips[tip].label : ''"></div>
                         @foreach($series as $key => $s)
-                            <g x-show="on.{{ $key }}">
-                                <polyline fill="none" stroke="{{ $s['color'] }}" stroke-width="1.5"
-                                          stroke-linejoin="round" stroke-linecap="round"
-                                          points="{{ collect($buckets)->map(fn ($b, $i) => round($px($i), 1).','.round($py($b[$key]), 1))->implode(' ') }}"/>
-                                @foreach($buckets as $i => $b)
-                                    {{-- نقطهٔ نامرئیِ بزرگ فقط برای tooltip + نقطهٔ ریزِ مینیمال --}}
-                                    <circle cx="{{ round($px($i), 1) }}" cy="{{ round($py($b[$key]), 1) }}" r="1.8" fill="{{ $s['color'] }}"/>
-                                    <circle cx="{{ round($px($i), 1) }}" cy="{{ round($py($b[$key]), 1) }}" r="7" fill="transparent">
-                                        <title>{{ $b['label'] }} — {{ $s['label'] }}: {{ number_format($b[$key]) }} تومان</title>
-                                    </circle>
-                                @endforeach
-                            </g>
+                            <div class="flex items-center gap-2 whitespace-nowrap" x-show="on.{{ $key }}">
+                                <span class="w-2 h-2 rounded-full shrink-0" style="background: {{ $s['color'] }};"></span>
+                                <span class="text-gray-500">{{ $s['label'] }}:</span>
+                                <span class="font-bold text-gray-800 dark:text-gray-100" dir="ltr" x-text="tip !== null ? tips[tip].values.{{ $key }} : ''"></span>
+                                <span class="text-gray-400">تومان</span>
+                            </div>
                         @endforeach
-
-                        @foreach($buckets as $i => $b)
-                            @if($i % $labelStep === 0 || $i === $n - 1)
-                                <text x="{{ round($px($i), 1) }}" y="{{ $y0 + 14 }}" text-anchor="middle" font-size="9" class="fill-gray-400">{{ $b['label'] }}</text>
-                            @endif
-                        @endforeach
-                    </svg>
+                    </div>
                 </div>
             @endif
         </div>
