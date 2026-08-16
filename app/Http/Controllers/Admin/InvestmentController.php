@@ -62,6 +62,9 @@ class InvestmentController extends Controller
             'asset' => 'required|string|in:'.implode(',', array_keys(config('investment.assets', []))),
             'amount' => 'required|numeric|gt:0',
             'source' => 'required|in:'.implode(',', array_keys(InvestmentAsset::SOURCES)),
+            // مبلغِ واقعیِ پرداختی (کل، تومان) — اختیاری. اگر بیاید، همین
+            // «برداشتِ از منبع» است؛ اگر نه، از قیمتِ لحظه‌ایِ نوسان.
+            'total_paid' => 'nullable|integer|min:1',
             'bought_at' => ['nullable', 'string', function ($attr, $value, $fail) {
                 if (filled($value) && ! JalaliDate::isValid((string) $value)) {
                     $fail('تاریخ خرید معتبر نیست (مثال: 1405/05/20).');
@@ -73,15 +76,22 @@ class InvestmentController extends Controller
             'amount.gt' => 'مقدار باید بیشتر از صفر باشد.',
             'source.required' => 'منبع سرمایه (تعمیر یا گنجه) را انتخاب کنید.',
             'source.in' => 'منبع سرمایه نامعتبر است.',
+            'total_paid.min' => 'مبلغ کل خرید را به تومان وارد کنید.',
         ]);
 
-        // قیمتِ واحد از نوسان — بدونِ قیمتِ روز، مبلغِ خرید قابلِ محاسبه نیست
-        // و ردیفِ بی‌مبلغ همهٔ جمع‌ها را خراب می‌کند؛ ثبت متوقف می‌شود.
-        $unitPrice = $portfolio->unitPrice($v['asset']);
-        if ($unitPrice === null || $unitPrice <= 0) {
-            throw ValidationException::withMessages([
-                'asset' => 'قیمت لحظه‌ای این دارایی از نوسان در دسترس نیست — چند دقیقه بعد دوباره تلاش کنید.',
-            ]);
+        if (filled($v['total_paid'] ?? null)) {
+            // مبلغِ واقعی وارد شده → قیمتِ واحد از همان مشتق می‌شود تا جمعِ
+            // ردیف دقیقاً همان پولی باشد که از کسب‌وکار برداشته شده.
+            $unitPrice = max(1, (int) round(((int) $v['total_paid']) / (float) $v['amount']));
+        } else {
+            // قیمتِ واحد از نوسان — بدونِ قیمتِ روز، مبلغِ خرید قابلِ محاسبه
+            // نیست و ردیفِ بی‌مبلغ همهٔ جمع‌ها را خراب می‌کند؛ ثبت متوقف می‌شود.
+            $unitPrice = $portfolio->unitPrice($v['asset']);
+            if ($unitPrice === null || $unitPrice <= 0) {
+                throw ValidationException::withMessages([
+                    'asset' => 'قیمت لحظه‌ای این دارایی از نوسان در دسترس نیست — یا «مبلغ کل خرید» را دستی وارد کنید یا چند دقیقه بعد دوباره تلاش کنید.',
+                ]);
+            }
         }
 
         $row = InvestmentAsset::create([

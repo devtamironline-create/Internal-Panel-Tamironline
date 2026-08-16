@@ -99,7 +99,7 @@
             <input type="number" name="amount" required step="any" min="0" value="{{ old('amount') }}" dir="ltr"
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
         </div>
-        <div class="md:col-span-3">
+        <div class="md:col-span-2">
             <label class="block text-xs text-gray-500 mb-1">منبع سرمایه <span class="text-rose-500">*</span></label>
             <select name="source" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                 <option value="" disabled @selected(! old('source'))>انتخاب کنید…</option>
@@ -108,21 +108,27 @@
                 @endforeach
             </select>
         </div>
+        <div class="md:col-span-3">
+            <label class="block text-xs text-gray-500 mb-1">مبلغ کل خرید (تومان)</label>
+            <input type="number" name="total_paid" min="1" value="{{ old('total_paid') }}" dir="ltr"
+                   placeholder="خالی = قیمت لحظه‌ای نوسان"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+        </div>
         <div class="md:col-span-2">
             <label class="block text-xs text-gray-500 mb-1">تاریخ خرید (شمسی)</label>
             <input type="text" name="bought_at" placeholder="1405/05/20" value="{{ old('bought_at') }}" dir="ltr" autocomplete="off"
                    class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm text-center">
         </div>
-        <div class="md:col-span-2">
-            <button class="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-bold">افزایش سرمایه</button>
-        </div>
-        <div class="md:col-span-12">
+        <div class="md:col-span-9">
             <label class="block text-xs text-gray-500 mb-1">یادداشت</label>
             <input type="text" name="note" maxlength="500" value="{{ old('note') }}"
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
         </div>
+        <div class="md:col-span-3">
+            <button class="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-bold">افزایش سرمایه</button>
+        </div>
         <div class="md:col-span-12 text-[11px] text-gray-400 leading-6">
-            قیمت خرید به‌صورت خودکار از قیمت لحظه‌ای نوسان در لحظهٔ ثبت برداشته می‌شود؛ مبلغ کل (معادل تومانی) همان «برداشت سرمایه از منبع» است و در پیام ثبت و نمودار بالا دیده می‌شود.
+            «مبلغ کل خرید» = پول واقعی‌ای که از منبع برداشته‌اید و در نمودار برداشت می‌نشیند. اگر خالی بگذارید، از قیمت لحظه‌ای نوسان در لحظهٔ ثبت محاسبه می‌شود.
         </div>
     </form>
 
