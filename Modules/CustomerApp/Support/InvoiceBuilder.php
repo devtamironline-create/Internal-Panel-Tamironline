@@ -171,6 +171,13 @@ final class InvoiceBuilder
             'paid_at' => $paidAt?->format(\DateTimeInterface::ATOM),
             'paid_at_jalali' => self::jalali($paidAt),
             'payment_url' => $paymentUrl,
+            // قراردادِ صریح برای اپ (درخواستِ تیمِ اپ ۱۴۰۵/۰۵/۲۵):
+            //  - public_token همیشه هست (حتی paid/cancelled) تا اپ بتواند
+            //    GET /crm/pay/{token}/status را poll کند.
+            //  - pay_url فقط وقتی فاکتور قابلِ پرداخت است (همان payment_url؛
+            //    payment_url برای سازگاری با نسخهٔ فعلیِ اپ می‌ماند).
+            'public_token' => $invoice?->public_token,
+            'pay_url' => $paymentUrl,
         ];
     }
 
