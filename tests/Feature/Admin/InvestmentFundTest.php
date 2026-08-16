@@ -126,6 +126,38 @@ class InvestmentFundTest extends TestCase
         $this->assertSame('2026-07-23', $row->bought_at->toDateString());
     }
 
+    /** مبلغِ واقعیِ پرداختی بر قیمتِ نوسان مقدم است — برداشتِ دقیق از منبع. */
+    public function test_a_manual_total_overrides_the_navasan_price(): void
+    {
+        Http::fake(['*' => Http::response(['18ayar' => ['value' => '7500000']], 200)]);
+
+        $this->actingAs($this->user(access: true))
+            ->post('/admin/investment', [
+                'asset' => 'gold_18k', 'amount' => '100',
+                'source' => 'ganje', 'total_paid' => '851500000',
+            ])
+            ->assertSessionHas('success');
+
+        $row = InvestmentAsset::firstOrFail();
+        $this->assertSame(8_515_000, (int) $row->buy_unit_price);
+        $this->assertSame(851_500_000, $row->cost());
+    }
+
+    /** با مبلغِ دستی، قطعیِ نوسان مانعِ ثبت نیست. */
+    public function test_a_manual_total_works_even_when_navasan_is_down(): void
+    {
+        Http::fake(['*' => Http::response('upstream error', 502)]);
+
+        $this->actingAs($this->user(access: true))
+            ->post('/admin/investment', [
+                'asset' => 'gold_18k', 'amount' => '10',
+                'source' => 'tamir', 'total_paid' => '85000000',
+            ])
+            ->assertSessionHas('success');
+
+        $this->assertSame(85_000_000, InvestmentAsset::firstOrFail()->cost());
+    }
+
     public function test_source_is_required_for_a_purchase(): void
     {
         Http::fake(['*' => Http::response(['18ayar' => ['value' => '7500000']], 200)]);
