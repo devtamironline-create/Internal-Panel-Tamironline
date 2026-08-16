@@ -86,7 +86,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions) {
         // پاسخ‌های روت‌های /v1/* همیشه JSON باشد و در پروداکشن stack-trace
         // به فرانت برنگردد.
-        $exceptions->shouldRenderJsonWhen(fn (Request $request, \Throwable $e) => $request->is('v1/*'));
+        $exceptions->shouldRenderJsonWhen(
+            fn (Request $request, \Throwable $e) => $request->is('v1/*') || $request->is('api/ads/*')
+        );
 
         $exceptions->render(function (\Throwable $e, Request $request) {
             if (! $request->is('v1/*')) {

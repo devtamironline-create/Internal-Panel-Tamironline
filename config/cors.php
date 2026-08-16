@@ -17,14 +17,19 @@ return [
     |
     */
 
-    'paths' => ['v1/*'],
+    // api/ads/* — دو endpoint عمومیِ ردیابیِ تبلیغات (سایت + PWA).
+    'paths' => ['v1/*', 'api/ads/*'],
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => array_values(array_filter(array_map(
-        'trim',
-        explode(',', (string) env('CUSTOMER_APP_ORIGINS', ''))
-    ))),
+    'allowed_origins' => array_values(array_unique(array_filter(array_merge(
+        array_map('trim', explode(',', (string) env('CUSTOMER_APP_ORIGINS', ''))),
+        // originهای ردیابیِ تبلیغات (سایت + PWA) — تنظیم در config/ads_tracking.php
+        array_map('trim', explode(',', (string) env(
+            'ADS_TRACKING_ORIGINS',
+            'https://tamironline.com,https://www.tamironline.com,https://app.tamironline.com'
+        ))),
+    )))),
 
     'allowed_origins_patterns' => [],
 
