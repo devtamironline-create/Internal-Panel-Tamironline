@@ -648,6 +648,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('create', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'create'])->name('create');
         Route::post('/', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'store'])->name('store');
         Route::get('report', [\Modules\CRM\Http\Controllers\Accounting\ExpenseReportController::class, 'index'])->name('report');
+        Route::get('analytics', [\Modules\CRM\Http\Controllers\Accounting\FinancialReportController::class, 'index'])->name('analytics');
         Route::get('{expense}/attachment', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'attachment'])->name('attachment')->whereNumber('expense');
     });
     // ─── حسابداری — گوگل ادز (دفترِ روزانه) ───────────────────────
