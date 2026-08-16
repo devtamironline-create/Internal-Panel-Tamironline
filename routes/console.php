@@ -38,6 +38,11 @@ Schedule::call(function () {
     \App\Services\NavasanService::refresh();
 })->dailyAt('08:30')->name('investment-navasan-refresh')->onOneServer();
 
+// ثبتِ ارزشِ روزانهٔ سبد — بعد از رفرشِ قیمت، تا نمودارِ روندِ ارزش
+// (روز/ماه/سال) هر روز یک نقطه بگیرد. idempotent روی ردیفِ امروز.
+Schedule::command('investment:snapshot')
+    ->dailyAt('08:40')->name('investment-daily-snapshot')->onOneServer();
+
 // ضربانِ زمان‌بند — هر اجرای schedule:run این زمان را ثبت می‌کند تا ai:diagnose
 // بتواند قطعی بگوید cron کار می‌کند یا نه (مثلاً وقتی cron با phpِ اشتباه است).
 Schedule::call(function () {
