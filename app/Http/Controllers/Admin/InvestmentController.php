@@ -84,8 +84,9 @@ class InvestmentController extends Controller
             ]);
         }
 
-        InvestmentAsset::create([
+        $row = InvestmentAsset::create([
             'asset' => $v['asset'],
+            'type' => 'buy',
             'amount' => $v['amount'],
             'buy_unit_price' => $unitPrice,
             'bought_at' => filled($v['bought_at'] ?? null) ? JalaliDate::toGregorian($v['bought_at']) : now()->toDateString(),
@@ -94,7 +95,74 @@ class InvestmentController extends Controller
             'created_by' => auth()->id(),
         ]);
 
-        return back()->with('success', 'خرید با قیمت لحظه‌ای '.number_format($unitPrice).' تومان به‌ازای هر واحد ثبت شد.');
+        $meta = config('investment.assets.'.$v['asset'], ['label' => $v['asset'], 'unit' => '']);
+
+        return back()->with('success', sprintf(
+            'افزایش سرمایه ثبت شد: %s %s %s معادل %s تومان — برداشت از منبع %s.',
+            rtrim(rtrim(number_format((float) $v['amount'], 8), '0'), '.'),
+            $meta['unit'], $meta['label'],
+            number_format($row->cost()),
+            InvestmentAsset::SOURCES[$v['source']],
+        ));
+    }
+
+    /**
+     * «کاهش سرمایه» — فروشِ بخشی از یک دارایی با قیمتِ لحظه‌ایِ نوسان.
+     * بیشتر از موجودی نمی‌شود فروخت؛ مبلغِ فروش از «سرمایهٔ خالص» کم
+     * می‌شود تا سودِ شناسایی‌شده در سود/زیانِ کل بماند.
+     */
+    public function sell(Request $request, InvestmentPortfolio $portfolio)
+    {
+        $v = $request->validate([
+            'asset' => 'required|string|in:'.implode(',', array_keys(config('investment.assets', []))),
+            'amount' => 'required|numeric|gt:0',
+            'sold_at' => ['nullable', 'string', function ($attr, $value, $fail) {
+                if (filled($value) && ! JalaliDate::isValid((string) $value)) {
+                    $fail('تاریخ فروش معتبر نیست (مثال: 1405/05/20).');
+                }
+            }],
+            'note' => 'nullable|string|max:500',
+        ], [
+            'asset.in' => 'نوع دارایی نامعتبر است.',
+            'amount.gt' => 'مقدار باید بیشتر از صفر باشد.',
+        ]);
+
+        $available = $portfolio->availableAmount($v['asset']);
+        // تلورانسِ ممیزِ شناور — «فروشِ کلِ موجودی» نباید به‌خاطر خطای
+        // نمایشِ اعشار رد شود.
+        if ((float) $v['amount'] > $available + 1e-8) {
+            throw ValidationException::withMessages([
+                'amount' => 'بیشتر از موجودی نمی‌توانید بفروشید — موجودی فعلی: '
+                    .rtrim(rtrim(number_format($available, 8), '0'), '.'),
+            ]);
+        }
+
+        $unitPrice = $portfolio->unitPrice($v['asset']);
+        if ($unitPrice === null || $unitPrice <= 0) {
+            throw ValidationException::withMessages([
+                'asset' => 'قیمت لحظه‌ای این دارایی از نوسان در دسترس نیست — چند دقیقه بعد دوباره تلاش کنید.',
+            ]);
+        }
+
+        $row = InvestmentAsset::create([
+            'asset' => $v['asset'],
+            'type' => 'sell',
+            'amount' => $v['amount'],
+            'buy_unit_price' => $unitPrice, // قیمتِ لحظهٔ فروش — سندِ تراکنش
+            'bought_at' => filled($v['sold_at'] ?? null) ? JalaliDate::toGregorian($v['sold_at']) : now()->toDateString(),
+            'source' => null,
+            'note' => $v['note'] ?? null,
+            'created_by' => auth()->id(),
+        ]);
+
+        $meta = config('investment.assets.'.$v['asset'], ['label' => $v['asset'], 'unit' => '']);
+
+        return back()->with('success', sprintf(
+            'کاهش سرمایه ثبت شد: %s %s %s معادل %s تومان فروخته شد.',
+            rtrim(rtrim(number_format((float) $v['amount'], 8), '0'), '.'),
+            $meta['unit'], $meta['label'],
+            number_format($row->cost()),
+        ));
     }
 
     public function update(Request $request, InvestmentAsset $investmentAsset)
@@ -142,6 +210,10 @@ class InvestmentController extends Controller
         $sourceTotals = ['tamir' => 0, 'ganje' => 0, 'unknown' => 0];
 
         foreach ($rows as $row) {
+            // فقط خریدها «برداشت از منبع» هستند — فروش برداشتی از کسب‌وکار نیست.
+            if ($row->isSell()) {
+                continue;
+            }
             $date = $row->bought_at ?? $row->created_at;
             if (! $date) {
                 continue;

@@ -28,8 +28,11 @@ class InvestmentPortfolio
 
         $positions = $rows->groupBy('asset')->map(function ($group, $asset) use ($registry, $prices) {
             $meta = $registry[$asset] ?? ['label' => $asset, 'unit' => '', 'item' => null];
-            $amount = (float) $group->sum(fn ($r) => (float) $r->amount);
-            $cost = (int) $group->sum(fn ($r) => $r->cost());
+            // فروش (کاهش سرمایه) با علامتِ منفی: موجودی = خریدها − فروش‌ها و
+            // «سرمایهٔ خالص» = مبلغ خریدها − مبلغ فروش‌ها؛ به این ترتیب سودِ
+            // شناسایی‌شدهٔ فروش هم در سود/زیانِ کل دیده می‌شود.
+            $amount = (float) $group->sum(fn ($r) => ($r->isSell() ? -1 : 1) * (float) $r->amount);
+            $cost = (int) $group->sum(fn ($r) => ($r->isSell() ? -1 : 1) * $r->cost());
             $unitPrice = $this->unitPrice($asset, $prices);
             $value = $unitPrice !== null ? (int) round($amount * $unitPrice) : null;
 
@@ -75,6 +78,13 @@ class InvestmentPortfolio
         return isset($prices[$meta['item']])
             ? (int) ($prices[$meta['item']] * ($meta['multiplier'] ?? 1))
             : null;
+    }
+
+    /** موجودیِ فعلیِ یک دارایی (خریدها − فروش‌ها) — سقفِ مجازِ فروش. */
+    public function availableAmount(string $asset): float
+    {
+        return (float) InvestmentAsset::where('asset', $asset)->get()
+            ->sum(fn ($r) => ($r->isSell() ? -1 : 1) * (float) $r->amount);
     }
 
     /**

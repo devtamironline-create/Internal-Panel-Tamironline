@@ -29,7 +29,7 @@
     {{-- جمع کل --}}
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div class="text-xs text-gray-500 mb-1">مبلغ کل خرید</div>
+            <div class="text-xs text-gray-500 mb-1">سرمایهٔ خالص (خرید − فروش)</div>
             <div class="text-lg font-bold text-gray-800 dark:text-gray-100">{{ number_format($totalCost) }} <span class="text-xs font-normal">تومان</span></div>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
@@ -79,10 +79,13 @@
         </table>
     </div>
 
-    {{-- ثبت خرید جدید — قیمتِ واحد خودکار از قیمتِ لحظه‌ایِ نوسان برداشته می‌شود --}}
+    {{-- افزایش سرمایه — قیمتِ واحد خودکار از قیمتِ لحظه‌ایِ نوسان برداشته می‌شود --}}
     <form method="POST" action="{{ route('admin.investment.store') }}"
-          class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+          class="bg-white dark:bg-gray-800 rounded-xl border-2 border-emerald-200 dark:border-emerald-900 p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
         @csrf
+        <div class="md:col-span-12 -mb-1">
+            <h2 class="text-sm font-bold text-emerald-700 dark:text-emerald-400">📈 افزایش سرمایه (خرید)</h2>
+        </div>
         <div class="md:col-span-3">
             <label class="block text-xs text-gray-500 mb-1">نوع دارایی <span class="text-rose-500">*</span></label>
             <select name="asset" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
@@ -111,7 +114,7 @@
                    class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm text-center">
         </div>
         <div class="md:col-span-2">
-            <button class="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-bold">ثبت خرید</button>
+            <button class="w-full px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-bold">افزایش سرمایه</button>
         </div>
         <div class="md:col-span-12">
             <label class="block text-xs text-gray-500 mb-1">یادداشت</label>
@@ -119,7 +122,49 @@
                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
         </div>
         <div class="md:col-span-12 text-[11px] text-gray-400 leading-6">
-            قیمت خرید به‌صورت خودکار از قیمت لحظه‌ای نوسان در لحظهٔ ثبت برداشته و ذخیره می‌شود — نیازی به واردکردن قیمت نیست.
+            قیمت خرید به‌صورت خودکار از قیمت لحظه‌ای نوسان در لحظهٔ ثبت برداشته می‌شود؛ مبلغ کل (معادل تومانی) همان «برداشت سرمایه از منبع» است و در پیام ثبت و نمودار بالا دیده می‌شود.
+        </div>
+    </form>
+
+    {{-- کاهش سرمایه (فروش) — فقط از دارایی‌هایی که موجودی دارند --}}
+    <form method="POST" action="{{ route('admin.investment.sell') }}"
+          class="bg-white dark:bg-gray-800 rounded-xl border-2 border-rose-200 dark:border-rose-900 p-4 grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+        @csrf
+        <div class="md:col-span-12 -mb-1">
+            <h2 class="text-sm font-bold text-rose-700 dark:text-rose-400">📉 کاهش سرمایه (فروش)</h2>
+        </div>
+        <div class="md:col-span-4">
+            <label class="block text-xs text-gray-500 mb-1">دارایی <span class="text-rose-500">*</span></label>
+            <select name="asset" required class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                <option value="" disabled selected>انتخاب کنید…</option>
+                @foreach($positions->filter(fn ($p) => $p['amount'] > 0) as $p)
+                    <option value="{{ $p['asset'] }}">
+                        {{ $p['label'] }} — موجودی: {{ rtrim(rtrim(number_format($p['amount'], 8), '0'), '.') }} {{ $p['unit'] }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">مقدار فروش <span class="text-rose-500">*</span></label>
+            <input type="number" name="amount" required step="any" min="0" dir="ltr"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">تاریخ فروش (شمسی)</label>
+            <input type="text" name="sold_at" placeholder="1405/05/25" dir="ltr" autocomplete="off"
+                   class="jalali-datepicker w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm text-center">
+        </div>
+        <div class="md:col-span-2">
+            <label class="block text-xs text-gray-500 mb-1">یادداشت</label>
+            <input type="text" name="note" maxlength="500"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+        </div>
+        <div class="md:col-span-2">
+            <button class="w-full px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm rounded-lg font-bold"
+                    onclick="return confirm('این مقدار از سرمایه با قیمت لحظه‌ای فروخته و کم شود؟');">کاهش سرمایه</button>
+        </div>
+        <div class="md:col-span-12 text-[11px] text-gray-400 leading-6">
+            قیمت فروش، قیمت لحظه‌ای نوسان در لحظهٔ ثبت است و بیشتر از موجودی نمی‌توانید بفروشید. مبلغ فروش از «سرمایهٔ خالص» کم می‌شود تا سود فروخته‌شده در سود/زیان کل بماند.
         </div>
     </form>
 
@@ -233,17 +278,19 @@
         @endif
     </div>
 
-    {{-- ریز خریدها --}}
+    {{-- لاگ تراکنش‌ها — همهٔ افزایش/کاهش‌های سرمایه --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <div class="px-4 pt-3 text-sm font-bold text-gray-800 dark:text-gray-100">لاگ تراکنش‌ها</div>
         <table class="w-full text-sm">
             <thead>
                 <tr class="text-xs text-gray-500 border-b border-gray-100 dark:border-gray-700">
+                    <th class="px-4 py-2 text-right">نوع</th>
                     <th class="px-4 py-2 text-right">دارایی</th>
                     <th class="px-4 py-2 text-right">مقدار</th>
-                    <th class="px-4 py-2 text-right">قیمت واحد خرید</th>
+                    <th class="px-4 py-2 text-right">قیمت واحد لحظهٔ ثبت</th>
                     <th class="px-4 py-2 text-right">مبلغ</th>
                     <th class="px-4 py-2 text-right">منبع</th>
-                    <th class="px-4 py-2 text-right">تاریخ خرید</th>
+                    <th class="px-4 py-2 text-right">تاریخ</th>
                     <th class="px-4 py-2 text-right">یادداشت</th>
                     <th class="px-4 py-2 text-right">عملیات</th>
                 </tr>
@@ -251,14 +298,23 @@
             <tbody>
                 @forelse($rows as $row)
                     <tr class="border-b border-gray-50 dark:border-gray-700/50">
-                        <td class="px-4 py-2">{{ ($registry[$row->asset]['label'] ?? $row->asset) }}</td>
-                        <td class="px-4 py-2" dir="ltr">{{ rtrim(rtrim(number_format((float) $row->amount, 8), '0'), '.') }}</td>
-                        <td class="px-4 py-2">{{ number_format($row->buy_unit_price) }}</td>
-                        <td class="px-4 py-2">{{ number_format($row->cost()) }}</td>
                         <td class="px-4 py-2">
-                            <span class="text-xs px-2 py-0.5 rounded-full {{ $row->source === 'tamir' ? 'bg-emerald-100 text-emerald-700' : ($row->source === 'ganje' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500') }}">
-                                {{ $row->sourceLabel() }}
+                            <span class="text-xs px-2 py-0.5 rounded-full {{ $row->isSell() ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700' }}">
+                                {{ $row->isSell() ? 'کاهش' : 'افزایش' }}
                             </span>
+                        </td>
+                        <td class="px-4 py-2">{{ ($registry[$row->asset]['label'] ?? $row->asset) }}</td>
+                        <td class="px-4 py-2" dir="ltr">{{ ($row->isSell() ? '−' : '') }}{{ rtrim(rtrim(number_format((float) $row->amount, 8), '0'), '.') }}</td>
+                        <td class="px-4 py-2">{{ number_format($row->buy_unit_price) }}</td>
+                        <td class="px-4 py-2 {{ $row->isSell() ? 'text-rose-600' : '' }}">{{ ($row->isSell() ? '−' : '') }}{{ number_format($row->cost()) }}</td>
+                        <td class="px-4 py-2">
+                            @if($row->isSell())
+                                <span class="text-xs text-gray-400">—</span>
+                            @else
+                                <span class="text-xs px-2 py-0.5 rounded-full {{ $row->source === 'tamir' ? 'bg-emerald-100 text-emerald-700' : ($row->source === 'ganje' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500') }}">
+                                    {{ $row->sourceLabel() }}
+                                </span>
+                            @endif
                         </td>
                         <td class="px-4 py-2">{{ $row->bought_at ? \App\Support\JalaliDate::toJalali($row->bought_at->toDateString()) : '—' }}</td>
                         <td class="px-4 py-2 text-gray-500 text-xs">{{ $row->note }}</td>
@@ -271,7 +327,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="px-4 py-6 text-center text-gray-400">—</td></tr>
+                    <tr><td colspan="9" class="px-4 py-6 text-center text-gray-400">—</td></tr>
                 @endforelse
             </tbody>
         </table>

@@ -49,6 +49,11 @@ class InvestmentFundTest extends TestCase
             '--force' => true,
         ]);
 
+        Artisan::call('migrate', [
+            '--path' => 'database/migrations/2026_08_16_140000_add_type_to_investment_assets.php',
+            '--force' => true,
+        ]);
+
         // میدل‌ویر can/سایدبار در مسیرهای admin به جدول‌های Spatie نیاز دارد.
         Artisan::call('migrate', [
             '--path' => 'database/migrations/2025_12_19_195120_create_permission_tables.php',
@@ -204,6 +209,66 @@ class InvestmentFundTest extends TestCase
         $this->assertNull($gold['value']);
         $this->assertSame(75_000_000, $data['totalCost']);
         $this->assertNull($data['totalValue']);
+    }
+
+    // ───────────────────────── کاهش سرمایه (فروش)
+
+    public function test_a_sell_reduces_the_position_and_the_net_invested_cost(): void
+    {
+        Http::fake(['*' => Http::response(['18ayar' => ['value' => '8000000']], 200)]);
+        InvestmentAsset::create(['asset' => 'gold_18k', 'amount' => 10, 'buy_unit_price' => 7_500_000, 'source' => 'tamir']);
+
+        $this->actingAs($this->user(access: true))
+            ->post('/admin/investment/sell', ['asset' => 'gold_18k', 'amount' => '4'])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $sell = InvestmentAsset::where('type', 'sell')->firstOrFail();
+        $this->assertSame(8_000_000, (int) $sell->buy_unit_price); // قیمتِ لحظهٔ فروش
+        $this->assertNull($sell->source);
+
+        $gold = collect($this->indexData()['positions'])->firstWhere('asset', 'gold_18k');
+        $this->assertSame(6.0, $gold['amount']);                       // ۱۰ − ۴
+        $this->assertSame(75_000_000 - 32_000_000, $gold['cost']);     // سرمایهٔ خالص
+        $this->assertSame(6 * 8_000_000, $gold['value']);
+    }
+
+    public function test_selling_more_than_the_available_amount_is_rejected(): void
+    {
+        Http::fake(['*' => Http::response(['18ayar' => ['value' => '8000000']], 200)]);
+        InvestmentAsset::create(['asset' => 'gold_18k', 'amount' => 3, 'buy_unit_price' => 7_500_000]);
+
+        $this->actingAs($this->user(access: true))
+            ->post('/admin/investment/sell', ['asset' => 'gold_18k', 'amount' => '5'])
+            ->assertSessionHasErrors('amount');
+
+        $this->assertSame(0, InvestmentAsset::where('type', 'sell')->count());
+    }
+
+    public function test_a_sell_is_rejected_when_navasan_is_down(): void
+    {
+        Http::fake(['*' => Http::response('upstream error', 502)]);
+        InvestmentAsset::create(['asset' => 'gold_18k', 'amount' => 10, 'buy_unit_price' => 7_500_000]);
+
+        $this->actingAs($this->user(access: true))
+            ->post('/admin/investment/sell', ['asset' => 'gold_18k', 'amount' => '2'])
+            ->assertSessionHasErrors('asset');
+
+        $this->assertSame(0, InvestmentAsset::where('type', 'sell')->count());
+    }
+
+    /** فروش «برداشت از منبع» نیست — نمودار برداشت فقط خریدها را می‌شمارد. */
+    public function test_sells_are_excluded_from_the_withdrawal_chart(): void
+    {
+        Http::fake(['*' => Http::response(['18ayar' => ['value' => '8000000']], 200)]);
+        InvestmentAsset::create(['asset' => 'gold_18k', 'amount' => 10, 'buy_unit_price' => 1_000_000, 'bought_at' => '2026-07-23', 'source' => 'tamir']);
+        InvestmentAsset::create(['asset' => 'gold_18k', 'type' => 'sell', 'amount' => 5, 'buy_unit_price' => 2_000_000, 'bought_at' => '2026-07-25']);
+
+        $data = $this->indexData(['year' => '1405']);
+        $mordad = collect($data['withdrawMonths'])->firstWhere('month', 5);
+
+        $this->assertSame(10_000_000, $mordad['tamir']);
+        $this->assertSame(0, $mordad['unknown']); // فروش در برداشت‌ها نیامده
     }
 
     // ───────────────────────── نمودار برداشت از هر منبع
