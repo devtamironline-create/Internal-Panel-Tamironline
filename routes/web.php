@@ -175,6 +175,7 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         ->prefix('investment')->name('investment.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Admin\InvestmentController::class, 'index'])->name('index');
             Route::post('/', [\App\Http\Controllers\Admin\InvestmentController::class, 'store'])->name('store');
+            Route::post('/sell', [\App\Http\Controllers\Admin\InvestmentController::class, 'sell'])->name('sell');
             Route::put('/{investmentAsset}', [\App\Http\Controllers\Admin\InvestmentController::class, 'update'])->name('update');
             Route::delete('/{investmentAsset}', [\App\Http\Controllers\Admin\InvestmentController::class, 'destroy'])->name('destroy');
         });

@@ -15,7 +15,7 @@ class InvestmentAsset extends Model
         'ganje' => 'گنجه',
     ];
 
-    protected $fillable = ['asset', 'amount', 'buy_unit_price', 'bought_at', 'source', 'note', 'created_by'];
+    protected $fillable = ['asset', 'type', 'amount', 'buy_unit_price', 'bought_at', 'source', 'note', 'created_by'];
 
     protected $casts = [
         'amount' => 'decimal:8',
@@ -39,5 +39,11 @@ class InvestmentAsset extends Model
     public function sourceLabel(): string
     {
         return self::SOURCES[$this->source] ?? 'نامشخص';
+    }
+
+    /** آیا این ردیف «کاهش سرمایه» (فروش) است؟ ردیف‌های قدیمی buy هستند. */
+    public function isSell(): bool
+    {
+        return $this->type === 'sell';
     }
 }
