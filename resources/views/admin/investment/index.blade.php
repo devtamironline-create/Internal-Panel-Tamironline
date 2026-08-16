@@ -40,7 +40,7 @@
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <div class="text-xs text-gray-500 mb-1">سود / زیان</div>
-            @php($pl = ($totalValue ?? $pricedTotalValue) - $totalCost)
+            <?php $pl = ($totalValue ?? $pricedTotalValue) - $totalCost; ?>
             <div class="text-lg font-bold {{ $pl >= 0 ? 'text-emerald-600' : 'text-rose-600' }}">
                 {{ $pl >= 0 ? '+' : '' }}{{ number_format($pl) }} <span class="text-xs font-normal text-gray-500">تومان</span>
             </div>
@@ -143,9 +143,11 @@
         </div>
         <div class="overflow-x-auto">
             <svg viewBox="0 0 760 230" class="w-full min-w-[640px]" style="direction: ltr;">
-                @php
-                    $chartH = 180; $baseY = 195; $barW = 34; $gap = 62;
-                @endphp
+                {{-- در این فایل عمداً همه‌جا تگِ خامِ PHP به‌کار رفته و نه
+                     دایرکتیوهای بلیدی php — جفت‌شدنِ اشتباهِ فرم‌های مختلفِ
+                     آن دایرکتیو (حتی داخلِ کامنت) کامپایل را خراب می‌کرد و
+                     در production خطای ۵۰۰ «Undefined variable» می‌داد. --}}
+                <?php $chartH = 180; $baseY = 195; $barW = 34; $gap = 62; ?>
                 <line x1="10" y1="{{ $baseY }}" x2="750" y2="{{ $baseY }}" stroke="currentColor" class="text-gray-300 dark:text-gray-600" stroke-width="1"/>
                 @foreach($withdrawMonths as $i => $m)
                     @php
@@ -193,7 +195,8 @@
                 هنوز ثبت روزانه‌ای وجود ندارد — از امروز هر روز ساعت ۰۸:۴۰ ارزش سبد ذخیره می‌شود و این نمودار روزبه‌روز کامل‌تر می‌شود.
             </div>
         @else
-            @php
+            <?php
+                // تگِ خامِ PHP — همان دلیلِ بلوکِ نمودارِ بالا.
                 $values = $trendPoints->pluck('value');
                 $costs = $trendPoints->pluck('cost');
                 $minV = min($values->min(), $costs->min());
@@ -205,7 +208,7 @@
                 $valueLine = $trendPoints->map(fn ($p, $i) => round($px($i), 1).','.round($py($p['value']), 1))->implode(' ');
                 $costLine = $trendPoints->map(fn ($p, $i) => round($px($i), 1).','.round($py($p['cost']), 1))->implode(' ');
                 $labelStep = max(1, (int) ceil($n / 10));
-            @endphp
+            ?>
             <div class="flex items-center gap-4 text-[11px] text-gray-500 mb-2">
                 <span class="inline-flex items-center gap-1"><span class="w-3 h-0.5 bg-emerald-500 inline-block"></span> ارزش روز</span>
                 <span class="inline-flex items-center gap-1"><span class="w-3 h-0.5 bg-gray-400 inline-block border-b border-dashed"></span> مبلغ خرید</span>
