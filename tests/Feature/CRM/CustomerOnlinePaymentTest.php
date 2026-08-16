@@ -357,6 +357,30 @@ class CustomerOnlinePaymentTest extends TestCase
         $this->assertSame('tamironline://payment-result?order=55', Payment::firstOrFail()->return_url);
     }
 
+    /** مسیرِ یک‌کلیکهٔ اپ: GET /crm/pay/{token}/go → مستقیم redirect به درگاه. */
+    public function test_the_direct_route_goes_straight_to_the_gateway(): void
+    {
+        Http::fake([
+            'gateway.zibal.ir/v1/request' => Http::response([
+                'result' => 100, 'trackId' => 'TRK-GO', 'payLink' => 'x',
+            ]),
+            '*' => Http::response([]),
+        ]);
+        $tech = $this->technician();
+        $invoice = $this->invoiceFor($tech, 350_000, ['public_token' => str_repeat('h', 40)]);
+
+        $response = app(PaymentController::class)->direct(
+            Request::create('/', 'GET', ['return' => 'tamironline://orders/9']),
+            $invoice->public_token,
+        );
+
+        $this->assertInstanceOf(\Illuminate\Http\RedirectResponse::class, $response);
+        $this->assertStringContainsString('gateway.zibal.ir/start/TRK-GO', $response->getTargetUrl());
+        $payment = Payment::firstOrFail();
+        $this->assertSame('pending', $payment->status);
+        $this->assertSame('tamironline://orders/9', $payment->return_url);
+    }
+
     public function test_a_foreign_return_url_is_silently_dropped(): void
     {
         Http::fake(['gateway.zibal.ir/v1/request' => Http::response(['result' => 100, 'trackId' => 'TRK-R2', 'payLink' => 'x']), '*' => Http::response([])]);

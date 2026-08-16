@@ -74,6 +74,13 @@ return Application::configure(basePath: dirname(__DIR__))
             // callback درگاه پرداخت (ملت با POST و بدون توکن CSRF برمی‌گردد)
             'crm/payment/callback',
             'public/crm/payment/callback',
+            // دکمهٔ پرداختِ صفحهٔ عمومیِ فاکتور: صفحه توسط کش (LiteSpeed/CDN)
+            // نگه داشته می‌شود و توکنِ CSRF داخلش مالِ سشنِ مرده است — POST
+            // با 419 می‌شکست و کاربر به همان صفحه برمی‌گشت. حفاظِ واقعیِ این
+            // مسیر خودِ public_token غیرقابل‌حدسِ ۴۰نویسه‌ای است؛ CSRF این‌جا
+            // چیزی اضافه نمی‌کند.
+            'crm/pay/*',
+            'public/crm/pay/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

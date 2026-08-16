@@ -178,6 +178,11 @@ final class InvoiceBuilder
             //    payment_url برای سازگاری با نسخهٔ فعلیِ اپ می‌ماند).
             'public_token' => $invoice?->public_token,
             'pay_url' => $paymentUrl,
+            // یک‌کلیکه: مستقیم به درگاه بدونِ صفحهٔ پیش‌نمایش — اپ ?return=
+            // خودش را به همین اضافه می‌کند.
+            'direct_pay_url' => $paymentUrl !== null
+                ? route('crm.payment.direct', ['invoiceCode' => $invoice->public_token])
+                : null,
         ];
     }
 

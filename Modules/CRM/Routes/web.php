@@ -44,9 +44,16 @@ Route::middleware('web')->group(function () {
 });
 
 // ─── مسیرهای عمومی پرداخت (بدون نیاز به لاگین) ─────────────────────
-Route::middleware('web')->group(function () {
+// no.cache روی همه: صفحهٔ کش‌شدهٔ پرداخت یعنی وضعیت/فرمِ کهنه — ریشهٔ
+// باگِ «دکمهٔ پرداخت به همان صفحه برمی‌گردد».
+Route::middleware(['web', 'no.cache'])->group(function () {
     Route::get('/crm/pay/{invoiceCode}', [PaymentController::class, 'pay'])->name('crm.payment.pay');
     Route::post('/crm/pay/{invoiceCode}', [PaymentController::class, 'initiate'])->name('crm.payment.initiate');
+    // مستقیم به درگاه — یک‌کلیکه برای اپ‌ها: بدونِ صفحهٔ پیش‌نمایش و کلیکِ
+    // دوم. GET است تا از اپ لینک‌شدنی باشد؛ throttle جلوی ساختِ انبوهِ
+    // paymentِ pending را می‌گیرد.
+    Route::get('/crm/pay/{invoiceCode}/go', [PaymentController::class, 'direct'])
+        ->middleware('throttle:10,1')->name('crm.payment.direct');
     // وضعیتِ پرداخت برای اپِ مشتری — poll بعد از برگشت از درگاه. throttle
     // تا با توکنِ تصادفی هم نشود endpoint را بمباران کرد.
     Route::get('/crm/pay/{invoiceCode}/status', [PaymentController::class, 'status'])
