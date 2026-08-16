@@ -101,4 +101,16 @@ https://panel.tamironline.com/crm/pay/{public_token}?return={URL-encoded deep li
 - [ ] حالت‌های `paid` / `superseded` / `cancelled` در UI
 - [ ] هیچ منطق مبلغ/کارمزدی در اپ — فقط `amount` نمایشی
 
+## ضمیمه — پاسخ به گزارش پیاده‌سازی اپ (۱۴۰۵/۰۵/۲۵)
+
+پیاده‌سازی‌تان با قرارداد منطبق است. پاسخ تنها ابهام:
+
+1. **تأیید می‌شود:** `payment.payment_url` دقیقاً `https://panel.tamironline.com/crm/pay/{public_token}` است (صفحهٔ پرداخت پنل — نه URL مستقیم درگاه). استخراج آخرین segment درست کار می‌کند.
+2. **و گزینهٔ «بهترین» هم انجام شد** — از این نسخه بلوک `payment` در پاسخ `GET /v1/customer/orders/{id}/invoice` دو فیلد صریح دارد:
+   - `public_token`: **همیشه** موجود است، حتی برای فاکتور paid/cancelled — تا poll کردن `/crm/pay/{token}/status` بدون استخراج URL ممکن باشد.
+   - `pay_url`: فقط وقتی فاکتور قابل پرداخت است (همان `payment_url`؛ فیلد قدیمی برای سازگاری حذف نشده).
+
+   بعد از دیپلوی بعدی پنل، منطق fallback شما خودکار سراغ فیلد صریح می‌رود.
+3. return با `https://app.tamironline.com/...` تأیید است (در allowlist)؛ هر وقت scheme سفارشی خواستید اعلام کنید.
+
 هر ابهامی بود همین‌جا پاسخ می‌دهیم. — تیم بک‌اند
