@@ -76,8 +76,12 @@ class PaymentController extends Controller
      * بعد از کلیک روی دکمه «پرداخت آنلاین» در صفحه preview، این متد
      * فراخوانی می‌شود. درخواست به zibal و redirect به درگاه.
      */
-    public function initiate(string $invoiceCode)
+    public function initiate(Request $request, string $invoiceCode)
     {
+        // لینکِ برگشت به اپِ مشتری — فقط اگر از allowlist عبور کند ذخیره
+        // می‌شود؛ لینکِ نامعتبر پرداخت را نمی‌شکند، فقط برگشتِ خودکار ندارد.
+        $returnUrl = \Modules\CRM\Support\PaymentReturnUrl::sanitize($request->input('return'));
+
         $invoice = Invoice::with('customer')->where('public_token', $invoiceCode)->first();
 
         if (! $invoice) {
@@ -147,6 +151,7 @@ class PaymentController extends Controller
                 'status' => $response['success'] ? 'pending' : 'failed',
                 'result_message' => $response['message'] ?? null,
                 'gateway_response' => ['refId' => $response['refId'] ?? null, 'raw' => $response['raw'] ?? null],
+                'return_url' => $returnUrl,
                 'requested_at' => now(),
             ]);
 
@@ -185,6 +190,7 @@ class PaymentController extends Controller
             'status' => $response['success'] ? 'pending' : 'failed',
             'result_message' => $response['message'] ?? null,
             'gateway_response' => $response['raw'] ?? null,
+            'return_url' => $returnUrl,
             'requested_at' => now(),
         ]);
 

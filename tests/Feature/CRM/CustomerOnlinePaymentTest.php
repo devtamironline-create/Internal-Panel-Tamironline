@@ -100,6 +100,7 @@ class CustomerOnlinePaymentTest extends TestCase
             $t->integer('result_code')->nullable();
             $t->text('result_message')->nullable();
             $t->text('gateway_response')->nullable();
+            $t->string('return_url', 500)->nullable();
             $t->timestamp('requested_at')->nullable();
             $t->timestamp('verified_at')->nullable();
             $t->unsignedBigInteger('created_by')->nullable();
@@ -328,15 +329,45 @@ class CustomerOnlinePaymentTest extends TestCase
         $tech = $this->technician();
 
         $free = $this->invoiceFor($tech, 0, ['public_token' => str_repeat('d', 40)]);
-        $view = app(PaymentController::class)->initiate($free->public_token);
+        $view = app(PaymentController::class)->initiate(Request::create('/', 'POST'), $free->public_token);
         $this->assertStringContainsString('صفر', $view->getData()['message']);
 
         $cancelled = $this->invoiceFor($tech, 300_000, [
             'public_token' => str_repeat('e', 40), 'status' => 'cancelled',
         ]);
-        $view = app(PaymentController::class)->initiate($cancelled->public_token);
+        $view = app(PaymentController::class)->initiate(Request::create('/', 'POST'), $cancelled->public_token);
         $this->assertStringContainsString('لغو شده', $view->getData()['message']);
 
         $this->assertSame(0, Payment::count());
+    }
+
+    // ───────────────────────── ۶) لینکِ برگشت به اپ
+
+    public function test_a_whitelisted_return_url_is_stored_with_the_payment(): void
+    {
+        Http::fake(['gateway.zibal.ir/v1/request' => Http::response(['result' => 100, 'trackId' => 'TRK-R', 'payLink' => 'x']), '*' => Http::response([])]);
+        $tech = $this->technician();
+        $invoice = $this->invoiceFor($tech, 400_000, ['public_token' => str_repeat('f', 40)]);
+
+        app(PaymentController::class)->initiate(
+            Request::create('/', 'POST', ['return' => 'tamironline://payment-result?order=55']),
+            $invoice->public_token,
+        );
+
+        $this->assertSame('tamironline://payment-result?order=55', Payment::firstOrFail()->return_url);
+    }
+
+    public function test_a_foreign_return_url_is_silently_dropped(): void
+    {
+        Http::fake(['gateway.zibal.ir/v1/request' => Http::response(['result' => 100, 'trackId' => 'TRK-R2', 'payLink' => 'x']), '*' => Http::response([])]);
+        $tech = $this->technician();
+        $invoice = $this->invoiceFor($tech, 400_000, ['public_token' => str_repeat('g', 40)]);
+
+        app(PaymentController::class)->initiate(
+            Request::create('/', 'POST', ['return' => 'https://evil.example/phish']),
+            $invoice->public_token,
+        );
+
+        $this->assertNull(Payment::firstOrFail()->return_url);
     }
 }
