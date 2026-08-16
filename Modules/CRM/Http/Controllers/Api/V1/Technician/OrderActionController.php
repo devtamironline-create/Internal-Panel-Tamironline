@@ -39,8 +39,10 @@ class OrderActionController extends Controller
         $request->merge(['description' => trim((string) $request->input('description', ''))]);
 
         // توضیح فقط برای این وضعیت‌ها الزامی است (Open اختیاری — رسیدِ انتقال).
+        // «هماهنگ شده» عمداً توضیح نمی‌خواهد: تکنسین فقط تقویم را می‌بیند و
+        // زمان را انتخاب می‌کند (تصمیمِ ۱۴۰۵/۰۵)؛ توضیح اگر بیاید اختیاری است.
         $needsDesc = in_array((string) $request->input('status'), [
-            OrderStatus::Coordinated->value, OrderStatus::Suspended->value,
+            OrderStatus::Suspended->value,
             OrderStatus::Declined->value, OrderStatus::Transit->value,
         ], true);
 
@@ -79,6 +81,12 @@ class OrderActionController extends Controller
             'device_img1.uploaded' => \Modules\CRM\Support\UploadLimits::failedMessage(),
             'device_img1.image' => 'فایل انتخابی عکس نیست. یک عکس (JPG یا PNG) انتخاب کنید.',
         ]);
+
+        // مفهومِ «پیش‌نویس» حذف شده است (تصمیمِ ۱۴۰۵/۰۵): تکمیل همیشه
+        // نهایی است و همان لحظه فاکتور/بدهی می‌سازد. ورودیِ کلاینت‌های
+        // قدیمی عمداً نادیده گرفته می‌شود؛ فقط نهایی‌سازیِ پیش‌نویس‌های
+        // موجودِ قدیمی از allowedStatusesFor باز مانده است.
+        $validated['save_as_draft'] = false;
 
         $newStatus = OrderStatus::tryFrom($validated['status']);
         if (! $newStatus) {

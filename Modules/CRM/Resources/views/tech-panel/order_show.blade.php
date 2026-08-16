@@ -587,7 +587,8 @@
                 techPercent: {{ (int) ($technician->percent ?? 0) }},
                 techPerOfAll: {{ (int) ($technician->tech_per_of_all ?? 0) }},
                 techCalcType: '{{ (string) ($technician->type_of_calc_tech ?? '') }}',
-                saveAsDraft: {{ old('save_as_draft', $order->save_as_draft) ? 'true' : 'false' }},
+                saveAsDraft: false, // مفهومِ پیش‌نویس حذف شد — فقط برای getterها مانده
+
                 isReturned: {{ is_null($order->return_type) ? 'false' : 'true' }},
                 get partsCost() { return this.pieces.reduce((s, p) => s + (Number(p.buy)||0), 0); },
                 get totalInvoice() { return Math.max(0, (Number(this.priceCustomer)||0) - this.partsCost); },
@@ -786,14 +787,7 @@
                         @enderror
                     </div>
 
-                    {{-- save_as_draft --}}
-                    <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
-                        <input type="hidden" name="save_as_draft" value="0">
-                        <input type="checkbox" name="save_as_draft" value="1"
-                               x-model="saveAsDraft"
-                               class="w-4 h-4 accent-brand-700">
-                        ذخیره به‌عنوان پیش‌نویس (هنوز نهایی نشود)
-                    </label>
+                    {{-- «پیش‌نویس» حذف شد — تکمیل همیشه نهایی است و فاکتور همان لحظه صادر می‌شود. --}}
                 </div>
 
                 {{-- دکمهٔ ثبت برای همهٔ وضعیت‌ها به‌جز «هماهنگ کردن سفارش» (آن یکی

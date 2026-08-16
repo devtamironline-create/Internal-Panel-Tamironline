@@ -270,6 +270,61 @@ class ReturnFlowProfessionalTest extends TestCase
         $this->assertFalse((bool) $order->return_review_pending);
     }
 
+    // ───────────────────────── حذفِ مفهومِ پیش‌نویس (۱۴۰۵/۰۵)
+
+    /** کلاینتِ قدیمی save_as_draft=1 می‌فرستد — باید نادیده گرفته شود و فاکتور صادر شود. */
+    public function test_save_as_draft_input_is_ignored_and_the_invoice_is_issued(): void
+    {
+        $tech = $this->technician();
+        $order = Order::forceCreate([
+            'order_code' => 'ND-1', 'technician_id' => $tech->id,
+            'status' => OrderStatus::Coordinated->value,
+            'device_img1' => 'crm/orders/x/after.jpg',
+        ]);
+
+        $response = $this->callUpdateStatus($order, $tech, [
+            'status' => OrderStatus::Completed->value,
+            'save_as_draft' => '1',
+            'price_customer' => 600_000,
+            'invoice_descripotion' => 'تعویض قطعه و سرویس کامل',
+        ]);
+
+        $this->assertTrue($response->getData(true)['success']);
+        $order->refresh();
+        $this->assertFalse((bool) $order->save_as_draft);
+        $this->assertSame(1, Invoice::where('order_id', $order->id)->count());
+    }
+
+    /** پیش‌نویس‌های موجودِ قدیمی هنوز راهِ نهایی‌سازی دارند (قفل نمی‌شوند). */
+    public function test_legacy_drafts_can_still_be_finalized(): void
+    {
+        $order = new Order;
+        $order->forceFill(['status' => OrderStatus::Completed->value, 'save_as_draft' => true]);
+
+        $allowed = (new \ReflectionMethod(OrderActionController::class, 'allowedStatusesFor'))
+            ->invoke(app(OrderActionController::class), $order);
+
+        $this->assertSame([OrderStatus::Completed], $allowed);
+    }
+
+    // ───────────────────────── هماهنگی بدونِ توضیح (۱۴۰۵/۰۵)
+
+    public function test_coordination_no_longer_requires_a_description(): void
+    {
+        $tech = $this->technician();
+        $order = Order::forceCreate([
+            'order_code' => 'NC-1', 'technician_id' => $tech->id,
+            'status' => OrderStatus::New->value,
+        ]);
+
+        $response = $this->callUpdateStatus($order, $tech, [
+            'status' => OrderStatus::Coordinated->value,
+        ]);
+
+        $this->assertTrue($response->getData(true)['success']);
+        $this->assertSame(OrderStatus::Coordinated, $order->fresh()->status);
+    }
+
     // ───────────────────────── ۱ب) مسیرِ legacy «بازگشت سفارش» هم دورِ بررسی باز می‌کند
 
     /** هم‌ارزِ سفارشِ تستیِ تیمِ فرانت (ORD-2608-02176): برگشتِ کارِ انجام‌شده. */
