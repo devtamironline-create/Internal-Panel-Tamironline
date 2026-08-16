@@ -87,6 +87,7 @@
             get tooLow() { return this.amount > 0 && this.amount < this.min; },
           }">
         @csrf
+        <input type="hidden" name="return_url" value="{{ request('return') }}">
 
         <div class="text-[11px] text-gray-400 mb-2">مبلغ شارژ (تومان)</div>
 
@@ -170,6 +171,7 @@
     <form method="POST" action="{{ route('tech.wallet.recharge.initiate') }}"
           class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4 border-2 border-dashed border-rose-300">
         @csrf
+        <input type="hidden" name="return_url" value="{{ request('return') }}">
         <input type="hidden" name="amount" value="10000">
         <input type="hidden" name="test_mode" value="1">
         <div class="text-[11px] text-rose-600 font-bold mb-2 text-center">حالت تست درگاه</div>

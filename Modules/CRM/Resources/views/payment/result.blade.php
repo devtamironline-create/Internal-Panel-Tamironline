@@ -67,6 +67,31 @@
         @endif
         @endif
 
+        @if($payment && $payment->return_url)
+            <?php
+                $backUrl = \Modules\CRM\Support\PaymentReturnUrl::withResult(
+                    $payment->return_url,
+                    $ok,
+                    $payment->ref_number ?: $payment->track_id,
+                );
+            ?>
+            <a href="{{ $backUrl }}"
+               class="inline-block w-full py-3 mt-2 rounded-lg {{ $ok ? 'bg-emerald-600' : 'bg-gray-700' }} text-white font-bold text-sm">
+                بازگشت به اپلیکیشن
+            </a>
+            <p class="text-xs text-gray-400 mt-2">تا <span id="return-count">3</span> ثانیهٔ دیگر خودکار به اپلیکیشن برمی‌گردید…</p>
+            <script>
+                (function () {
+                    var left = 3, el = document.getElementById('return-count');
+                    var t = setInterval(function () {
+                        left--;
+                        if (el) el.textContent = left;
+                        if (left <= 0) { clearInterval(t); window.location.href = @json($backUrl); }
+                    }, 1000);
+                })();
+            </script>
+        @endif
+
         <p class="text-xs text-gray-400 mt-4">در صورت بروز مشکل با پشتیبانی تماس بگیرید.</p>
     </div>
 </body>

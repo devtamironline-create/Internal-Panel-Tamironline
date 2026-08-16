@@ -138,6 +138,8 @@
             @else
                 <form method="POST" action="{{ route('crm.payment.initiate', $invoice->public_token) }}">
                     @csrf
+                    {{-- لینکِ برگشت به اپ — سمتِ سرور از allowlist عبور می‌کند --}}
+                    <input type="hidden" name="return" value="{{ request('return') }}">
                     <button type="submit"
                             class="w-full py-4 rounded-xl text-white font-bold text-base transition flex items-center justify-center gap-2 shadow-lg active:scale-[.99]"
                             style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">

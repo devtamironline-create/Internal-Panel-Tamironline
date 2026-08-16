@@ -269,12 +269,12 @@ class DashboardController extends Controller
         ]);
 
         // توضیح فقط برای وضعیت‌هایی الزامی است که در view لیست شده‌اند
-        // (Coordinated, Suspended, Declined, Transit). برای Open (انتقال به
-        // تعمیرگاه) اختیاری است — رسیدِ رسمی از سیستمِ «رسید انتقال» صادر
-        // می‌شود. برای Completed/Cancelled هم اختیاری است چون فیلد جدا
-        // (invoice_descripotion) دارد یا اصلاً نیاز نیست.
+        // (Suspended, Declined, Transit). «هماهنگ شده» عمداً توضیح نمی‌خواهد:
+        // تکنسین فقط تقویم را می‌بیند و زمان را انتخاب می‌کند. برای Open
+        // (انتقال به تعمیرگاه) اختیاری است — رسیدِ رسمی از سیستمِ «رسید
+        // انتقال» صادر می‌شود. برای Completed/Cancelled هم اختیاری است چون
+        // فیلد جدا (invoice_descripotion) دارد یا اصلاً نیاز نیست.
         $statusesRequiringDescription = [
-            OrderStatus::Coordinated->value,
             OrderStatus::Suspended->value,
             OrderStatus::Declined->value,
             OrderStatus::Transit->value,
@@ -305,6 +305,9 @@ class DashboardController extends Controller
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد (بدون فضای خالی).',
             'description.max' => 'توضیحات حداکثر ۲۰۰۰ کاراکتر.',
         ]);
+
+        // مفهومِ «پیش‌نویس» حذف شده است — تکمیل همیشه نهایی است (هم‌ارز API).
+        $validated['save_as_draft'] = false;
 
         $newStatus = OrderStatus::tryFrom($validated['status']);
         if (! $newStatus) {
@@ -1008,6 +1011,8 @@ class DashboardController extends Controller
 
         $amount = (int) $validated['amount'];
         $callbackUrl = route('crm.payment.callback');
+        // لینکِ برگشت به اپِ تکنسین — فقط بعد از عبور از allowlist.
+        $returnUrl = \Modules\CRM\Support\PaymentReturnUrl::sanitize($request->input('return_url'));
         $techName = trim($tech->firstname_tech ?: ($tech->first_name.' '.($tech->last_name ?? ''))) ?: ('تکنسین #'.$tech->id);
         $gateway = \Modules\CRM\Models\CrmSetting::get('payment_gateway', 'zibal');
 
@@ -1030,6 +1035,7 @@ class DashboardController extends Controller
                 'status' => $response['success'] ? 'pending' : 'failed',
                 'result_message' => $response['message'] ?? null,
                 'gateway_response' => ['refId' => $response['refId'] ?? null, 'raw' => $response['raw'] ?? null],
+                'return_url' => $returnUrl,
                 'requested_at' => now(),
             ]);
 
@@ -1067,6 +1073,7 @@ class DashboardController extends Controller
             'status' => $response['success'] ? 'pending' : 'failed',
             'result_message' => $response['message'] ?? null,
             'gateway_response' => $response['raw'] ?? null,
+            'return_url' => $returnUrl,
             'requested_at' => now(),
         ]);
 

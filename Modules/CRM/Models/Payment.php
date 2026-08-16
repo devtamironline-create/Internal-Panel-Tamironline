@@ -27,6 +27,7 @@ class Payment extends Model
         'result_code',
         'result_message',
         'gateway_response',
+        'return_url',
         'requested_at',
         'verified_at',
         'created_by',
