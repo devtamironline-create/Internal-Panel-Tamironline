@@ -14,14 +14,17 @@
 
     {{-- فیلترها: دانه‌بندی + بازهٔ شمسی --}}
     <form method="GET" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex items-end flex-wrap gap-3">
+        {{-- دانه‌بندی به‌صورت لینک — نسخهٔ قبلی دکمهٔ submit بود و فیلدِ
+             مخفیِ granularity پایین‌تر مقدارش را بازنویسی می‌کرد؛ نتیجه:
+             کلیک روی ماه/فصل/سال هیچ اثری نداشت. --}}
         <div>
             <label class="block text-xs text-gray-500 mb-1">بر اساس</label>
             <div class="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
                 @foreach($granularities as $key => $label)
-                    <button type="submit" name="granularity" value="{{ $key }}"
-                            class="px-4 py-2 text-sm {{ $granularity === $key ? 'bg-emerald-600 text-white font-bold' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300' }}">
+                    <a href="{{ route('crm.costs.analytics', array_filter(['granularity' => $key, 'from' => request('from'), 'to' => request('to')])) }}"
+                       class="px-4 py-2 text-sm {{ $granularity === $key ? 'bg-emerald-600 text-white font-bold' : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300' }}">
                         {{ $label }}
-                    </button>
+                    </a>
                 @endforeach
             </div>
         </div>
@@ -56,7 +59,6 @@
 
     <?php
         $series = [
-            'invoices' => ['label' => 'مبلغ کل فاکتورها', 'color' => '#3b82f6', 'chip' => 'text-blue-600'],
             'wallet' => ['label' => 'شارژ کیف پول (سود ناخالص)', 'color' => '#10b981', 'chip' => 'text-emerald-600'],
             'expenses' => ['label' => 'هزینه‌ها', 'color' => '#f43f5e', 'chip' => 'text-rose-600'],
             'net' => ['label' => 'سود خالص', 'color' => '#8b5cf6', 'chip' => 'text-violet-600'],
@@ -70,9 +72,9 @@
         };
     ?>
 
-    <div x-data="{ on: { invoices: true, wallet: true, expenses: true, net: true } }" class="space-y-4">
+    <div x-data="{ on: { wallet: true, expenses: true, net: true } }" class="space-y-4">
         {{-- کارت‌های جمع — کلیک = روشن/خاموش همان سری روی نمودار (سبک Google Ads) --}}
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
             @foreach($series as $key => $s)
                 <button type="button" @click="on.{{ $key }} = ! on.{{ $key }}"
                         class="text-right bg-white dark:bg-gray-800 rounded-xl border-2 p-4 transition"
@@ -96,31 +98,37 @@
                 <div class="text-center text-gray-400 text-sm py-10">در این بازه داده‌ای نیست.</div>
             @else
                 <?php
+                    // محورِ ثابتِ ۰ تا ۵ میلیارد (خواستِ مدیر) — اگر داده‌ای از
+                    // سقف بزرگ‌تر یا سودِ خالص منفی بود، محور کش می‌آید تا
+                    // هیچ نقطه‌ای بیرون نیفتد.
                     $all = [];
                     foreach ($buckets as $b) { foreach (array_keys($series) as $k) { $all[] = $b[$k]; } }
                     $minV = min(min($all), 0);
-                    $maxV = max(max($all), $minV + 1);
+                    $maxV = max(max($all), 5_000_000_000);
                     $n = count($buckets);
-                    $plotW = 700.0; $plotH = 200.0; $x0 = 46.0; $y0 = 218.0;
+                    $plotW = 700.0; $plotH = 210.0; $x0 = 46.0; $y0 = 224.0;
                     $px = fn ($i) => $n > 1 ? $x0 + $i * ($plotW / ($n - 1)) : $x0 + $plotW / 2;
                     $py = fn ($val) => $y0 - (($val - $minV) / ($maxV - $minV)) * $plotH;
                     $labelStep = max(1, (int) ceil($n / 12));
                 ?>
                 <div class="overflow-x-auto">
-                    <svg viewBox="0 0 760 250" class="w-full min-w-[680px]" style="direction: ltr;">
-                        <line x1="{{ $x0 }}" y1="{{ round($py(0), 1) }}" x2="{{ $x0 + $plotW }}" y2="{{ round($py(0), 1) }}" stroke="currentColor" class="text-gray-300 dark:text-gray-600" stroke-width="1"/>
-                        <text x="4" y="{{ round($py($maxV), 1) + 4 }}" font-size="9" class="fill-gray-400">{{ $fmtShort($maxV) }}</text>
-                        <text x="4" y="{{ round($py(0), 1) + 4 }}" font-size="9" class="fill-gray-400">0</text>
-                        @if($minV < 0)
-                            <text x="4" y="{{ round($py($minV), 1) }}" font-size="9" class="fill-gray-400">{{ $fmtShort($minV) }}</text>
-                        @endif
+                    <svg viewBox="0 0 760 252" class="w-full min-w-[680px]" style="direction: ltr;">
+                        {{-- خطوطِ راهنمای کم‌رنگِ هر ۱ میلیارد — مینیمال، سبکِ Google Ads --}}
+                        @for($g = 0; $g <= 5_000_000_000 && $g <= $maxV; $g += 1_000_000_000)
+                            <line x1="{{ $x0 }}" y1="{{ round($py($g), 1) }}" x2="{{ $x0 + $plotW }}" y2="{{ round($py($g), 1) }}"
+                                  stroke="currentColor" class="text-gray-200 dark:text-gray-700" stroke-width="{{ $g === 0 ? 1 : 0.5 }}"/>
+                            <text x="4" y="{{ round($py($g), 1) + 3 }}" font-size="9" class="fill-gray-400">{{ $g === 0 ? '0' : $fmtShort($g) }}</text>
+                        @endfor
 
                         @foreach($series as $key => $s)
                             <g x-show="on.{{ $key }}">
-                                <polyline fill="none" stroke="{{ $s['color'] }}" stroke-width="2"
+                                <polyline fill="none" stroke="{{ $s['color'] }}" stroke-width="1.5"
+                                          stroke-linejoin="round" stroke-linecap="round"
                                           points="{{ collect($buckets)->map(fn ($b, $i) => round($px($i), 1).','.round($py($b[$key]), 1))->implode(' ') }}"/>
                                 @foreach($buckets as $i => $b)
-                                    <circle cx="{{ round($px($i), 1) }}" cy="{{ round($py($b[$key]), 1) }}" r="3" fill="{{ $s['color'] }}">
+                                    {{-- نقطهٔ نامرئیِ بزرگ فقط برای tooltip + نقطهٔ ریزِ مینیمال --}}
+                                    <circle cx="{{ round($px($i), 1) }}" cy="{{ round($py($b[$key]), 1) }}" r="1.8" fill="{{ $s['color'] }}"/>
+                                    <circle cx="{{ round($px($i), 1) }}" cy="{{ round($py($b[$key]), 1) }}" r="7" fill="transparent">
                                         <title>{{ $b['label'] }} — {{ $s['label'] }}: {{ number_format($b[$key]) }} تومان</title>
                                     </circle>
                                 @endforeach
@@ -129,7 +137,7 @@
 
                         @foreach($buckets as $i => $b)
                             @if($i % $labelStep === 0 || $i === $n - 1)
-                                <text x="{{ round($px($i), 1) }}" y="{{ $y0 + 16 }}" text-anchor="middle" font-size="9" class="fill-gray-500 dark:fill-gray-400">{{ $b['label'] }}</text>
+                                <text x="{{ round($px($i), 1) }}" y="{{ $y0 + 14 }}" text-anchor="middle" font-size="9" class="fill-gray-400">{{ $b['label'] }}</text>
                             @endif
                         @endforeach
                     </svg>
@@ -152,13 +160,12 @@
                     @forelse(array_reverse($buckets) as $b)
                         <tr class="border-b border-gray-50 dark:border-gray-700/50">
                             <td class="px-4 py-2 font-medium text-gray-700 dark:text-gray-200">{{ $b['label'] }}</td>
-                            <td class="px-4 py-2" x-show="on.invoices">{{ number_format($b['invoices']) }}</td>
                             <td class="px-4 py-2" x-show="on.wallet">{{ number_format($b['wallet']) }}</td>
                             <td class="px-4 py-2" x-show="on.expenses">{{ number_format($b['expenses']) }}</td>
                             <td class="px-4 py-2 {{ $b['net'] >= 0 ? 'text-emerald-600' : 'text-rose-600' }}" x-show="on.net">{{ ($b['net'] > 0 ? '+' : '').number_format($b['net']) }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5" class="px-4 py-6 text-center text-gray-400">—</td></tr>
+                        <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">—</td></tr>
                     @endforelse
                 </tbody>
             </table>

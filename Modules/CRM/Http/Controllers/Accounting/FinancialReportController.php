@@ -10,13 +10,15 @@ use Illuminate\Support\Facades\DB;
 use Morilog\Jalali\Jalalian;
 
 /**
- * «گزارش حسابداری» — چهار سری روی یک نمودار، به سبک Google Ads
+ * «گزارش حسابداری» — سه سری روی یک نمودار، به سبک Google Ads
  * (هر سری جداگانه روشن/خاموش می‌شود):
  *
- *   invoices  مبلغ کل فاکتورها          جمعِ فاکتورهای فعال (بدون لغو/جایگزین‌شده)
  *   wallet    شارژ کیف پول (سود ناخالص)  تراکنش‌های wallet_charge تکنسین‌ها
  *   expenses  هزینه‌ها                    اسنادِ هزینهٔ همین بخش حسابداری
  *   net       سود خالص                   شارژ کیف پول − هزینه‌ها (تعریفِ مصوب)
+ *
+ * «مبلغ کل فاکتورها» به درخواستِ مدیر حذف شد — مقیاسش سری‌های سود را
+ * له می‌کرد و معیارِ تصمیمش نبود.
  *
  * دانه‌بندی و بازه هر دو شمسی‌اند؛ جمعِ روزانه در SQL و بسته‌بندیِ
  * روز→ماه/فصل/سال در PHP انجام می‌شود (تقویمِ شمسی در SQL وجود ندارد).
@@ -52,13 +54,7 @@ class FinancialReportController extends Controller
 
         [$from, $to] = $this->range($request, $granularity);
 
-        // ─── جمعِ روزانهٔ سه منبع در SQL ───────────────────────────
-        $invoiceRows = \Modules\CRM\Models\Invoice::query()
-            ->where('status', '!=', 'cancelled')
-            ->whereRaw('DATE(COALESCE(issued_at, created_at)) BETWEEN ? AND ?', [$from->toDateString(), $to->toDateString()])
-            ->groupBy('d')
-            ->pluck(DB::raw('SUM(total_amount) as total'), DB::raw('DATE(COALESCE(issued_at, created_at)) as d'));
-
+        // ─── جمعِ روزانهٔ دو منبع در SQL ───────────────────────────
         $walletRows = \Modules\CRM\Models\WalletTransaction::query()
             ->where('type', \Modules\CRM\Enums\WalletTxType::WalletCharge->value)
             ->where('amount', '>', 0)
@@ -78,11 +74,10 @@ class FinancialReportController extends Controller
             if (! isset($buckets[$key])) {
                 $buckets[$key] = [
                     'label' => $this->bucketLabel($day, $granularity),
-                    'invoices' => 0, 'wallet' => 0, 'expenses' => 0, 'net' => 0,
+                    'wallet' => 0, 'expenses' => 0, 'net' => 0,
                 ];
             }
             $d = $day->toDateString();
-            $buckets[$key]['invoices'] += (int) ($invoiceRows[$d] ?? 0);
             $buckets[$key]['wallet'] += (int) ($walletRows[$d] ?? 0);
             $buckets[$key]['expenses'] += (int) ($expenseRows[$d] ?? 0);
         }
@@ -99,7 +94,6 @@ class FinancialReportController extends Controller
             'to' => Jalalian::fromDateTime($to)->format('Y/m/d'),
             'buckets' => $buckets,
             'totals' => [
-                'invoices' => array_sum(array_column($buckets, 'invoices')),
                 'wallet' => array_sum(array_column($buckets, 'wallet')),
                 'expenses' => array_sum(array_column($buckets, 'expenses')),
                 'net' => array_sum(array_column($buckets, 'net')),
