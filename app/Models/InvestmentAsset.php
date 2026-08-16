@@ -9,7 +9,13 @@ use Illuminate\Database\Eloquent\Model;
  */
 class InvestmentAsset extends Model
 {
-    protected $fillable = ['asset', 'amount', 'buy_unit_price', 'bought_at', 'note', 'created_by'];
+    /** منبعِ سرمایهٔ خرید — کسب‌وکاری که پول از آن برداشته شده. */
+    public const SOURCES = [
+        'tamir' => 'تعمیر',
+        'ganje' => 'گنجه',
+    ];
+
+    protected $fillable = ['asset', 'amount', 'buy_unit_price', 'bought_at', 'source', 'note', 'created_by'];
 
     protected $casts = [
         'amount' => 'decimal:8',
@@ -27,5 +33,11 @@ class InvestmentAsset extends Model
     public function cost(): int
     {
         return (int) round((float) $this->amount * $this->buy_unit_price);
+    }
+
+    /** برچسبِ فارسیِ منبعِ سرمایه — «نامشخص» برای خریدهای قدیمیِ بدونِ منبع. */
+    public function sourceLabel(): string
+    {
+        return self::SOURCES[$this->source] ?? 'نامشخص';
     }
 }
