@@ -257,6 +257,9 @@ class PermissionController extends Controller
             'view-crm-costs' => 'مشاهده هزینه‌ها',
             'manage-crm-costs' => 'مدیریت هزینه‌ها',
 
+            // بازاریابی
+            'view-ads-tracking' => 'مشاهده داشبورد ردیابی تبلیغات (Ads Tracking)',
+
             // CRM - HappyCall
             'view-crm-happycall' => 'مشاهده پاسخ‌های HappyCall',
             'manage-crm-happycall' => 'مدیریت HappyCall',
