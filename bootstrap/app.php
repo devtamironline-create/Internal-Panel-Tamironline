@@ -69,6 +69,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'upload.size' => \Modules\CRM\Http\Middleware\RejectOversizedUpload::class,
         ]);
 
+        // مهمانِ مسیرهای پنل تکنسین باید به لاگینِ تکنسین برود، نه لاگینِ
+        // ادمین (tamironline-admin) — پیش‌فرضِ لاراول route('login') است و
+        // تکنسینِ سشن‌منقضی را وسطِ فرمِ ادمین می‌انداخت.
+        $middleware->redirectGuestsTo(function (Request $request) {
+            return $request->is('tech', 'tech/*') ? route('tech.login') : route('login');
+        });
+
         $middleware->validateCsrfTokens(except: [
             'join-technician/register/biometric-callback',
             // callback درگاه پرداخت (ملت با POST و بدون توکن CSRF برمی‌گردد)
