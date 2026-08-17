@@ -81,7 +81,7 @@
             ['label' => 'Website', 'value' => $kpis['website'], 'sub' => $pct($kpis['website']), 'color' => 'text-blue-600'],
             ['label' => 'PWA', 'value' => $kpis['pwa'], 'sub' => $pct($kpis['pwa']), 'color' => 'text-violet-600'],
             ['label' => 'Unique Attributions', 'value' => $kpis['unique_attributions'], 'sub' => null, 'color' => 'text-gray-800 dark:text-gray-100'],
-            ['label' => 'Pending Google', 'value' => $kpis['pending_upload'], 'sub' => 'آپلود خاموش', 'color' => 'text-amber-600'],
+            ['label' => 'Pending Google', 'value' => $kpis['pending_upload'], 'sub' => $googleHealth['upload_enabled'] ? 'در صف ارسال' : 'آپلود خاموش', 'color' => 'text-amber-600'],
             ['label' => 'Failed Upload', 'value' => $kpis['failed_upload'], 'sub' => null, 'color' => 'text-rose-600'],
         ];
     ?>
@@ -149,6 +149,85 @@
                     </div>
                 </div>
             @endif
+        @endif
+    </div>
+
+    {{-- Google Delivery Health — وضعیت تحویل Conversion به Google Ads --}}
+    <?php
+        $gh = $googleHealth;
+        $sc = $gh['status_counts'];
+        $chip = fn (string $label, int $v, string $color) => ['label' => $label, 'value' => $v, 'color' => $color];
+        $googleChips = [
+            $chip('Pending', (int) ($sc['pending'] ?? 0), 'text-amber-600'),
+            $chip('Sending', (int) ($sc['sending'] ?? 0), 'text-sky-600'),
+            $chip('Processing', (int) ($sc['processing'] ?? 0), 'text-blue-600'),
+            $chip('Uploaded', (int) ($sc['uploaded'] ?? 0), 'text-emerald-600'),
+            $chip('Failed', (int) ($sc['failed'] ?? 0), 'text-rose-600'),
+            $chip('Not Ready', (int) ($sc['not_ready'] ?? 0), 'text-gray-500'),
+            $chip('Ignored', (int) ($sc['ignored'] ?? 0), 'text-gray-400'),
+        ];
+        $onOff = fn (bool $b, string $on = 'روشن', string $off = 'خاموش') => $b
+            ? '<span class="text-emerald-600 font-bold">'.$on.'</span>'
+            : '<span class="text-gray-400 font-bold">'.$off.'</span>';
+        $testResult = session('google_test_result') ?: $gh['last_check'];
+    ?>
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+            <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">Google Delivery Health</h2>
+            <div class="flex items-center gap-2">
+                <form method="POST" action="{{ route('admin.marketing.ads-tracking.test-connection') }}">
+                    @csrf
+                    <button class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold">تست اتصال گوگل</button>
+                </form>
+                @if((int) ($sc['failed'] ?? 0) > 0)
+                    <form method="POST" action="{{ route('admin.marketing.ads-tracking.retry-failed') }}"
+                          onsubmit="return confirm('همهٔ رویدادهای ناموفق دوباره وارد صف ارسال شوند؟ (duplicate ساخته نمی‌شود)');">
+                        @csrf
+                        <button class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold">ارسال دوبارهٔ ناموفق‌ها ({{ number_format($sc['failed']) }})</button>
+                    </form>
+                @endif
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 text-xs">
+            <div><span class="text-gray-400">Google Upload:</span> {!! $onOff($gh['upload_enabled'], 'Enabled', 'Disabled') !!}</div>
+            <div><span class="text-gray-400">Validate Only:</span> {!! $onOff($gh['validate_only'], 'Yes', 'No') !!}</div>
+            <div><span class="text-gray-400">Proxy:</span>
+                <span dir="ltr" class="font-mono">{{ $gh['proxy_host'] }}</span>
+                {!! $onOff($gh['proxy_enabled'], 'اجباری', 'غیرفعال!') !!}
+            </div>
+            <div><span class="text-gray-400">Credential:</span> {!! $onOff($gh['credentials_ready'], 'آماده', 'در دسترس نیست') !!}</div>
+            <div><span class="text-gray-400">Customer:</span> <span dir="ltr" class="font-mono">{{ $gh['customer_id'] ?: '—' }}</span></div>
+            <div class="md:col-span-2"><span class="text-gray-400">Conversion:</span>
+                <span dir="ltr" class="font-mono">{{ $gh['conversion_action_id'] ?: '—' }}</span>
+                <span class="text-gray-500">{{ $gh['conversion_action_name'] }}</span>
+            </div>
+            <div><span class="text-gray-400">Last Attempt:</span> {{ $gh['last_attempt_at'] ?: '—' }}</div>
+            <div><span class="text-gray-400">Last Successful Upload:</span> {{ $gh['last_uploaded_at'] ?: '—' }}</div>
+            <div class="md:col-span-2"><span class="text-gray-400">Last Request ID:</span> <span dir="ltr" class="font-mono break-all">{{ $gh['last_request_id'] ?: '—' }}</span></div>
+            <div><span class="text-gray-400">Last Request Status:</span> {{ $gh['last_request_status'] ?: '—' }}</div>
+            <div><span class="text-gray-400">Oldest Pending:</span> {{ $gh['oldest_pending_at'] ?: '—' }}</div>
+        </div>
+
+        <div class="flex items-center gap-4 flex-wrap border-t border-gray-100 dark:border-gray-700 pt-2">
+            @foreach($googleChips as $c)
+                <span class="text-xs"><span class="text-gray-400">{{ $c['label'] }}:</span> <span class="font-bold {{ $c['color'] }}">{{ number_format($c['value']) }}</span></span>
+            @endforeach
+        </div>
+
+        @if(is_array($testResult) && isset($testResult['steps']))
+            <div class="border-t border-gray-100 dark:border-gray-700 pt-2">
+                <div class="text-[11px] text-gray-400 mb-1">آخرین تست اتصال: {{ $testResult['at'] ?? '' }}</div>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs">
+                    @foreach(['proxy' => 'Proxy', 'oauth' => 'OAuth', 'data_manager' => 'Data Manager', 'destination' => 'Destination'] as $key => $label)
+                        <?php $step = $testResult['steps'][$key] ?? ['ok' => false, 'message' => '—']; ?>
+                        <div class="rounded-lg border p-2 {{ $step['ok'] ? 'border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800' : 'border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800' }}">
+                            <div class="font-bold {{ $step['ok'] ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300' }}">{{ $label }} {{ $step['ok'] ? '✓' : '✗' }}</div>
+                            <div class="text-gray-500 dark:text-gray-400 break-all" dir="auto">{{ $step['message'] }}</div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         @endif
     </div>
 
@@ -322,8 +401,26 @@
                 <div class="flex justify-between"><span class="text-gray-500">Scheduler</span>
                     <span class="{{ $d['scheduler_heartbeat'] ? 'text-emerald-600' : 'text-amber-600' }}">{{ $d['scheduler_heartbeat'] ? 'فعال — '.$d['scheduler_heartbeat'] : 'ضربان ثبت نشده' }}</span>
                 </div>
-                <div class="flex justify-between"><span class="text-gray-500">Google Integration</span>
-                    <span class="text-gray-500">{{ $d['google_upload_enabled'] ? '⚠ روشن (نباید باشد!)' : 'Disabled — Backend Foundation Stage' }}</span>
+                <div class="flex justify-between"><span class="text-gray-500">Google Upload</span>
+                    <span class="{{ $d['google_upload_enabled'] ? 'text-emerald-600' : 'text-gray-500' }}">{{ $d['google_upload_enabled'] ? 'Enabled' : 'Disabled' }}{{ $d['google_validate_only'] ? ' (Validate Only)' : '' }}</span>
+                </div>
+                <div class="flex justify-between"><span class="text-gray-500">Proxy اجباری</span>
+                    <span class="{{ $d['google_proxy_enabled'] ? 'text-emerald-600' : 'text-rose-600' }}">{{ $d['google_proxy_enabled'] ? 'بله (fail-closed)' : 'خیر — خطرناک!' }}</span>
+                </div>
+                <div class="flex justify-between"><span class="text-gray-500">Credential</span>
+                    <span class="{{ $d['google_credentials_ready'] ? 'text-emerald-600' : 'text-amber-600' }}">{{ $d['google_credentials_ready'] ? 'آماده' : 'در دسترس نیست' }}</span>
+                </div>
+                <div class="flex justify-between"><span class="text-gray-500">Sending / Processing</span>
+                    <span>{{ number_format($d['sending_google']) }} / {{ number_format($d['processing_google']) }}</span>
+                </div>
+                <div class="flex justify-between"><span class="text-gray-500">قدیمی‌ترین Pending</span>
+                    <span dir="ltr">{{ $d['oldest_pending_google'] ? \Morilog\Jalali\Jalalian::fromDateTime($d['oldest_pending_google'])->format('Y/m/d H:i') : '—' }}</span>
+                </div>
+                <div class="flex justify-between"><span class="text-gray-500">آخرین تلاش / آپلود موفق</span>
+                    <span dir="ltr" class="text-xs">{{ $d['last_google_attempt_at'] ?: '—' }} / {{ $d['last_google_uploaded_at'] ?: '—' }}</span>
+                </div>
+                <div class="flex justify-between"><span class="text-gray-500">آخرین Request ID</span>
+                    <span dir="ltr" class="font-mono text-[10px] break-all">{{ $d['last_google_request_id'] ?: '—' }}</span>
                 </div>
             </div>
         </div>

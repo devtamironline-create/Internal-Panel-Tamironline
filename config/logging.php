@@ -78,6 +78,18 @@ return [
             'ignore_exceptions' => true,
         ],
 
+        // لاگِ ساخت‌یافتهٔ تحویلِ Conversion به Google (فاز ۲ ردیابی تماس).
+        // هرگز توکن/کلید/credential داخل این کانال نوشته نمی‌شود و
+        // شناسه‌های کلیک (gclid/…) پیش از لاگ ماسک می‌شوند.
+        'ads-google' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/ads-google.log'),
+            'level' => 'info',
+            'days' => (int) env('ADS_GOOGLE_LOG_DAYS', 30),
+            'permission' => 0640,
+            'ignore_exceptions' => true,
+        ],
+
         // لاگِ اختصاصیِ AI — جزئیاتِ هر درخواستِ gateway و هر تصمیمِ خطِ لولهٔ
         // خودکار در «فایل» (storage/logs/ai-YYYY-MM-DD.log)، جدا از laravel.log.
         'ai' => [
