@@ -120,6 +120,17 @@ class OrderActionController extends Controller
             ]);
         }
 
+        // وقتی بستانکاریِ تکنسین از شرکت به سقف رسیده، دریافتِ اعتباری
+        // بسته است — پرداختِ آنلاین بدهیِ شرکت را باز هم بیشتر می‌کند.
+        // InvoiceService هم null/online را cash می‌کند (دفاع در عمق)؛
+        // این‌جا انتخابِ صریحِ online با پیامِ روشن رد می‌شود.
+        if (($validated['payment_collection'] ?? null) === 'online'
+            && $tech->isOnlineCollectionBlocked()) {
+            throw ValidationException::withMessages([
+                'payment_collection' => 'اعتبار کیف‌پول شما به سقف مجاز رسیده است؛ برای این فاکتور فقط دریافت نقدی ممکن است.',
+            ]);
+        }
+
         $description = trim($validated['description'] ?? '');
         $updates = ['status' => $newStatus->value];
 

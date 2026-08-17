@@ -120,6 +120,13 @@ class TechOrderDetailResource extends JsonResource
                     'online' => 'اعتباری (پرداخت آنلاین)',
                     default => null,
                 },
+                // وقتی بستانکاریِ تکنسین از شرکت به سقف رسیده، «اعتباری»
+                // برای فاکتورهای جدید بسته است — اپ باید گزینه را غیرفعال
+                // نشان دهد؛ سرور هم انتخابِ online را با 422 رد می‌کند.
+                'online_collection_allowed' => $onlineAllowed = ! ($request->user()?->isOnlineCollectionBlocked() ?? false),
+                'online_collection_blocked_reason' => $onlineAllowed
+                    ? null
+                    : 'اعتبار کیف‌پول شما به سقف مجاز رسیده است؛ فعلاً فقط دریافت نقدی ممکن است.',
                 'price_customer' => (int) ($this->price_customer ?? 0) ?: null,
                 'cost_price' => (int) ($this->cost_price ?? 0) ?: null,
                 'total_invoice' => (int) ($this->total_invoice ?? 0) ?: null,
