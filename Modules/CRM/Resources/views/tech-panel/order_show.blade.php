@@ -762,23 +762,18 @@
                         </p>
                     </div>
 
-                    {{-- invoice_descripotion — اجباری برای بستن سفارش (مگر پیش‌نویس یا سفارش برگشتی) --}}
+                    {{-- invoice_descripotion — برای بستن سفارش همیشه اجباری است (حتی برگشتی رایگان). --}}
                     @php $isReturned = ! is_null($order->return_type); @endphp
                     <div>
-                        <label class="text-[11px] {{ $isReturned ? 'text-gray-600' : 'text-rose-700' }} font-bold mb-1 block">
-                            توضیحات فاکتور
-                            @if($isReturned)
-                                <span class="text-emerald-600 mr-1">— اختیاری (سفارش برگشتی)</span>
-                            @else
-                                — اجباری *
-                            @endif
+                        <label class="text-[11px] text-rose-700 font-bold mb-1 block">
+                            توضیحات فاکتور — اجباری *
                         </label>
                         <textarea name="invoice_descripotion" rows="3"
-                                  @if(! $isReturned) :required="selected === '{{ OrderStatus::Completed->value }}'" @endif
+                                  :required="selected === '{{ OrderStatus::Completed->value }}'"
                                   class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 px-3 text-sm focus:bg-white focus:border-brand-400 focus:outline-none leading-7">{{ old('invoice_descripotion', $order->invoice_descripotion) }}</textarea>
                         <div class="mt-2 px-3 py-2 rounded-lg {{ $isReturned ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-amber-50 border-amber-200 text-amber-900' }} border text-[10px] leading-6">
                             @if($isReturned)
-                                <strong>سفارش برگشتی:</strong> در سفارش‌های برگشتی می‌توانید بدون توضیحات و با مبلغ صفر سفارش را ببندید (خدمات رایگان). در صورتی که هزینه‌ای دریافت می‌کنید، توضیحات و مبلغ را وارد کنید.
+                                <strong>سفارش برگشتی:</strong> مبلغ می‌تواند صفر باشد (خدمات رایگان)، ولی شرحِ کارِ انجام‌شده را حتماً بنویسید — این متن سندِ کار است.
                             @else
                                 <strong>توجه:</strong> توضیحات وارد شده در کادر بالا به صورت فاکتور آنلاین برای مشتری ارسال می‌گردد و اعتبار قانونی دارد. خواهشمندیم در ثبت قطعات و توضیحات، دقت لازم را به عمل آورید. از همکاری شما سپاسگزاریم.
                             @endif

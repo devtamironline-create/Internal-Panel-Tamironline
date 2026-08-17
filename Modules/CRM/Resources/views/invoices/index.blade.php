@@ -58,6 +58,7 @@
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">مبلغ</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">سهم تکنسین</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">وضعیت</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">دریافت</th>
                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">زمان</th>
                 </tr>
             </thead>
@@ -84,10 +85,19 @@
                     <td class="px-6 py-3 text-sm font-medium">{{ number_format($invoice->total_amount) }} ت</td>
                     <td class="px-6 py-3 text-sm text-green-600">{{ number_format($invoice->tech_share) }} ت</td>
                     <td class="px-6 py-3"><span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $invoice->statusBadge() }}">{{ $invoice->statusLabel() }}</span></td>
+                    <td class="px-6 py-3">
+                        @if($invoice->collectionMethodLabel())
+                            <span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $invoice->isCashCollected() ? 'bg-sky-100 text-sky-800' : 'bg-teal-100 text-teal-800' }}">
+                                {{ $invoice->isCashCollected() ? 'نقدی' : 'اعتباری' }}
+                            </span>
+                        @else
+                            <span class="text-xs text-gray-400">—</span>
+                        @endif
+                    </td>
                     <td class="px-6 py-3 text-xs text-gray-500" dir="ltr">@jdatetime($invoice->issued_at)</td>
                 </tr>
                 @empty
-                <tr><td colspan="8" class="px-6 py-12 text-center text-gray-500">فاکتوری یافت نشد.</td></tr>
+                <tr><td colspan="9" class="px-6 py-12 text-center text-gray-500">فاکتوری یافت نشد.</td></tr>
                 @endforelse
             </tbody>
         </table>

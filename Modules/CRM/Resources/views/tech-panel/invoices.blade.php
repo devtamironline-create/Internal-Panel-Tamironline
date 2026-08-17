@@ -80,6 +80,11 @@
                         <span class="px-2 py-0.5 text-[11px] font-bold rounded-full {{ $invoice->statusBadge() }}">
                             {{ $invoice->statusLabel() }}
                         </span>
+                        @if($invoice->collectionMethodLabel())
+                            <span class="px-2 py-0.5 text-[11px] font-bold rounded-full {{ $invoice->isCashCollected() ? 'bg-sky-100 text-sky-700' : 'bg-teal-100 text-teal-700' }}">
+                                {{ $invoice->isCashCollected() ? 'نقدی' : 'اعتباری' }}
+                            </span>
+                        @endif
                     </div>
                     @if($invoice->issued_at)
                         <div class="text-[11px] text-gray-500 whitespace-nowrap" dir="ltr">

@@ -112,6 +112,14 @@ class TechOrderDetailResource extends JsonResource
             'my_notes' => $this->myNotes($request),
 
             'financial' => [
+                // «روش دریافت وجه» فاکتورِ فعالِ سفارش — cash|online|null.
+                'collection_method' => $collection = \Modules\CRM\Models\Invoice::where('order_id', $this->id)
+                    ->value('collection_method'),
+                'collection_method_label' => match ($collection) {
+                    'cash' => 'نقدی (دریافت در محل)',
+                    'online' => 'اعتباری (پرداخت آنلاین)',
+                    default => null,
+                },
                 'price_customer' => (int) ($this->price_customer ?? 0) ?: null,
                 'cost_price' => (int) ($this->cost_price ?? 0) ?: null,
                 'total_invoice' => (int) ($this->total_invoice ?? 0) ?: null,

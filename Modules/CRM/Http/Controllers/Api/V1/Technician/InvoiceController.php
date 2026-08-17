@@ -39,6 +39,8 @@ class InvoiceController extends Controller
                 'id' => (int) $inv->id,
                 'invoice_code' => $inv->invoice_code,
                 'status' => $inv->status,
+                'collection_method' => $inv->collection_method,
+                'collection_method_label' => $inv->collectionMethodLabel(),
                 'total_amount' => (int) $inv->total_amount,
                 'tech_share' => (int) $inv->tech_share,
                 'company_share' => (int) $inv->company_share,
