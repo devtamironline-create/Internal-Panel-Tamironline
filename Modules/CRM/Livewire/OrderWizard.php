@@ -603,9 +603,9 @@ class OrderWizard extends Component
         $rules = $this->showNewCustomerForm
             ? [
                 'newName' => 'required|string|max:255',
-                // موبایل تا امروز هر چیزی را می‌پذیرفت. حالا بعد از نرمال‌سازی
-                // باید دقیقاً ۱۱ رقم و با 09 باشد — همان قاعدهٔ ماژول Staff.
-                'newMobile' => ['required', 'string', MobileNumber::RULE],
+                // چون این فرم لید هم ثبت می‌کند، مشتری ممکن است با تلفنِ ثابت
+                // تماس گرفته باشد — موبایل یا ثابت با کدِ شهر، هر دو پذیرفته‌اند.
+                'newMobile' => ['required', 'string', MobileNumber::PHONE_RULE],
                 'newPhone' => 'nullable|string|max:20',
                 'introduction' => 'required|string|max:255',
             ]
@@ -624,7 +624,7 @@ class OrderWizard extends Component
         }
         $this->validate($rules, attributes: [
             'newName' => 'نام مشتری',
-            'newMobile' => 'موبایل',
+            'newMobile' => 'شماره تماس',
             'customerId' => 'مشتری',
             'introduction' => 'نحوه آشنایی',
             'address' => 'آدرس',
@@ -632,8 +632,8 @@ class OrderWizard extends Component
         ], messages: [
             'introduction.required' => 'انتخاب «نحوه آشنایی» الزامی است.',
             'regionId.required' => 'برای این شهر، انتخاب منطقه الزامی است.',
-            'newMobile.required' => 'شماره موبایل الزامی است.',
-            'newMobile.regex' => MobileNumber::MESSAGE,
+            'newMobile.required' => 'شماره تماس الزامی است.',
+            'newMobile.regex' => MobileNumber::PHONE_MESSAGE,
         ]);
     }
 

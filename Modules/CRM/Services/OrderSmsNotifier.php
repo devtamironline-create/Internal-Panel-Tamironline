@@ -8,6 +8,7 @@ use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\SmsLog;
 use Modules\CRM\Models\SmsTemplate;
+use Modules\CRM\Support\MobileNumber;
 use Modules\CRM\Support\TechSmsPolicy;
 use Modules\SMS\Services\KavenegarService;
 
@@ -135,7 +136,15 @@ class OrderSmsNotifier
             return $mobile ? [$mobile, 'technician'] : [null, null];
         }
 
-        return [$order->customer_mobile ?: $order->customer?->mobile, 'customer'];
+        $mobile = $order->customer_mobile ?: $order->customer?->mobile;
+
+        // مشتریِ لید ممکن است با تلفنِ ثابت ثبت شده باشد — پیامک به شمارهٔ
+        // ثابت نمی‌رسد و فقط خطای بیهودهٔ کاوه‌نگار لاگ می‌شود؛ سایلنت رد.
+        if ($mobile && ! MobileNumber::isValid($mobile)) {
+            return [null, null];
+        }
+
+        return [$mobile, 'customer'];
     }
 
     protected function buildVariables(Order $order): array
