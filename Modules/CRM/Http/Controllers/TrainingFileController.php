@@ -157,8 +157,18 @@ class TrainingFileController extends Controller
 
     private function ensureAuthenticated(): void
     {
-        if (! Auth::check() && ! Auth::guard('tech')->check()) {
-            abort(403, 'برای دسترسی به فایل‌های آموزش ابتدا وارد شوید.');
+        // ادمین (سشن وب) یا تکنسین PWA (سشن guard tech).
+        if (Auth::check() || Auth::guard('tech')->check()) {
+            return;
         }
+
+        // APK اپ تکنسین: WebView کوکی شخص‌ثالث را بلاک می‌کند، پس پروکسیِ
+        // هم‌مبدأِ اپ همان توکن Sanctum مسیرهای /v1/technician/* را به‌صورت
+        // Authorization: Bearer می‌فرستد — این‌جا پذیرفته می‌شود.
+        if (request()->bearerToken() && Auth::guard('sanctum')->check()) {
+            return;
+        }
+
+        abort(403, 'برای دسترسی به فایل‌های آموزش ابتدا وارد شوید.');
     }
 }
