@@ -77,12 +77,15 @@ class WalletController extends Controller
 
         $validated = $request->validate([
             'amount' => ['required', 'integer', 'min:500000', 'max:50000000'],
+            // لینکِ برگشت به اپ بعد از پرداخت — از allowlist عبور می‌کند.
+            'return_url' => ['nullable', 'string', 'max:500'],
         ], [
             'amount.min' => 'حداقل مبلغ شارژ ۵۰۰٬۰۰۰ تومان است.',
             'amount.max' => 'حداکثر مبلغ شارژ ۵۰٬۰۰۰٬۰۰۰ تومان است.',
         ]);
 
         $amount = (int) $validated['amount'];
+        $returnUrl = \Modules\CRM\Support\PaymentReturnUrl::sanitize($validated['return_url'] ?? null);
         $callbackUrl = route('crm.payment.callback');
         $gateway = CrmSetting::get('payment_gateway', 'zibal');
         $techName = trim((string) $tech->display_name) ?: ('تکنسین #'.$tech->id);
@@ -96,7 +99,7 @@ class WalletController extends Controller
 
             Payment::create([
                 'technician_id' => $tech->id, 'gateway' => 'mellat', 'purpose' => 'wallet_charge',
-                'amount' => $amount, 'track_id' => (string) $orderId,
+                'amount' => $amount, 'track_id' => (string) $orderId, 'return_url' => $returnUrl,
                 'status' => $response['success'] ? 'pending' : 'failed',
                 'result_message' => $response['message'] ?? null,
                 'gateway_response' => ['refId' => $response['refId'] ?? null, 'raw' => $response['raw'] ?? null],
@@ -130,7 +133,7 @@ class WalletController extends Controller
 
         Payment::create([
             'technician_id' => $tech->id, 'gateway' => 'zibal', 'purpose' => 'wallet_charge',
-            'amount' => $amount, 'track_id' => $response['trackId'] ?? null,
+            'amount' => $amount, 'track_id' => $response['trackId'] ?? null, 'return_url' => $returnUrl,
             'status' => $response['success'] ? 'pending' : 'failed',
             'result_message' => $response['message'] ?? null,
             'gateway_response' => $response['raw'] ?? null, 'requested_at' => now(),
