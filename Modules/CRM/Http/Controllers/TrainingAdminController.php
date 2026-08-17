@@ -31,40 +31,40 @@ class TrainingAdminController extends Controller
     public function categoriesStore(Request $request)
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:200|unique:crm_training_categories,name',
+            'name' => 'required|string|max:200|unique:crm_training_categories,name',
             'description' => 'nullable|string|max:2000',
         ], [
             'name.required' => 'نام دسته‌بندی الزامی است.',
-            'name.unique'   => 'این نام قبلاً ثبت شده است.',
+            'name.unique' => 'این نام قبلاً ثبت شده است.',
         ]);
 
         $maxOrder = TrainingCategory::max('sort_order') ?? 0;
         TrainingCategory::create([
-            'name'        => $validated['name'],
+            'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
-            'sort_order'  => $maxOrder + 1,
-            'is_active'   => true,
+            'sort_order' => $maxOrder + 1,
+            'is_active' => true,
         ]);
 
         return redirect()
             ->route('crm.training.admin.categories')
-            ->with('success', 'دسته‌بندی «' . $validated['name'] . '» اضافه شد.');
+            ->with('success', 'دسته‌بندی «'.$validated['name'].'» اضافه شد.');
     }
 
     public function categoriesUpdate(Request $request, TrainingCategory $category)
     {
         $validated = $request->validate([
-            'name'        => 'required|string|max:200|unique:crm_training_categories,name,' . $category->id,
+            'name' => 'required|string|max:200|unique:crm_training_categories,name,'.$category->id,
             'description' => 'nullable|string|max:2000',
-            'sort_order'  => 'nullable|integer|min:0',
-            'is_active'   => 'required|boolean',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'required|boolean',
         ]);
 
         $category->update($validated);
 
         return redirect()
             ->route('crm.training.admin.categories')
-            ->with('success', 'دسته‌بندی «' . $category->name . '» به‌روزرسانی شد.');
+            ->with('success', 'دسته‌بندی «'.$category->name.'» به‌روزرسانی شد.');
     }
 
     public function categoriesDestroy(TrainingCategory $category)
@@ -74,7 +74,7 @@ class TrainingAdminController extends Controller
 
         return redirect()
             ->route('crm.training.admin.categories')
-            ->with('success', 'دسته «' . $name . '» حذف شد. ویدیوهای آن بدون دسته باقی ماندند.');
+            ->with('success', 'دسته «'.$name.'» حذف شد. ویدیوهای آن بدون دسته باقی ماندند.');
     }
 
     // ─── ویدیوها ───────────────────────────────────────────────────
@@ -116,7 +116,7 @@ class TrainingAdminController extends Controller
 
         return redirect()
             ->route('crm.training.admin.videos')
-            ->with('success', 'ویدیو «' . $payload['title'] . '» اضافه شد.');
+            ->with('success', 'ویدیو «'.$payload['title'].'» اضافه شد.');
     }
 
     public function videosEdit(TrainingVideo $video)
@@ -139,7 +139,7 @@ class TrainingAdminController extends Controller
 
         return redirect()
             ->route('crm.training.admin.videos')
-            ->with('success', 'ویدیو «' . $payload['title'] . '» به‌روزرسانی شد.');
+            ->with('success', 'ویدیو «'.$payload['title'].'» به‌روزرسانی شد.');
     }
 
     public function videosDestroy(TrainingVideo $video)
@@ -147,6 +147,9 @@ class TrainingAdminController extends Controller
         // در صورت لوکال بودن، فایل را هم حذف کنیم
         if ($video->is_local && $video->video_url) {
             Storage::disk('public')->delete($video->video_url);
+        }
+        if ($video->video_low_url) {
+            Storage::disk('public')->delete($video->video_low_url);
         }
         if ($video->thumbnail) {
             Storage::disk('public')->delete($video->thumbnail);
@@ -157,7 +160,7 @@ class TrainingAdminController extends Controller
 
         return redirect()
             ->route('crm.training.admin.videos')
-            ->with('success', 'ویدیو «' . $title . '» حذف شد.');
+            ->with('success', 'ویدیو «'.$title.'» حذف شد.');
     }
 
     // ─── helpers ─────────────────────────────────────────────────
@@ -165,23 +168,26 @@ class TrainingAdminController extends Controller
     protected function validateVideoRequest(Request $request): array
     {
         return $request->validate([
-            'category_id'      => 'nullable|integer|exists:crm_training_categories,id',
-            'title'            => 'required|string|max:255',
-            'description'      => 'nullable|string|max:5000',
-            'source_type'      => 'required|in:url,upload',
-            'video_url'        => 'required_if:source_type,url|nullable|url|max:1000',
-            'video_file'       => 'required_if:source_type,upload|nullable|file|mimes:mp4,webm,mov|max:204800', // 200MB
-            'thumbnail_file'   => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'category_id' => 'nullable|integer|exists:crm_training_categories,id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string|max:5000',
+            'source_type' => 'required|in:url,upload',
+            'video_url' => 'required_if:source_type,url|nullable|url|max:1000',
+            'video_file' => 'required_if:source_type,upload|nullable|file|mimes:mp4,webm,mov|max:204800', // 200MB
+            // نسخهٔ کم‌حجم (نت ضعیف) — اختیاری، فقط برای منبع آپلود.
+            'video_low_file' => 'nullable|file|mimes:mp4,webm,mov|max:102400', // 100MB
+            'thumbnail_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             'duration_seconds' => 'nullable|integer|min:0',
-            'sort_order'       => 'nullable|integer|min:0',
-            'is_active'        => 'required|boolean',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_active' => 'required|boolean',
         ], [
-            'title.required'       => 'عنوان ویدیو الزامی است.',
+            'title.required' => 'عنوان ویدیو الزامی است.',
             'video_url.required_if' => 'برای منبع URL، لینک ویدیو الزامی است.',
-            'video_url.url'        => 'لینک ویدیو معتبر نیست.',
+            'video_url.url' => 'لینک ویدیو معتبر نیست.',
             'video_file.required_if' => 'برای منبع آپلود، فایل ویدیو الزامی است.',
-            'video_file.max'       => 'حجم فایل ویدیو حداکثر ۲۰۰ مگابایت مجاز است.',
-            'thumbnail_file.max'   => 'حجم تصویر کاور حداکثر ۵ مگابایت مجاز است.',
+            'video_file.max' => 'حجم فایل ویدیو حداکثر ۲۰۰ مگابایت مجاز است.',
+            'video_low_file.max' => 'حجم نسخهٔ کم‌حجم حداکثر ۱۰۰ مگابایت مجاز است.',
+            'thumbnail_file.max' => 'حجم تصویر کاور حداکثر ۵ مگابایت مجاز است.',
         ]);
     }
 
@@ -191,12 +197,12 @@ class TrainingAdminController extends Controller
     protected function buildVideoPayload(Request $request, array $validated, ?TrainingVideo $existing): array
     {
         $payload = [
-            'category_id'      => $validated['category_id'] ?? null,
-            'title'            => $validated['title'],
-            'description'      => $validated['description'] ?? null,
+            'category_id' => $validated['category_id'] ?? null,
+            'title' => $validated['title'],
+            'description' => $validated['description'] ?? null,
             'duration_seconds' => $validated['duration_seconds'] ?? null,
-            'sort_order'       => $validated['sort_order'] ?? 0,
-            'is_active'        => (bool) $validated['is_active'],
+            'sort_order' => $validated['sort_order'] ?? 0,
+            'is_active' => (bool) $validated['is_active'],
         ];
 
         if ($validated['source_type'] === 'upload' && $request->hasFile('video_file')) {
@@ -205,19 +211,34 @@ class TrainingAdminController extends Controller
                 Storage::disk('public')->delete($existing->video_url);
             }
             $path = $request->file('video_file')->store('crm/training/videos', 'public');
-            $payload['is_local']  = true;
+            $payload['is_local'] = true;
             $payload['video_url'] = $path;
         } elseif ($validated['source_type'] === 'url') {
             // اگر قبلاً فایل لوکال داشته و الان URL گذاشته، فایل قدیم پاک شود
             if ($existing && $existing->is_local && $existing->video_url) {
                 Storage::disk('public')->delete($existing->video_url);
             }
-            $payload['is_local']  = false;
+            $payload['is_local'] = false;
             $payload['video_url'] = $validated['video_url'];
         } elseif ($existing) {
             // source_type تغییر نکرده و فایل جدیدی هم نیامده — نگه‌داری مقادیر فعلی
-            $payload['is_local']  = $existing->is_local;
+            $payload['is_local'] = $existing->is_local;
             $payload['video_url'] = $existing->video_url;
+        }
+
+        // نسخهٔ کم‌حجم فقط وقتی معنا دارد که منبع، فایلِ لوکال باشد.
+        $willBeLocal = (bool) ($payload['is_local'] ?? false);
+        if ($willBeLocal && $request->hasFile('video_low_file')) {
+            if ($existing && $existing->video_low_url) {
+                Storage::disk('public')->delete($existing->video_low_url);
+            }
+            $payload['video_low_url'] = $request->file('video_low_file')->store('crm/training/videos', 'public');
+        } elseif (! $willBeLocal) {
+            // منبع URL شد → نسخهٔ کم‌حجمِ قبلی بی‌معنا است و پاک می‌شود.
+            if ($existing && $existing->video_low_url) {
+                Storage::disk('public')->delete($existing->video_low_url);
+            }
+            $payload['video_low_url'] = null;
         }
 
         if ($request->hasFile('thumbnail_file')) {
