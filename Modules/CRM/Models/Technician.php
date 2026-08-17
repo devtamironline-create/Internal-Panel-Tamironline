@@ -372,6 +372,23 @@ class Technician extends Authenticatable
     }
 
     /**
+     * سقف بستانکاری برای دریافت اعتباری (تومان). وقتی شرکت به تکنسین
+     * بیش از این مبلغ بدهکار شود، پرداخت آنلاین برای فاکتورهای جدیدش
+     * بسته می‌شود — هر پرداخت آنلاین بدهی شرکت را بیشتر می‌کند و
+     * دریافت نقدی آن را کم.
+     */
+    public static function onlineCollectionCap(): int
+    {
+        return (int) CrmSetting::get('online_collection_balance_cap', 10_000_000);
+    }
+
+    /** تنها مرجعِ قاعدهٔ «اعتباری قفل است» — بقیهٔ لایه‌ها فقط صدا می‌زنند. */
+    public function isOnlineCollectionBlocked(): bool
+    {
+        return $this->true_balance >= self::onlineCollectionCap();
+    }
+
+    /**
      * نام نمایشی — اولویت با firstname_tech (نام تجاری/کامل WP)،
      * fallback به first_name + last_name (داده‌ی legacy لاراولی)،
      * در نهایت موبایل.

@@ -174,6 +174,7 @@ class ReturnFlowProfessionalTest extends TestCase
             $t->id();
             $t->string('key')->unique();
             $t->text('value')->nullable();
+            $t->timestamps();
         });
 
         // هوکِ actor لاگِ وضعیت به جدول users سر می‌زند.
@@ -349,6 +350,96 @@ class ReturnFlowProfessionalTest extends TestCase
         $invoice = Invoice::where('order_id', $order->id)->firstOrFail();
         $this->assertNull($invoice->collection_method);
         $this->assertTrue($invoice->isPayableOnline());
+    }
+
+    // ───────────────────────── سقفِ بستانکاری برای دریافتِ اعتباری (۱۴۰۵/۰۵/۲۷)
+
+    /** شرکت ۱۰ میلیون به تکنسین بدهکار است → انتخابِ صریحِ online با 422 رد می‌شود. */
+    public function test_online_collection_is_rejected_when_the_company_owes_the_technician_the_cap(): void
+    {
+        $tech = $this->technician();
+        $tech->forceFill(['wallet_balance' => 10_000_000])->save();
+
+        $order = Order::forceCreate([
+            'order_code' => 'CAP-1', 'technician_id' => $tech->id,
+            'status' => OrderStatus::Coordinated->value,
+            'device_img1' => 'crm/orders/x/after.jpg',
+        ]);
+
+        try {
+            $this->callUpdateStatus($order, $tech, [
+                'status' => OrderStatus::Completed->value,
+                'payment_collection' => 'online',
+                'price_customer' => 400_000,
+                'invoice_descripotion' => 'سرویس کامل دستگاه انجام شد',
+            ]);
+            $this->fail('انتخاب اعتباری برای تکنسینِ بالای سقف نباید پذیرفته شود.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('نقدی', $e->errors()['payment_collection'][0]);
+        }
+
+        $this->assertNull(Invoice::where('order_id', $order->id)->first(), 'فاکتوری نباید ساخته شده باشد.');
+    }
+
+    /** دفاع در عمق: کلاینتِ قدیمیِ بدونِ فیلد هم برای تکنسینِ بالای سقف فاکتورِ نقدی می‌گیرد. */
+    public function test_a_capped_technician_gets_a_cash_invoice_even_without_the_field(): void
+    {
+        $tech = $this->technician();
+        $tech->forceFill(['wallet_balance' => 12_000_000])->save();
+
+        $order = Order::forceCreate([
+            'order_code' => 'CAP-2', 'technician_id' => $tech->id,
+            'status' => OrderStatus::Coordinated->value,
+            'device_img1' => 'crm/orders/x/after.jpg',
+        ]);
+
+        $this->callUpdateStatus($order, $tech, [
+            'status' => OrderStatus::Completed->value,
+            'price_customer' => 400_000,
+            'invoice_descripotion' => 'سرویس کامل دستگاه انجام شد',
+        ]);
+
+        $invoice = Invoice::where('order_id', $order->id)->firstOrFail();
+        $this->assertSame('cash', $invoice->collection_method);
+        $this->assertFalse($invoice->isPayableOnline(), 'درگاه باید برای تکنسینِ بالای سقف خاموش باشد.');
+    }
+
+    /** زیرِ سقف، اعتباری مثلِ قبل کار می‌کند. */
+    public function test_online_collection_still_works_below_the_cap(): void
+    {
+        $tech = $this->technician();
+        $tech->forceFill(['wallet_balance' => 9_999_999])->save();
+
+        $order = Order::forceCreate([
+            'order_code' => 'CAP-3', 'technician_id' => $tech->id,
+            'status' => OrderStatus::Coordinated->value,
+            'device_img1' => 'crm/orders/x/after.jpg',
+        ]);
+
+        $this->callUpdateStatus($order, $tech, [
+            'status' => OrderStatus::Completed->value,
+            'payment_collection' => 'online',
+            'price_customer' => 400_000,
+            'invoice_descripotion' => 'سرویس کامل دستگاه انجام شد',
+        ]);
+
+        $invoice = Invoice::where('order_id', $order->id)->firstOrFail();
+        $this->assertSame('online', $invoice->collection_method);
+        $this->assertTrue($invoice->isPayableOnline());
+    }
+
+    /** سقف از تنظیمات قابلِ تغییر است — تنها مرجع: Technician::onlineCollectionCap. */
+    public function test_the_cap_is_configurable_from_settings(): void
+    {
+        $this->assertSame(10_000_000, Technician::onlineCollectionCap());
+
+        \Modules\CRM\Models\CrmSetting::set('online_collection_balance_cap', '4000000');
+
+        $this->assertSame(4_000_000, Technician::onlineCollectionCap());
+
+        $tech = $this->technician();
+        $tech->forceFill(['wallet_balance' => 5_000_000])->save();
+        $this->assertTrue($tech->fresh()->isOnlineCollectionBlocked());
     }
 
     // ───────────────────────── هماهنگی بدونِ توضیح (۱۴۰۵/۰۵)

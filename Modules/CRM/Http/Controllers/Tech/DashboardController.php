@@ -332,6 +332,14 @@ class DashboardController extends Controller
             return back()->with('error', 'برای «هماهنگ شده» ابتدا زمان مراجعه را از تقویم ثبت کنید.');
         }
 
+        // بستانکاری به سقف رسیده → دریافتِ اعتباری بسته است (هم‌ارز API).
+        if (($validated['payment_collection'] ?? null) === 'online'
+            && $tech->isOnlineCollectionBlocked()) {
+            return back()->withInput()->withErrors([
+                'payment_collection' => 'اعتبار کیف‌پول شما به سقف مجاز رسیده است؛ برای این فاکتور فقط دریافت نقدی ممکن است.',
+            ]);
+        }
+
         $description = trim($validated['description'] ?? '');
 
         // نگاشت توضیح هر وضعیت روی فیلد متناظر — هم‌سو با پنل WP:

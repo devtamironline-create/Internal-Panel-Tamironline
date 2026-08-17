@@ -53,6 +53,16 @@ class InvoiceService
 
         $collectionMethod = in_array($collectionMethod, ['cash', 'online'], true) ? $collectionMethod : null;
 
+        // دفاع در عمق: وقتی بستانکاریِ تکنسین از شرکت به سقف رسیده،
+        // فاکتور صرف‌نظر از ورودی (online یا null قدیمی) نقدی ثبت می‌شود.
+        // isPayableOnline از همین ستون می‌خواند، پس درگاه در همهٔ مسیرها
+        // (لینک پرداخت، رسید عمومی، اپ مشتری) خودکار خاموش می‌ماند.
+        if ($collectionMethod !== 'cash'
+            && $order->technician
+            && $order->technician->isOnlineCollectionBlocked()) {
+            $collectionMethod = 'cash';
+        }
+
         $invoice = DB::transaction(function () use ($order, $createdBy, $existing, $collectionMethod) {
             if ($existing) {
                 // فقط فاکتور قبلی را superseded می‌کنیم تا از لیست

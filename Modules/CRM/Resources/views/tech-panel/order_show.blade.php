@@ -784,8 +784,10 @@
                     </div>
 
                     {{-- روش دریافت وجه — نقدی: درگاه به مشتری نشان داده نمی‌شود؛
-                         اعتباری: مشتری آنلاین می‌پردازد و تکنسین نباید نقدی بگیرد. --}}
-                    <div x-data="{ payCollect: '{{ old('payment_collection', 'cash') }}' }">
+                         اعتباری: مشتری آنلاین می‌پردازد و تکنسین نباید نقدی بگیرد.
+                         وقتی بستانکاریِ تکنسین از شرکت به سقف رسیده، اعتباری قفل است. --}}
+                    @php $onlineBlocked = auth('tech')->user()?->isOnlineCollectionBlocked() ?? false; @endphp
+                    <div x-data="{ payCollect: '{{ $onlineBlocked ? 'cash' : old('payment_collection', 'cash') }}' }">
                         <label class="text-[11px] text-gray-700 font-bold mb-1 block">روش دریافت وجه *</label>
                         <div class="grid grid-cols-2 gap-2">
                             <label class="flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition"
@@ -793,16 +795,26 @@
                                 <input type="radio" name="payment_collection" value="cash" x-model="payCollect" class="accent-sky-600">
                                 <span class="text-xs font-bold">نقدی (در محل)</span>
                             </label>
-                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition"
-                                   :class="payCollect === 'online' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'">
-                                <input type="radio" name="payment_collection" value="online" x-model="payCollect" class="accent-emerald-600">
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-xl border transition
+                                          {{ $onlineBlocked ? 'opacity-50 cursor-not-allowed border-gray-200 bg-gray-50' : 'cursor-pointer' }}"
+                                   @if(! $onlineBlocked) :class="payCollect === 'online' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'" @endif>
+                                <input type="radio" name="payment_collection" value="online" x-model="payCollect"
+                                       class="accent-emerald-600" @if($onlineBlocked) disabled @endif>
                                 <span class="text-xs font-bold">اعتباری (آنلاین)</span>
                             </label>
                         </div>
+                        @if($onlineBlocked)
+                            <div class="mt-2 px-3 py-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-900 text-[10px] leading-6 font-bold">
+                                اعتبار کیف‌پول شما به سقف مجاز رسیده است؛ فعلاً فقط دریافت نقدی ممکن است.
+                            </div>
+                        @endif
                         <div x-show="payCollect === 'online'" x-cloak
                              class="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[10px] leading-6 font-bold">
                             ⚠️ پرداخت اعتباری: به هیچ عنوان وجه نقد از مشتری دریافت نکنید — لینک پرداخت آنلاین برای مشتری فعال می‌شود.
                         </div>
+                        @error('payment_collection')
+                            <p class="text-[10px] text-rose-600 mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
 
                     {{-- «پیش‌نویس» حذف شد — تکمیل همیشه نهایی است و فاکتور همان لحظه صادر می‌شود. --}}
