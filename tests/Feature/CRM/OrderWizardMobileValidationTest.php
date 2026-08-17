@@ -103,10 +103,23 @@ class OrderWizardMobileValidationTest extends TestCase
             ->assertHasErrors(['newMobile']);
     }
 
-    public function test_a_landline_number_is_rejected(): void
+    /**
+     * این فرم لید هم ثبت می‌کند و مشتری ممکن است با تلفنِ ثابت تماس گرفته
+     * باشد — بر خلافِ گذشته، شمارهٔ ثابتِ کامل (با کدِ شهر) باید پذیرفته شود.
+     */
+    public function test_a_landline_number_is_accepted(): void
     {
         $this->wizard()
             ->set('newMobile', '02188776655')
+            ->call('next')
+            ->assertHasNoErrors(['newMobile']);
+    }
+
+    public function test_an_incomplete_landline_number_is_rejected(): void
+    {
+        // بدونِ کدِ شهر (۸ رقم) → ناقص است و باید رد شود.
+        $this->wizard()
+            ->set('newMobile', '88776655')
             ->call('next')
             ->assertHasErrors(['newMobile']);
     }

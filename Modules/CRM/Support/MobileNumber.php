@@ -22,6 +22,17 @@ final class MobileNumber
 
     public const MESSAGE = 'شماره موبایل باید ۱۱ رقم و با ۰۹ شروع شود (مثال: 09123456789).';
 
+    /**
+     * قاعدهٔ نرم‌تر برای فرم‌هایی که لید هم ثبت می‌کنند: مشتری ممکن است با
+     * تلفنِ ثابت تماس بگیرد و اپراتور جز همان شماره چیزی ندارد. موبایل یا
+     * ثابت با کدِ شهر — هر دو ۱۱ رقم و با ۰ شروع می‌شوند.
+     */
+    public const PHONE_PATTERN = '/^0[0-9]{10}$/';
+
+    public const PHONE_RULE = 'regex:'.self::PHONE_PATTERN;
+
+    public const PHONE_MESSAGE = 'شماره تماس باید ۱۱ رقم و با ۰ شروع شود (موبایل مثل 09123456789 یا ثابت با کد شهر مثل 02177612345).';
+
     /** @var array<string, string> */
     private const DIGITS = [
         '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
@@ -62,5 +73,11 @@ final class MobileNumber
     public static function isValid(?string $value): bool
     {
         return (bool) preg_match(self::PATTERN, self::normalize($value));
+    }
+
+    /** موبایل یا تلفنِ ثابت با کدِ شهر — همان قاعدهٔ PHONE_PATTERN. */
+    public static function isValidPhone(?string $value): bool
+    {
+        return (bool) preg_match(self::PHONE_PATTERN, self::normalize($value));
     }
 }

@@ -25,6 +25,7 @@ use Modules\CRM\Services\OrderSmsNotifier;
 use Modules\CRM\Services\TechnicianGroupPlanner;
 use Modules\CRM\Services\TechnicianHistoryService;
 use Modules\CRM\Services\TechnicianSuggestionService;
+use Modules\CRM\Support\MobileNumber;
 
 class OrderController extends Controller
 {
@@ -1659,7 +1660,9 @@ class OrderController extends Controller
         if ($updating) {
             $rules['final_price'] = 'nullable|integer|min:0';
             $rules['customer_name'] = 'nullable|string|max:255';
-            $rules['customer_mobile'] = 'nullable|string|max:20|regex:/^09\d{9}$/';
+            // موبایل یا ثابت — مشتریِ لید ممکن است فقط تلفنِ ثابت داشته باشد
+            // و سفارشش باید بدونِ گیر قابلِ ویرایش بماند.
+            $rules['customer_mobile'] = ['nullable', 'string', 'max:20', MobileNumber::PHONE_RULE];
             $rules['customer_phone'] = 'nullable|string|max:20';
         } else {
             $rules['customer_id'] = 'required|exists:crm_customers,id';

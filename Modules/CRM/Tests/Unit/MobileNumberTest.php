@@ -76,6 +76,44 @@ class MobileNumberTest extends TestCase
     }
 
     /**
+     * قاعدهٔ نرم‌ترِ «شماره تماس» برای فرم‌هایی که لید ثبت می‌کنند: موبایل و
+     * ثابت هر دو پذیرفته‌اند، ولی شمارهٔ ناقص همچنان رد می‌شود.
+     */
+    public static function acceptedPhones(): array
+    {
+        return [
+            'موبایل' => ['09123456789'],
+            'ثابت با کد شهر' => ['02188776655'],
+            'ثابت با رقمِ فارسی' => ['۰۲۱۸۸۷۷۶۶۵۵'],
+            'ثابت با خط تیره' => ['021-8877-6655'],
+        ];
+    }
+
+    #[DataProvider('acceptedPhones')]
+    public function test_the_relaxed_phone_rule_accepts_mobiles_and_landlines(string $input): void
+    {
+        $this->assertTrue(MobileNumber::isValidPhone($input), "«{$input}» باید به‌عنوان شماره تماس معتبر باشد.");
+    }
+
+    public static function rejectedPhones(): array
+    {
+        return [
+            'خالی' => [''],
+            'null' => [null],
+            'کوتاه (۱۰ رقم)' => ['0218877665'],
+            'بلند (۱۲ رقم)' => ['021887766554'],
+            'بدون صفرِ ابتدایی' => ['2188776655'],
+            'فقط حروف' => ['سلام'],
+        ];
+    }
+
+    #[DataProvider('rejectedPhones')]
+    public function test_the_relaxed_phone_rule_still_rejects_incomplete_numbers(?string $input): void
+    {
+        $this->assertFalse(MobileNumber::isValidPhone($input), '«'.$input.'» نباید شماره تماس معتبر شمرده شود.');
+    }
+
+    /**
      * `98` فقط وقتی پیش‌شمارهٔ کشور شمرده می‌شود که طولِ کل جور دربیاید (۱۲ رقم).
      * وگرنه شماره‌ای که تصادفاً با ۹۸ شروع شود مثله می‌شد.
      */
