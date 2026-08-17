@@ -327,6 +327,11 @@ class DashboardController extends Controller
             return back()->with('error', 'تغییر به این وضعیت در شرایط فعلی مجاز نیست.');
         }
 
+        // «هماهنگ شده» بدونِ زمانِ مراجعه معنا ندارد (هم‌ارز API).
+        if ($newStatus === OrderStatus::Coordinated && $order->visit_scheduled_at === null) {
+            return back()->with('error', 'برای «هماهنگ شده» ابتدا زمان مراجعه را از تقویم ثبت کنید.');
+        }
+
         $description = trim($validated['description'] ?? '');
 
         // نگاشت توضیح هر وضعیت روی فیلد متناظر — هم‌سو با پنل WP:
@@ -360,9 +365,10 @@ class DashboardController extends Controller
                 $errors['device_img1'] = 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.';
             }
 
-            // توضیحات فاکتور اجباری — مگر در سفارش‌های برگشتی.
+            // توضیحات فاکتور برای بستن همیشه اجباری است — حتی برگشتیِ رایگان
+            // (تصمیمِ ۱۴۰۵/۰۵/۲۷): این متن سندِ کارِ انجام‌شده است.
             $invDesc = trim((string) ($validated['invoice_descripotion'] ?? ''));
-            if (! $isDraft && ! $isReturned && $invDesc === '') {
+            if (! $isDraft && $invDesc === '') {
                 $errors['invoice_descripotion'] = 'توضیحات فاکتور اجباری است — این متن به‌صورت فاکتور به مشتری ارسال می‌شود.';
             }
 

@@ -353,12 +353,43 @@ class ReturnFlowProfessionalTest extends TestCase
 
     // ───────────────────────── هماهنگی بدونِ توضیح (۱۴۰۵/۰۵)
 
+    public function test_coordination_without_a_visit_time_is_rejected(): void
+    {
+        $tech = $this->technician();
+        $order = Order::forceCreate([
+            'order_code' => 'NC-0', 'technician_id' => $tech->id,
+            'status' => OrderStatus::New->value, // visit_scheduled_at خالی
+        ]);
+
+        try {
+            $this->callUpdateStatus($order, $tech, ['status' => OrderStatus::Coordinated->value]);
+            $this->fail('«هماهنگ شده» بدون زمان مراجعه نباید ثبت شود.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('زمان مراجعه', $e->errors()['status'][0]);
+        }
+    }
+
+    /** توضیحاتِ فاکتور حتی برای برگشتیِ رایگان اجباری است. */
+    public function test_closing_without_an_invoice_description_is_rejected_even_for_returns(): void
+    {
+        $tech = $this->technician();
+        $order = $this->pendingReturnedOrder($tech);
+        $this->callReturnReview($order, $tech, ['approved' => '1', 'days' => 2]);
+
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->callUpdateStatus($order->fresh(), $tech, [
+            'status' => OrderStatus::Completed->value,
+            'price_customer' => 0,
+        ]);
+    }
+
     public function test_coordination_no_longer_requires_a_description(): void
     {
         $tech = $this->technician();
         $order = Order::forceCreate([
             'order_code' => 'NC-1', 'technician_id' => $tech->id,
             'status' => OrderStatus::New->value,
+            'visit_scheduled_at' => now()->addDay(), // بدونِ زمانِ مراجعه، هماهنگ‌شده مجاز نیست
         ]);
 
         $response = $this->callUpdateStatus($order, $tech, [
@@ -552,6 +583,7 @@ class ReturnFlowProfessionalTest extends TestCase
         $response = $this->callUpdateStatus($order->fresh(), $tech, [
             'status' => OrderStatus::Completed->value,
             'price_customer' => 0,
+            'invoice_descripotion' => 'خدمات برگشتی رایگان — رفع مجدد ایراد قبلی',
         ]);
 
         $this->assertTrue($response->getData(true)['success']);

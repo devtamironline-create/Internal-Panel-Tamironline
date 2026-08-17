@@ -111,6 +111,15 @@ class OrderActionController extends Controller
             throw ValidationException::withMessages(['status' => 'تغییر به این وضعیت در شرایط فعلی مجاز نیست.']);
         }
 
+        // «هماهنگ شده» بدونِ زمانِ مراجعه معنا ندارد — مسیرِ درست
+        // schedule-visit است که خودش وضعیت را هماهنگ می‌کند. ثبتِ مستقیم
+        // فقط وقتی مجاز است که زمانِ مراجعه از قبل ثبت شده باشد.
+        if ($newStatus === OrderStatus::Coordinated && $order->visit_scheduled_at === null) {
+            throw ValidationException::withMessages([
+                'status' => 'برای «هماهنگ شده» ابتدا زمان مراجعه را از تقویم ثبت کنید.',
+            ]);
+        }
+
         $description = trim($validated['description'] ?? '');
         $updates = ['status' => $newStatus->value];
 
@@ -490,8 +499,10 @@ class OrderActionController extends Controller
         if (! $isDraft && ! $isReturned && ! $hasNewImage && ! $hasExistingImage) {
             $errors['device_img1'] = 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.';
         }
+        // توضیحاتِ فاکتور برای «بستنِ» سفارش همیشه اجباری است — حتی
+        // برگشتیِ رایگان (تصمیمِ ۱۴۰۵/۰۵/۲۷): این متن سندِ کارِ انجام‌شده است.
         $invDesc = trim((string) ($validated['invoice_descripotion'] ?? ''));
-        if (! $isDraft && ! $isReturned && $invDesc === '') {
+        if (! $isDraft && $invDesc === '') {
             $errors['invoice_descripotion'] = 'توضیحات فاکتور اجباری است.';
         }
         if ($errors) {
