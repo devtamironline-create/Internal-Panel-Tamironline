@@ -1068,11 +1068,17 @@
     @endif
 
     {{-- ─────── Status history ─────── --}}
-    @if($order->statusLogs->isNotEmpty())
+    {{-- حریم خصوصی: یادداشتِ دیگران (نام تکنسین‌های قبلی و…) حذف می‌شود. --}}
+    @php
+        $visibleLogs = \Modules\CRM\Models\OrderStatusLog::visibleToTechnician(
+            $order->statusLogs, (int) (auth('tech')->id() ?? 0)
+        );
+    @endphp
+    @if($visibleLogs->isNotEmpty())
         <div class="mx-3 mt-3 bg-white rounded-[24px] shadow-sm p-4">
             <div class="text-[11px] text-gray-400 mb-3">تاریخچه وضعیت</div>
             <ol class="space-y-3">
-                @foreach($order->statusLogs as $log)
+                @foreach($visibleLogs as $log)
                     @php $toEnum = OrderStatus::tryFrom($log->to_status); @endphp
                     <li class="flex items-start gap-3">
                         <span class="mt-1 w-2 h-2 rounded-full bg-brand-500 flex-shrink-0"></span>

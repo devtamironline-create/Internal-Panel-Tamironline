@@ -145,7 +145,7 @@ class TechOrderDetailResource extends JsonResource
             'device_image_url' => $this->device_img1 ? storage_url($this->device_img1) : null,
 
             'allowed_transitions' => $this->allowedTransitions($status),
-            'status_history' => $this->statusHistory(),
+            'status_history' => $this->statusHistory((int) ($request->user()?->id ?? 0)),
 
             'proformas' => $this->whenLoaded('proformas', fn () => $this->proformas->map(fn ($pf) => [
                 'id' => (int) $pf->id,
@@ -302,17 +302,18 @@ class TechOrderDetailResource extends JsonResource
     }
 
     /**
-     * تاریخچهٔ وضعیت — بدونِ نامِ تغییردهنده (طبقِ خواستِ کاربر).
+     * تاریخچهٔ وضعیت — بدونِ نامِ تغییردهنده و با حذفِ حریمِ خصوصی:
+     * یادداشت فقط از خودِ تکنسین؛ لاگ‌های تخصیص/لغو تخصیصِ دیگران حذف.
      *
      * @return array<int, array<string, mixed>>
      */
-    private function statusHistory(): array
+    private function statusHistory(int $techId): array
     {
         if (! $this->relationLoaded('statusLogs')) {
             return [];
         }
 
-        return $this->statusLogs->map(function ($log) {
+        return \Modules\CRM\Models\OrderStatusLog::visibleToTechnician($this->statusLogs, $techId)->map(function ($log) {
             $to = OrderStatus::tryFrom((string) $log->to_status);
 
             return [

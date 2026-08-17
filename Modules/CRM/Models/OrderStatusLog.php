@@ -92,6 +92,41 @@ class OrderStatusLog extends Model
         ];
     }
 
+    /**
+     * نمای تکنسین از تاریخچه — با حذفِ حریمِ خصوصیِ دیگران.
+     *
+     * قاعده (خواستِ ۱۴۰۵/۰۵/۲۷): خودِ گذرِ وضعیت‌ها (لیبل + تاریخ) برای
+     * تکنسین مفید است و می‌ماند، ولی:
+     *   - متنِ یادداشت فقط وقتی دیده می‌شود که نویسنده خودِ همین تکنسین باشد
+     *     (یادداشت‌های اپراتور نامِ تکنسین‌های قبلی/افراد را دارد).
+     *   - لاگ‌های «بدونِ تغییرِ وضعیت»ِ دیگران (تخصیص/لغو تخصیص و پیام‌های
+     *     اپراتور) کلاً حذف می‌شوند — بدونِ یادداشت چیزی برای گفتن ندارند.
+     * پنل ادمین از این متد استفاده نمی‌کند و لاگِ کامل را می‌بیند.
+     *
+     * @param  \Illuminate\Support\Collection<int, self>  $logs
+     * @return \Illuminate\Support\Collection<int, self> همان مدل‌ها؛ یادداشتِ غیرِخودی null شده
+     */
+    public static function visibleToTechnician($logs, int $technicianId)
+    {
+        return $logs
+            ->filter(function (self $log) use ($technicianId) {
+                if ((int) $log->actor_technician_id === $technicianId && $technicianId > 0) {
+                    return true;
+                }
+
+                return (string) $log->from_status !== (string) $log->to_status;
+            })
+            ->map(function (self $log) use ($technicianId) {
+                if ((int) $log->actor_technician_id !== $technicianId || $technicianId <= 0) {
+                    $log = clone $log;
+                    $log->note = null;
+                }
+
+                return $log;
+            })
+            ->values();
+    }
+
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
