@@ -43,6 +43,23 @@ Schedule::call(function () {
 Schedule::command('investment:snapshot')
     ->dailyAt('08:40')->name('investment-daily-snapshot')->onOneServer();
 
+// تحویلِ Conversionهای تماس به Google Data Manager (از مسیر پروکسی).
+// هر دو کامند وقتی ADS_TRACKING_GOOGLE_UPLOAD=false باشد بلافاصله خارج
+// می‌شوند؛ when() جلوی spawn بیهودهٔ پروسهٔ PHP را هم می‌گیرد.
+Schedule::command('ads:google-upload')
+    ->everyFiveMinutes()
+    ->when(fn () => (bool) config('ads_tracking.google.upload_enabled'))
+    ->onOneServer()
+    ->withoutOverlapping()
+    ->name('ads-google-upload');
+
+Schedule::command('ads:google-poll')
+    ->everyTenMinutes()
+    ->when(fn () => (bool) config('ads_tracking.google.upload_enabled'))
+    ->onOneServer()
+    ->withoutOverlapping()
+    ->name('ads-google-poll');
+
 // ضربانِ زمان‌بند — هر اجرای schedule:run این زمان را ثبت می‌کند تا ai:diagnose
 // بتواند قطعی بگوید cron کار می‌کند یا نه (مثلاً وقتی cron با phpِ اشتباه است).
 Schedule::call(function () {

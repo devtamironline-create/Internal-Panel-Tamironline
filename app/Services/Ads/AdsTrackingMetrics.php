@@ -145,6 +145,18 @@ class AdsTrackingMetrics
             'queue_driver' => (string) config('queue.default'),
             'scheduler_heartbeat' => \Illuminate\Support\Facades\Cache::get('scheduler_heartbeat'),
             'google_upload_enabled' => (bool) config('ads_tracking.google_upload_enabled'),
+            // فاز ۲ — تحویل به Google (همه فقط از DB/cache، بدون تماس زنده)
+            'google_validate_only' => (bool) config('ads_tracking.google.validate_only'),
+            'google_proxy_enabled' => (bool) config('ads_tracking.google.proxy.enabled'),
+            'google_credentials_ready' => is_readable((string) config('ads_tracking.google.credentials_path')),
+            'processing_google' => AdsCallClickEvent::where('google_status', 'processing')->count(),
+            'sending_google' => AdsCallClickEvent::where('google_status', 'sending')->count(),
+            'oldest_pending_google' => AdsCallClickEvent::where('google_status', 'pending')->min('event_time'),
+            'last_google_attempt_at' => AdsCallClickEvent::max('google_last_attempt_at'),
+            'last_google_uploaded_at' => AdsCallClickEvent::max('google_uploaded_at'),
+            'last_google_request_id' => AdsCallClickEvent::whereNotNull('google_request_id')
+                ->latest('google_last_attempt_at')->value('google_request_id'),
+            'last_google_check' => \Illuminate\Support\Facades\Cache::get('ads_google_last_check'),
         ];
     }
 }

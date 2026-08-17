@@ -175,6 +175,10 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
             Route::get('/', [\App\Http\Controllers\Admin\AdsTrackingController::class, 'index'])->name('index');
             Route::get('/events/{event}', [\App\Http\Controllers\Admin\AdsTrackingController::class, 'show'])
                 ->whereNumber('event')->name('event');
+            // تست اتصال گوگل — validateOnly، هرگز conversion واقعی نمی‌سازد.
+            Route::post('/test-connection', [\App\Http\Controllers\Admin\AdsTrackingController::class, 'testConnection'])->name('test-connection');
+            // ارسال دوبارهٔ failedها — transactionId ثابت است، duplicate نمی‌سازد.
+            Route::post('/retry-failed', [\App\Http\Controllers\Admin\AdsTrackingController::class, 'retryFailed'])->name('retry-failed');
         });
 
     // صندوق سرمایه — فقط فلگ investment_access (روشن‌شدنی فقط با کامند
