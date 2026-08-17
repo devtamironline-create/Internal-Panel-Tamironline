@@ -102,6 +102,16 @@ class PaymentController extends Controller
             ]);
         }
 
+        // فاکتورِ نقدی: تکنسین وجه را در محل گرفته — درگاه معنا ندارد.
+        if ($invoice->isCashCollected()) {
+            return view('crm::payment.result', [
+                'ok' => false,
+                'message' => 'این فاکتور به‌صورت نقدی در محل تسویه می‌شود و نیازی به پرداخت آنلاین ندارد.',
+                'invoice' => $invoice,
+                'payment' => null,
+            ]);
+        }
+
         // فاکتورِ لغوشده یا بدونِ مبلغ (مثلاً ادامهٔ رایگانِ برگشتی) قابلِ
         // پرداخت نیست — نباید درخواستی به درگاه برود.
         if ($invoice->status === 'cancelled') {
@@ -241,9 +251,9 @@ class PaymentController extends Controller
                 'paid_at' => $invoice->paid_at?->utc()->toIso8601String(),
                 // جایگزین‌شده = دیگر قابلِ پرداخت نیست؛ اپ باید لینکِ فاکتورِ جدید را بگیرد.
                 'superseded' => $invoice->superseded_at !== null,
-                'payable' => $invoice->superseded_at === null
-                    && ! in_array($invoice->status, ['paid', 'cancelled'], true)
-                    && (int) $invoice->total_amount > 0,
+                // نقدی (تسویه در محل) یا آنلاین — null یعنی فاکتورِ قدیمی.
+                'collection_method' => $invoice->collection_method,
+                'payable' => $invoice->isPayableOnline(),
             ],
         ]);
     }

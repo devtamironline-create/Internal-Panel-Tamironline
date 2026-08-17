@@ -26,7 +26,11 @@ class InvoiceService
 {
     public function __construct(protected CommissionCalculator $calc) {}
 
-    public function generateForOrder(Order $order, ?int $createdBy = null, bool $forceRegenerate = false): ?Invoice
+    /**
+     * @param  string|null  $collectionMethod  «روش دریافت» انتخابِ تکنسین
+     *                                         (cash|online) — null = قدیمی
+     */
+    public function generateForOrder(Order $order, ?int $createdBy = null, bool $forceRegenerate = false, ?string $collectionMethod = null): ?Invoice
     {
         // گاردِ سفت: سفارش‌های legacy-closed (از لاگ قدیمیِ WP بسته شده‌اند و
         // حسابداری‌شان قطعی‌ست) هرگز نباید فاکتور/wallet-tx بگیرند. اگر فاکتوری
@@ -47,7 +51,9 @@ class InvoiceService
             return $existing;
         }
 
-        $invoice = DB::transaction(function () use ($order, $createdBy, $existing) {
+        $collectionMethod = in_array($collectionMethod, ['cash', 'online'], true) ? $collectionMethod : null;
+
+        $invoice = DB::transaction(function () use ($order, $createdBy, $existing, $collectionMethod) {
             if ($existing) {
                 // فقط فاکتور قبلی را superseded می‌کنیم تا از لیست
                 // فعال خارج شود. **wallet tx آن را دست نمی‌زنیم** —
@@ -80,6 +86,7 @@ class InvoiceService
                 'calc_type' => $totals['calc_type'],
                 'commission_percent' => $totals['percent'],
                 'status' => 'issued',
+                'collection_method' => $collectionMethod,
                 'issued_at' => now(),
                 'created_by' => $createdBy,
                 'in_wallet' => false, // ابتدا false، بعد از ساختن wallet tx → true

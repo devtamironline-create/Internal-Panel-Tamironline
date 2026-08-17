@@ -90,6 +90,7 @@ class ReturnFlowProfessionalTest extends TestCase
             $t->integer('commission_percent')->default(0);
             $t->boolean('in_wallet')->default(false);
             $t->string('status', 20)->default('issued');
+            $t->string('collection_method', 10)->nullable();
             $t->timestamp('issued_at')->nullable();
             $t->timestamp('paid_at')->nullable();
             $t->timestamp('superseded_at')->nullable();
@@ -305,6 +306,49 @@ class ReturnFlowProfessionalTest extends TestCase
             ->invoke(app(OrderActionController::class), $order);
 
         $this->assertSame([OrderStatus::Completed], $allowed);
+    }
+
+    /** انتخابِ «روش دریافت» تکنسین هنگامِ تکمیل روی فاکتور می‌نشیند. */
+    public function test_the_collection_method_choice_lands_on_the_invoice(): void
+    {
+        $tech = $this->technician();
+        $order = Order::forceCreate([
+            'order_code' => 'CM-1', 'technician_id' => $tech->id,
+            'status' => OrderStatus::Coordinated->value,
+            'device_img1' => 'crm/orders/x/after.jpg',
+        ]);
+
+        $this->callUpdateStatus($order, $tech, [
+            'status' => OrderStatus::Completed->value,
+            'payment_collection' => 'cash',
+            'price_customer' => 400_000,
+            'invoice_descripotion' => 'سرویس کامل دستگاه انجام شد',
+        ]);
+
+        $invoice = Invoice::where('order_id', $order->id)->firstOrFail();
+        $this->assertSame('cash', $invoice->collection_method);
+        $this->assertFalse($invoice->isPayableOnline()); // درگاه برای مشتری خاموش
+    }
+
+    /** کلاینتِ قدیمیِ بدونِ فیلد — رفتارِ قبلی (درگاه باز) حفظ می‌شود. */
+    public function test_a_legacy_completion_without_the_field_keeps_the_gateway_open(): void
+    {
+        $tech = $this->technician();
+        $order = Order::forceCreate([
+            'order_code' => 'CM-2', 'technician_id' => $tech->id,
+            'status' => OrderStatus::Coordinated->value,
+            'device_img1' => 'crm/orders/x/after.jpg',
+        ]);
+
+        $this->callUpdateStatus($order, $tech, [
+            'status' => OrderStatus::Completed->value,
+            'price_customer' => 400_000,
+            'invoice_descripotion' => 'سرویس کامل دستگاه انجام شد',
+        ]);
+
+        $invoice = Invoice::where('order_id', $order->id)->firstOrFail();
+        $this->assertNull($invoice->collection_method);
+        $this->assertTrue($invoice->isPayableOnline());
     }
 
     // ───────────────────────── هماهنگی بدونِ توضیح (۱۴۰۵/۰۵)

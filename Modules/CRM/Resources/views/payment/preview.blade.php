@@ -127,6 +127,10 @@
                 <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl px-4 py-3 text-sm text-center font-bold">
                     ✓ این فاکتور قبلاً پرداخت شده است.
                 </div>
+            @elseif($invoice->isCashCollected())
+                <div class="bg-sky-50 border border-sky-200 text-sky-800 rounded-xl px-4 py-3 text-sm text-center">
+                    این فاکتور به‌صورت <strong>نقدی در محل</strong> تسویه می‌شود و نیازی به پرداخت آنلاین ندارد.
+                </div>
             @elseif($invoice->status === 'cancelled')
                 <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-xl px-4 py-3 text-sm text-center">
                     این فاکتور لغو شده و قابل پرداخت نیست.

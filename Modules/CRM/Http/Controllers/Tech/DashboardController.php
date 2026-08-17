@@ -298,6 +298,8 @@ class DashboardController extends Controller
             'pieces.*.buy_price' => 'nullable|integer|min:0',
             'pieces.*.customer_price' => 'nullable|integer|min:0',
             'invoice_descripotion' => 'nullable|string|max:2000',
+            // «روش دریافت وجه» — هم‌ارز API اپ.
+            'payment_collection' => 'nullable|in:cash,online',
             'save_as_draft' => 'nullable|boolean',
             'device_img1' => \Modules\CRM\Support\UploadLimits::imageRule(),
         ], [
@@ -460,7 +462,9 @@ class DashboardController extends Controller
             // فاکتورِ اصلی سندِ مالیِ کارِ اول است و باید فعال بماند.
             $order->refresh();
             $forceRegenerate = (int) ($order->return_type ?? 0) !== 1;
-            $invoice = $this->invoiceService->generateForOrder($order, $tech->user_id, $forceRegenerate);
+            $invoice = $this->invoiceService->generateForOrder(
+                $order, $tech->user_id, $forceRegenerate, $validated['payment_collection'] ?? null
+            );
 
             // پاپ‌آپِ بدهی: اگر این فاکتور سهمِ شرکت (بدهیِ تکنسین) ایجاد کرد،
             // بلافاصله بعدِ اتمامِ سفارش به تکنسین یادآوری شود که کیف‌پول را شارژ

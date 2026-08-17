@@ -232,11 +232,9 @@
 </head>
 <body>
     @php
-        // دکمهٔ پرداخت آنلاین — فقط برای فاکتورِ فعالِ پرداخت‌نشدهٔ مبلغ‌دار.
-        // فاکتورِ لغوشده/جایگزین‌شده (superseded) یا رایگان دکمه نمی‌گیرد.
-        $isPayable = $invoice->superseded_at === null
-            && ! in_array($invoice->status, ['paid', 'cancelled'], true)
-            && (int) $invoice->total_amount > 0;
+        // دکمهٔ پرداخت آنلاین — مرجعِ واحد: فاکتورِ لغو/جایگزین‌شده/رایگان/
+        // نقدی (تسویه در محل) دکمه نمی‌گیرد.
+        $isPayable = $invoice->isPayableOnline();
     @endphp
     <div class="toolbar" style="gap: 10px;">
         <button class="btn-print" onclick="window.print()">پرینت / دانلود</button>

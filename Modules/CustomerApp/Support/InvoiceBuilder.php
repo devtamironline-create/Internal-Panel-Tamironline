@@ -160,8 +160,10 @@ final class InvoiceBuilder
     private static function buildPayment(?Invoice $invoice, ?\DateTimeInterface $paidAt): array
     {
         $isPaid = $invoice?->status === 'paid';
+        // مرجعِ واحدِ «درگاه نشان بده؟» — فاکتورِ نقدی (تسویه در محل) و
+        // لغو/جایگزین‌شده/رایگان لینکِ پرداخت نمی‌گیرند.
         $paymentUrl = null;
-        if ($invoice && ! $isPaid && $invoice->status === 'issued') {
+        if ($invoice && $invoice->isPayableOnline()) {
             $paymentUrl = route('crm.payment.pay', ['invoiceCode' => $invoice->public_token]);
         }
 
@@ -177,6 +179,9 @@ final class InvoiceBuilder
             //  - pay_url فقط وقتی فاکتور قابلِ پرداخت است (همان payment_url؛
             //    payment_url برای سازگاری با نسخهٔ فعلیِ اپ می‌ماند).
             'public_token' => $invoice?->public_token,
+            // نقدی/آنلاین — نقدی یعنی «در محل تسویه می‌شود» و اپ نباید
+            // هیچ دکمهٔ پرداختی نشان دهد. null = فاکتورِ قدیمی.
+            'collection_method' => $invoice?->collection_method,
             'pay_url' => $paymentUrl,
             // یک‌کلیکه: مستقیم به درگاه بدونِ صفحهٔ پیش‌نمایش — اپ ?return=
             // خودش را به همین اضافه می‌کند.
