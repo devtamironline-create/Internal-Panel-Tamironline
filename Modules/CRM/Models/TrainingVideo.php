@@ -15,6 +15,7 @@ class TrainingVideo extends Model
         'description',
         'is_local',
         'video_url',
+        'video_low_url',
         'thumbnail',
         'duration_seconds',
         'sort_order',
@@ -62,6 +63,19 @@ class TrainingVideo extends Model
     }
 
     /**
+     * URL نسخهٔ کم‌حجم (نت ضعیف) — فقط برای فایل‌های لوکالِ دارای نسخهٔ
+     * دوم؛ در غیر این صورت null و پلیر گزینهٔ کیفیت را نشان نمی‌دهد.
+     */
+    public function lowPlaybackUrl(): ?string
+    {
+        if (! $this->is_local || ! $this->video_low_url) {
+            return null;
+        }
+
+        return route('crm.training.file.video', ['video' => $this->id, 'q' => 'low']);
+    }
+
+    /**
      * URL تامبنیل از طریق روت Laravel — مشابه playbackUrl برای ویدیو.
      */
     public function thumbnailUrl(): ?string
@@ -83,10 +97,19 @@ class TrainingVideo extends Model
             return 'mp4';
         }
         $url = (string) $this->video_url;
-        if (str_contains($url, 'aparat.com')) return 'aparat';
-        if (str_contains($url, 'youtube.com') || str_contains($url, 'youtu.be')) return 'youtube';
-        if (str_contains($url, 'vimeo.com')) return 'vimeo';
-        if (preg_match('/\.(mp4|webm|ogv|mov)(\?.*)?$/i', $url)) return 'mp4';
+        if (str_contains($url, 'aparat.com')) {
+            return 'aparat';
+        }
+        if (str_contains($url, 'youtube.com') || str_contains($url, 'youtu.be')) {
+            return 'youtube';
+        }
+        if (str_contains($url, 'vimeo.com')) {
+            return 'vimeo';
+        }
+        if (preg_match('/\.(mp4|webm|ogv|mov)(\?.*)?$/i', $url)) {
+            return 'mp4';
+        }
+
         return 'unknown';
     }
 
@@ -97,7 +120,7 @@ class TrainingVideo extends Model
             return null;
         }
 
-        return 'https://www.aparat.com/video/video/embed/videohash/' . $m[1] . '/vt/frame';
+        return 'https://www.aparat.com/video/video/embed/videohash/'.$m[1].'/vt/frame';
     }
 
     /** برای یوتیوب: تبدیل URL به URL embed. */
@@ -106,7 +129,7 @@ class TrainingVideo extends Model
         $url = (string) $this->video_url;
         if (preg_match('#youtu\.be/([A-Za-z0-9_-]+)#', $url, $m)
             || preg_match('#youtube\.com/watch\?v=([A-Za-z0-9_-]+)#', $url, $m)) {
-            return 'https://www.youtube.com/embed/' . $m[1];
+            return 'https://www.youtube.com/embed/'.$m[1];
         }
 
         return null;

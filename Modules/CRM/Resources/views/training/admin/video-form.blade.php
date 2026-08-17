@@ -88,6 +88,19 @@
                 <input type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime"
                        class="w-full text-sm">
                 <p class="text-[11px] text-gray-400 mt-1">فرمت‌ها: mp4, webm, mov — حداکثر ۲۰۰ مگابایت.</p>
+
+                {{-- نسخهٔ کم‌حجم برای نت ضعیف — اختیاری --}}
+                <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نسخهٔ کم‌حجم (نت ضعیف) — اختیاری</label>
+                    @if(($video->video_low_url ?? null) && $video->id)
+                        <p class="text-[11px] text-emerald-700 mb-2">
+                            فایل کم‌حجم فعلی: <a href="{{ route('crm.training.file.video', ['video' => $video->id, 'q' => 'low']) }}" target="_blank" class="underline">مشاهده</a>
+                        </p>
+                    @endif
+                    <input type="file" name="video_low_file" accept="video/mp4,video/webm,video/quicktime"
+                           class="w-full text-sm">
+                    <p class="text-[11px] text-gray-400 mt-1">همان ویدیو با کیفیت پایین‌تر (مثلاً 480p) — حداکثر ۱۰۰ مگابایت. اگر آپلود شود، پلیر تکنسین دکمهٔ «کیفیت کم» می‌گیرد.</p>
+                </div>
             </div>
 
             <div>

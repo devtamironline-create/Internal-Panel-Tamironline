@@ -127,6 +127,10 @@ class TechOrderDetailResource extends JsonResource
                 'online_collection_blocked_reason' => $onlineAllowed
                     ? null
                     : 'اعتبار کیف‌پول شما به سقف مجاز رسیده است؛ فعلاً فقط دریافت نقدی ممکن است.',
+                // برگشتیِ تأییدشده (گارانتی): فاکتور می‌تواند ۰ تومان باشد — اپ
+                // نباید با ولیدیشن سمتِ خودش جلوی صفر را بگیرد. برای بقیه
+                // سفارش‌ها مبلغ صفر سمتِ سرور رد می‌شود.
+                'zero_total_allowed' => ! is_null($this->return_type),
                 'price_customer' => (int) ($this->price_customer ?? 0) ?: null,
                 'cost_price' => (int) ($this->cost_price ?? 0) ?: null,
                 'total_invoice' => (int) ($this->total_invoice ?? 0) ?: null,
@@ -141,7 +145,7 @@ class TechOrderDetailResource extends JsonResource
             'device_image_url' => $this->device_img1 ? storage_url($this->device_img1) : null,
 
             'allowed_transitions' => $this->allowedTransitions($status),
-            'status_history' => $this->statusHistory(),
+            'status_history' => $this->statusHistory((int) ($request->user()?->id ?? 0)),
 
             'proformas' => $this->whenLoaded('proformas', fn () => $this->proformas->map(fn ($pf) => [
                 'id' => (int) $pf->id,
@@ -298,17 +302,18 @@ class TechOrderDetailResource extends JsonResource
     }
 
     /**
-     * تاریخچهٔ وضعیت — بدونِ نامِ تغییردهنده (طبقِ خواستِ کاربر).
+     * تاریخچهٔ وضعیت — بدونِ نامِ تغییردهنده و با حذفِ حریمِ خصوصی:
+     * یادداشت فقط از خودِ تکنسین؛ لاگ‌های تخصیص/لغو تخصیصِ دیگران حذف.
      *
      * @return array<int, array<string, mixed>>
      */
-    private function statusHistory(): array
+    private function statusHistory(int $techId): array
     {
         if (! $this->relationLoaded('statusLogs')) {
             return [];
         }
 
-        return $this->statusLogs->map(function ($log) {
+        return \Modules\CRM\Models\OrderStatusLog::visibleToTechnician($this->statusLogs, $techId)->map(function ($log) {
             $to = OrderStatus::tryFrom((string) $log->to_status);
 
             return [

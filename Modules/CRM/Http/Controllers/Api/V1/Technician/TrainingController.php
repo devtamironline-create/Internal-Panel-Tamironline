@@ -119,6 +119,8 @@ class TrainingController extends Controller
             'provider' => method_exists($video, 'sourceType') ? $video->sourceType() : null,
             'video_url' => $video->video_url,
             'playback_url' => method_exists($video, 'playbackUrl') ? $video->playbackUrl() : null,
+            // نسخهٔ کم‌حجم برای نت ضعیف — null یعنی موجود نیست.
+            'playback_url_low' => $video->lowPlaybackUrl(),
             'thumbnail_url' => method_exists($video, 'thumbnailUrl') ? $video->thumbnailUrl() : null,
             'duration_seconds' => (int) ($video->duration_seconds ?? 0) ?: null,
             'watched' => $watched,
