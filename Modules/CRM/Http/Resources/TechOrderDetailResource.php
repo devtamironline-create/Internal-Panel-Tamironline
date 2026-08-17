@@ -127,6 +127,10 @@ class TechOrderDetailResource extends JsonResource
                 'online_collection_blocked_reason' => $onlineAllowed
                     ? null
                     : 'اعتبار کیف‌پول شما به سقف مجاز رسیده است؛ فعلاً فقط دریافت نقدی ممکن است.',
+                // برگشتیِ تأییدشده (گارانتی): فاکتور می‌تواند ۰ تومان باشد — اپ
+                // نباید با ولیدیشن سمتِ خودش جلوی صفر را بگیرد. برای بقیه
+                // سفارش‌ها مبلغ صفر سمتِ سرور رد می‌شود.
+                'zero_total_allowed' => ! is_null($this->return_type),
                 'price_customer' => (int) ($this->price_customer ?? 0) ?: null,
                 'cost_price' => (int) ($this->cost_price ?? 0) ?: null,
                 'total_invoice' => (int) ($this->total_invoice ?? 0) ?: null,

@@ -684,6 +684,30 @@ class ReturnFlowProfessionalTest extends TestCase
         $this->assertSame(1, Invoice::withSuperseded()->where('order_id', $order->id)->count());
     }
 
+    /**
+     * برگشتیِ گارانتیِ بدونِ فاکتورِ قبلی: بستن با ۰ تومان مجاز است و یک
+     * فاکتورِ رسمیِ صفرتومانی صادر می‌شود (سندِ کار) — بدونِ درگاهِ پرداخت.
+     */
+    public function test_a_warranty_return_closes_with_a_zero_toman_invoice(): void
+    {
+        $tech = $this->technician();
+        $order = $this->pendingReturnedOrder($tech);
+
+        $this->callReturnReview($order, $tech, ['approved' => '1', 'days' => 2]);
+
+        $response = $this->callUpdateStatus($order->fresh(), $tech, [
+            'status' => OrderStatus::Completed->value,
+            'price_customer' => 0,
+            'invoice_descripotion' => 'گارانتی — رفع ایراد بدون هزینه',
+        ]);
+
+        $this->assertTrue($response->getData(true)['success']);
+
+        $invoice = Invoice::where('order_id', $order->id)->firstOrFail();
+        $this->assertSame(0, (int) $invoice->total_amount);
+        $this->assertFalse($invoice->isPayableOnline(), 'فاکتور صفرتومانی نباید درگاه پرداخت داشته باشد.');
+    }
+
     // ───────────────────────── ۴) رد → فلوی عادی؛ فاکتورِ قبلی بایگانی ولی در دسترس
 
     public function test_rejected_review_completion_supersedes_but_never_loses_the_old_invoice(): void
