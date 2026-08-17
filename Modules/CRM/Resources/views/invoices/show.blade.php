@@ -8,6 +8,11 @@
         <div>
             <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">فاکتور <span dir="ltr">{{ $invoice->invoice_code }}</span></h1>
             <span class="inline-block mt-2 px-2.5 py-1 text-xs font-medium rounded-full {{ $invoice->statusBadge() }}">{{ $invoice->statusLabel() }}</span>
+            @if($invoice->collectionMethodLabel())
+                <span class="inline-block mt-2 px-2.5 py-1 text-xs font-medium rounded-full {{ $invoice->isCashCollected() ? 'bg-sky-100 text-sky-800' : 'bg-teal-100 text-teal-800' }}">
+                    {{ $invoice->collectionMethodLabel() }}
+                </span>
+            @endif
             @if($invoice->superseded_at)
                 <span class="inline-block mt-2 px-2.5 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800"
                       title="این فاکتور با تکمیل مجدد سفارش بایگانی شده و فاکتور جدیدی جایگزین آن است.">

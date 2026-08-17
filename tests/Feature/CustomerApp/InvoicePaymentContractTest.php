@@ -28,6 +28,7 @@ class InvoicePaymentContractTest extends TestCase
             $t->unsignedBigInteger('order_id')->nullable();
             $t->bigInteger('total_amount')->default(0);
             $t->string('status', 20)->default('issued');
+            $t->string('collection_method', 10)->nullable();
             $t->timestamp('issued_at')->nullable();
             $t->timestamp('paid_at')->nullable();
             $t->timestamp('superseded_at')->nullable();

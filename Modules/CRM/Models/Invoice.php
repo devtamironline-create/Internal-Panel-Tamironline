@@ -26,6 +26,7 @@ class Invoice extends Model
         'commission_percent',
         'in_wallet',
         'status',
+        'collection_method',
         'issued_at',
         'paid_at',
         'superseded_at',
@@ -125,6 +126,35 @@ class Invoice extends Model
     public function walletTransactions(): HasMany
     {
         return $this->hasMany(WalletTransaction::class);
+    }
+
+    /** آیا این فاکتور نقدی تسویه می‌شود؟ (تکنسین در محل پول گرفته) */
+    public function isCashCollected(): bool
+    {
+        return $this->collection_method === 'cash';
+    }
+
+    /**
+     * تنها مرجعِ «آیا درگاهِ آنلاین باید نشان داده شود؟» — صفحهٔ پرداخت،
+     * endpoint وضعیت، رسیدِ عمومی و اپِ مشتری همه از همین می‌خوانند.
+     * فاکتورِ نقدی (انتخابِ تکنسین هنگام تکمیل) درگاه ندارد.
+     */
+    public function isPayableOnline(): bool
+    {
+        return $this->superseded_at === null
+            && ! in_array($this->status, ['paid', 'cancelled'], true)
+            && (int) $this->total_amount > 0
+            && ! $this->isCashCollected();
+    }
+
+    /** برچسبِ فارسیِ روشِ دریافت — null یعنی قدیمی/نامشخص. */
+    public function collectionMethodLabel(): ?string
+    {
+        return match ($this->collection_method) {
+            'cash' => 'نقدی (دریافت در محل)',
+            'online' => 'اعتباری (پرداخت آنلاین)',
+            default => null,
+        };
     }
 
     public function statusLabel(): string

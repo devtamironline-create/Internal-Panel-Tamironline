@@ -58,6 +58,10 @@ class OrderActionController extends Controller
             'pieces.*.buy_price' => 'nullable|integer|min:0',
             'pieces.*.customer_price' => 'nullable|integer|min:0',
             'invoice_descripotion' => 'nullable|string|max:2000',
+            // «روش دریافت وجه» — cash: تکنسین در محل نقد گرفته (درگاه به
+            // مشتری نشان داده نمی‌شود)؛ online: مشتری آنلاین می‌پردازد و
+            // تکنسین نباید نقدی بگیرد. nullable تا کلاینت‌های قدیمی نشکنند.
+            'payment_collection' => 'nullable|in:cash,online',
             'save_as_draft' => 'nullable|boolean',
             // سقف را از خودِ PHP می‌گیریم، نه عددِ ثابت: اگر
             // upload_max_filesize سرور کوچک‌تر باشد، فایل پیش از رسیدن به
@@ -158,7 +162,9 @@ class OrderActionController extends Controller
             // و باید فعال و قابلِ مشاهده بماند (نه بایگانی، نه ۴۰۴).
             $order->refresh();
             $forceRegenerate = (int) ($order->return_type ?? 0) !== 1;
-            $this->invoiceService->generateForOrder($order, $tech->user_id, $forceRegenerate);
+            $this->invoiceService->generateForOrder(
+                $order, $tech->user_id, $forceRegenerate, $validated['payment_collection'] ?? null
+            );
         }
 
         // SMS خودکارِ وضعیت. نهایی‌سازیِ پیش‌نویس (Completed→Completed) پیامک

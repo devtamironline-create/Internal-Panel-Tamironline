@@ -97,6 +97,7 @@ class InvoiceMismatchTest extends TestCase
             $t->unsignedTinyInteger('commission_percent')->default(0);
             $t->boolean('in_wallet')->default(false);
             $t->string('status', 20)->default('issued');
+            $t->string('collection_method', 10)->nullable();
             $t->timestamp('issued_at')->nullable();
             $t->timestamp('paid_at')->nullable();
             $t->timestamp('superseded_at')->nullable();

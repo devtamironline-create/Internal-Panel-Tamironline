@@ -267,7 +267,8 @@
 
                     {{-- دکمه‌های مسیریابی — نشان / گوگل‌مپ / بلد --}}
                     <div class="grid grid-cols-3 gap-2">
-                        <a href="https://neshan.org/maps/@{{ $lat }},{{ $lng }},16z" target="_blank" rel="noopener"
+                        {{-- «@» قبل از {{ در بلید یعنی escape — مختصات خام چاپ می‌شد و لینک نقشه خراب بود. --}}
+                        <a href="https://neshan.org/maps/{{ '@' }}{{ $lat }},{{ $lng }},16z" target="_blank" rel="noopener"
                            class="flex flex-col items-center justify-center gap-1 py-2.5 rounded-xl bg-emerald-50 text-emerald-700 text-[11px] font-bold active:bg-emerald-100">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
                             نشان
@@ -785,6 +786,28 @@
                         @error('invoice_descripotion')
                             <p class="text-[10px] text-rose-600 mt-1">{{ $message }}</p>
                         @enderror
+                    </div>
+
+                    {{-- روش دریافت وجه — نقدی: درگاه به مشتری نشان داده نمی‌شود؛
+                         اعتباری: مشتری آنلاین می‌پردازد و تکنسین نباید نقدی بگیرد. --}}
+                    <div x-data="{ payCollect: '{{ old('payment_collection', 'cash') }}' }">
+                        <label class="text-[11px] text-gray-700 font-bold mb-1 block">روش دریافت وجه *</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition"
+                                   :class="payCollect === 'cash' ? 'border-sky-500 bg-sky-50' : 'border-gray-200'">
+                                <input type="radio" name="payment_collection" value="cash" x-model="payCollect" class="accent-sky-600">
+                                <span class="text-xs font-bold">نقدی (در محل)</span>
+                            </label>
+                            <label class="flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition"
+                                   :class="payCollect === 'online' ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'">
+                                <input type="radio" name="payment_collection" value="online" x-model="payCollect" class="accent-emerald-600">
+                                <span class="text-xs font-bold">اعتباری (آنلاین)</span>
+                            </label>
+                        </div>
+                        <div x-show="payCollect === 'online'" x-cloak
+                             class="mt-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-[10px] leading-6 font-bold">
+                            ⚠️ پرداخت اعتباری: به هیچ عنوان وجه نقد از مشتری دریافت نکنید — لینک پرداخت آنلاین برای مشتری فعال می‌شود.
+                        </div>
                     </div>
 
                     {{-- «پیش‌نویس» حذف شد — تکمیل همیشه نهایی است و فاکتور همان لحظه صادر می‌شود. --}}

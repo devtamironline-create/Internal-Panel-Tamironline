@@ -75,6 +75,7 @@ class CustomerOnlinePaymentTest extends TestCase
             $t->integer('commission_percent')->default(0);
             $t->boolean('in_wallet')->default(false);
             $t->string('status', 20)->default('issued');
+            $t->string('collection_method', 10)->nullable();
             $t->timestamp('issued_at')->nullable();
             $t->timestamp('paid_at')->nullable();
             $t->timestamp('superseded_at')->nullable();
@@ -339,6 +340,38 @@ class CustomerOnlinePaymentTest extends TestCase
         $this->assertStringContainsString('لغو شده', $view->getData()['message']);
 
         $this->assertSame(0, Payment::count());
+    }
+
+    // ───────────────────────── فاکتورِ نقدی: درگاه خاموش
+
+    public function test_a_cash_collected_invoice_shows_no_gateway_anywhere(): void
+    {
+        $tech = $this->technician();
+        $invoice = $this->invoiceFor($tech, 900_000, [
+            'public_token' => str_repeat('k', 40), 'collection_method' => 'cash',
+        ]);
+
+        // endpoint وضعیت: قابلِ پرداخت نیست + روشِ دریافت اعلام می‌شود.
+        $json = app(PaymentController::class)->status($invoice->public_token)->getData(true);
+        $this->assertFalse($json['data']['payable']);
+        $this->assertSame('cash', $json['data']['collection_method']);
+
+        // شروعِ پرداخت: بلاک با پیامِ روشن؛ هیچ paymentای ساخته نمی‌شود.
+        $view = app(PaymentController::class)->initiate(Request::create('/', 'POST'), $invoice->public_token);
+        $this->assertStringContainsString('نقدی', $view->getData()['message']);
+        $this->assertSame(0, Payment::count());
+    }
+
+    public function test_an_online_collected_invoice_stays_payable(): void
+    {
+        $tech = $this->technician();
+        $invoice = $this->invoiceFor($tech, 900_000, [
+            'public_token' => str_repeat('l', 40), 'collection_method' => 'online',
+        ]);
+
+        $json = app(PaymentController::class)->status($invoice->public_token)->getData(true);
+        $this->assertTrue($json['data']['payable']);
+        $this->assertSame('online', $json['data']['collection_method']);
     }
 
     // ───────────────────────── ۶) لینکِ برگشت به اپ
