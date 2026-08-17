@@ -44,6 +44,18 @@ class TrainingVideoStreamingTest extends TestCase
             $t->timestamps();
         });
 
+        // توکن‌های Sanctum — مسیر احراز APK (پروکسی هم‌مبدأ اپ).
+        Schema::create('personal_access_tokens', function ($t) {
+            $t->id();
+            $t->morphs('tokenable');
+            $t->string('name');
+            $t->string('token', 64)->unique();
+            $t->text('abilities')->nullable();
+            $t->timestamp('last_used_at')->nullable();
+            $t->timestamp('expires_at')->nullable();
+            $t->timestamps();
+        });
+
         Storage::fake('public');
         Storage::disk('public')->put('crm/training/videos/a.mp4', self::BODY);
         Storage::disk('public')->put('crm/training/videos/a-low.mp4', 'LOWQ');
@@ -135,5 +147,34 @@ class TrainingVideoStreamingTest extends TestCase
     public function test_guests_cannot_stream_training_files(): void
     {
         $this->get('/crm/training/'.$this->video()->id.'/video')->assertForbidden();
+    }
+
+    /**
+     * مسیر APK: WebView کوکی شخص‌ثالث ندارد؛ پروکسیِ اپ همان توکن Sanctum
+     * مسیرهای /v1/technician/* را Bearer می‌فرستد — باید پذیرفته شود.
+     */
+    public function test_a_sanctum_bearer_token_streams_without_any_cookie(): void
+    {
+        $tech = Technician::forceCreate(['first_name' => 'تست', 'mobile' => '09120000000', 'status' => 'active']);
+        $token = $tech->createToken('apk')->plainTextToken;
+        $video = $this->video(['video_low_url' => 'crm/training/videos/a-low.mp4']);
+
+        $response = $this->get('/crm/training/'.$video->id.'/video', ['Authorization' => 'Bearer '.$token]);
+        $response->assertOk();
+        $this->assertSame(self::BODY, $response->streamedContent());
+
+        // Range و q=low هم با همین احراز کار می‌کنند.
+        $partial = $this->get('/crm/training/'.$video->id.'/video?q=low', [
+            'Authorization' => 'Bearer '.$token,
+            'Range' => 'bytes=0-1',
+        ]);
+        $partial->assertStatus(206);
+        $this->assertSame('LO', $partial->streamedContent());
+    }
+
+    public function test_an_invalid_bearer_token_is_rejected(): void
+    {
+        $this->get('/crm/training/'.$this->video()->id.'/video', ['Authorization' => 'Bearer invalid-token'])
+            ->assertForbidden();
     }
 }
