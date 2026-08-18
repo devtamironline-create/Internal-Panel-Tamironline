@@ -48,6 +48,10 @@ class TechOrderListResource extends JsonResource
             'status_changed_at' => $this->status_changed_at?->utc()->toIso8601String(),
             'sla_deadline_at' => \Modules\CRM\Support\SlaPolicy::deadlineFor($this->resource)?->utc()->toIso8601String(),
             'return_review_pending' => (bool) $this->return_review_pending,
+            // دکمهٔ «پیش‌فاکتور» روی کارتِ لیست — هم‌مرجع با جزئیات و با
+            // گیتِ ۴۲۲ سرور (OrderStatus::allowsProforma).
+            'can_create_proforma' => \Modules\CRM\Models\Proforma::techEnabled()
+                && (bool) $status?->allowsProforma(),
         ];
     }
 }

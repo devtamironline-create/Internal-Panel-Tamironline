@@ -105,6 +105,17 @@ class Proforma extends Model
     }
 
     /**
+     * آیا پیش‌فاکتورِ تکنسین روشن است؟ تنها مرجعِ خواندنِ این فلگ.
+     *
+     * memoized: ریسورسِ لیستِ سفارش‌ها برای هر ردیف صدایش می‌زند و بدونِ
+     * این، هر صفحهٔ لیست ۲۰ کوئریِ تکراری به crm_settings می‌زد.
+     */
+    public static function techEnabled(): bool
+    {
+        return once(fn () => \Modules\CRM\Models\CrmSetting::get('tech_proforma_enabled') === '1');
+    }
+
+    /**
      * نرمال‌سازیِ اقلامِ ورودی + محاسبهٔ subtotal/total. ورودی آرایه‌ای از
      * {title, quantity, unit_price} است؛ خروجی با total هر ردیف پر می‌شود.
      *

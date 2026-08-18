@@ -16,6 +16,7 @@ use Modules\CRM\Http\Controllers\Api\V1\Technician\TrainingController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\TransferReceiptController;
 use Modules\CRM\Http\Controllers\Api\V1\Technician\WalletController;
 use Modules\CRM\Http\Middleware\EnsureTechnician;
+use Modules\CRM\Http\Middleware\RequireTrainingCompleted;
 use Modules\CRM\Http\Middleware\TechRollingToken;
 
 /*
@@ -40,7 +41,10 @@ Route::prefix('v1/technician')->group(function () {
         ->middleware('throttle:otp-verify')->name('api.tech.auth.verify-otp');
 
     // ─── Private — auth:sanctum + tech guard + rolling token ─────
-    Route::middleware(['upload.size', 'auth:sanctum', EnsureTechnician::class, TechRollingToken::class])->group(function () {
+    // RequireTrainingCompleted: تکنسینِ آموزش‌ندیده حتی با توکنِ معتبر هم
+    // به مسیرهای کاری نمی‌رسد (allowlist داخلِ خودِ میدل‌ور است) — گیتِ
+    // سمتِ اپ مکمل است، نه جایگزین.
+    Route::middleware(['upload.size', 'auth:sanctum', EnsureTechnician::class, TechRollingToken::class, RequireTrainingCompleted::class])->group(function () {
         Route::get('/me', [AuthController::class, 'me'])->name('api.tech.me');
         // مهلت‌ها و متنِ پیام‌های سیستم SLA — اپ هر ۳۰ دقیقه refresh می‌کند.
         Route::get('/app-config', \Modules\CRM\Http\Controllers\Api\V1\Technician\AppConfigController::class)
