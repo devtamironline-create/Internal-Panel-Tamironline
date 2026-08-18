@@ -39,11 +39,18 @@ class CommissionCalculator
      *                                   فاکتور که مبلغ خود را دارد).
      * @return array{total:int, tech_share:int, company_share:int, percent:int, calc_type:string}
      */
+    /**
+     * مبلغِ کلِ سفارش با همان اولویتِ همیشگی — تنها مرجعِ «مبلغِ سفارش»
+     * تا تصمیم‌های بیرونی (مثلِ بازصدورِ فاکتور) از این فرمول جدا نیفتند.
+     */
+    public function orderTotal(Order $order): int
+    {
+        return (int) ($order->price_customer ?? $order->total_invoice ?? $order->final_price ?? $order->items_subtotal ?? 0);
+    }
+
     public function calculate(Order $order, Technician $technician, ?int $explicitTotal = null): array
     {
-        $total = $explicitTotal !== null
-            ? (int) $explicitTotal
-            : (int) ($order->price_customer ?? $order->total_invoice ?? $order->final_price ?? $order->items_subtotal ?? 0);
+        $total = $explicitTotal !== null ? (int) $explicitTotal : $this->orderTotal($order);
 
         // درصدِ مؤثر در لحظهٔ تکمیلِ سفارش (نه درصدِ «الان») — تغییراتِ زمان‌دارِ
         // درصد (crm_technician_percent_changes) تاریخِ مالیِ گذشته را عوض نمی‌کنند

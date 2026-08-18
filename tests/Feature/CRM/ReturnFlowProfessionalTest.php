@@ -12,6 +12,7 @@ use Modules\CRM\Http\Resources\TechOrderDetailResource;
 use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\Technician;
+use Modules\CRM\Models\WalletTransaction;
 use Tests\TestCase;
 
 /**
@@ -682,6 +683,84 @@ class ReturnFlowProfessionalTest extends TestCase
         // فاکتورِ اصلی نه superseded شده نه فاکتورِ جدیدی ساخته شده.
         $this->assertNull($original->fresh()->superseded_at);
         $this->assertSame(1, Invoice::withSuperseded()->where('order_id', $order->id)->count());
+    }
+
+    /**
+     * باگِ گزارش‌شدهٔ ۱۴۰۵/۰۵/۲۸: برگشتیِ تأییدشده که با **مبلغ** دوباره
+     * تکمیل می‌شود (اصلاحِ عددِ اشتباه یا کارِ اضافه) باید فاکتورِ تازه
+     * بگیرد — وگرنه سفارش عددِ جدید را نشان می‌دهد ولی بدهیِ تکنسین روی
+     * عددِ قدیمی می‌ماند.
+     */
+    public function test_a_priced_return_redo_reissues_the_invoice_and_fixes_the_debt(): void
+    {
+        $tech = $this->technician();
+        $order = $this->pendingReturnedOrder($tech);
+
+        // فاکتورِ اشتباهِ اول: ۳۲۸ میلیون (سهم شرکت ۳۰٪ = ۹۸٫۴ میلیون)
+        $wrong = Invoice::forceCreate([
+            'invoice_code' => 'INV-WRONG-1', 'order_id' => $order->id,
+            'technician_id' => $tech->id, 'total_amount' => 328_000_000,
+            'company_share' => 98_400_000, 'status' => 'issued',
+            'in_wallet' => true, 'issued_at' => now()->subDay(),
+        ]);
+        WalletTransaction::forceCreate([
+            'technician_id' => $tech->id, 'order_id' => $order->id, 'invoice_id' => $wrong->id,
+            'type' => \Modules\CRM\Enums\WalletTxType::Commission->value,
+            'amount' => -98_400_000, 'balance_after' => -98_400_000,
+            'note' => 'سهم شرکت از فاکتور '.$wrong->invoice_code,
+        ]);
+        $tech->forceFill(['wallet_balance' => -98_400_000])->save();
+
+        $this->callReturnReview($order, $tech, ['approved' => '1', 'days' => 3]);
+        $this->assertSame(1, (int) $order->fresh()->return_type);
+
+        // تکمیلِ دوباره با عددِ درست: ۳۲٫۸ میلیون
+        $this->callUpdateStatus($order->fresh(), $tech, [
+            'status' => OrderStatus::Completed->value,
+            'price_customer' => 32_800_000,
+            'invoice_descripotion' => 'اصلاح مبلغ فاکتور — همان کار قبلی',
+        ]);
+
+        // فاکتورِ اشتباه بایگانی شد و فاکتورِ تازه با عددِ درست صادر شد.
+        $this->assertNotNull($wrong->fresh()->superseded_at);
+        $fresh = Invoice::where('order_id', $order->id)->firstOrFail();
+        $this->assertSame(32_800_000, (int) $fresh->total_amount);
+        $this->assertSame(9_840_000, (int) $fresh->company_share);
+
+        // برآیندِ کیف‌پول: بدهی فقط بابتِ فاکتورِ فعال (۹٫۸۴ میلیون) —
+        // کمیسیونِ فاکتورِ اشتباه برگشت خورده، نه اینکه روی هم جمع شود.
+        $this->assertSame(-9_840_000, (int) $tech->fresh()->wallet_balance);
+    }
+
+    /** برگشتِ کمیسیون idempotent است — تکمیلِ دوباره بدهی را دوبار برنمی‌گرداند. */
+    public function test_the_commission_reversal_is_not_repeated(): void
+    {
+        $tech = $this->technician();
+        $order = $this->pendingReturnedOrder($tech);
+        $old = Invoice::forceCreate([
+            'invoice_code' => 'INV-OLD-3', 'order_id' => $order->id,
+            'technician_id' => $tech->id, 'total_amount' => 1_000_000,
+            'company_share' => 300_000, 'status' => 'issued',
+            'in_wallet' => true, 'issued_at' => now()->subDay(),
+        ]);
+        WalletTransaction::forceCreate([
+            'technician_id' => $tech->id, 'order_id' => $order->id, 'invoice_id' => $old->id,
+            'type' => \Modules\CRM\Enums\WalletTxType::Commission->value,
+            'amount' => -300_000, 'balance_after' => -300_000,
+            'note' => 'سهم شرکت از فاکتور '.$old->invoice_code,
+        ]);
+        $tech->forceFill(['wallet_balance' => -300_000])->save();
+
+        $service = app(\Modules\CRM\Services\InvoiceService::class);
+        $order->forceFill(['price_customer' => 2_000_000, 'status' => OrderStatus::Completed->value])->save();
+
+        $service->generateForOrder($order->fresh(), null, true);
+        $service->generateForOrder($order->fresh(), null, true);
+
+        // فقط یک برگشت برای فاکتورِ اولِ بایگانی‌شده ثبت شده باشد.
+        $reversals = WalletTransaction::where('invoice_id', $old->id)
+            ->where('amount', '>', 0)->count();
+        $this->assertSame(1, $reversals);
     }
 
     /**

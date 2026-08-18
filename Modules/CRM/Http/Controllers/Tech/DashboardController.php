@@ -470,14 +470,15 @@ class DashboardController extends Controller
         // پیش‌نویس‌ها فاکتور صادر نمی‌کنند — تکنسین می‌تواند بعداً دوباره ثبت
         // کند بدون save_as_draft تا فاکتور نهایی بخورد.
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
-            // forceRegenerate → اگر فاکتور قبلی برای این سفارش هست،
-            // superseded شود و فاکتور جدید با قیمت/قطعات فعلی ساخته شود.
-            // استثنا: تکمیلِ رایگانِ برگشتیِ تأییدشده (return_type=1) —
-            // فاکتورِ اصلی سندِ مالیِ کارِ اول است و باید فعال بماند.
+            // تصمیمِ بازصدور تنها در InvoiceService است (هم‌ارز API اپ):
+            // ادامهٔ **رایگانِ** برگشتی فاکتورِ قبلی را نگه می‌دارد، ولی
+            // برگشتیِ دارای مبلغ فاکتور را بازصادر می‌کند.
             $order->refresh();
-            $forceRegenerate = (int) ($order->return_type ?? 0) !== 1;
             $invoice = $this->invoiceService->generateForOrder(
-                $order, $tech->user_id, $forceRegenerate, $validated['payment_collection'] ?? null
+                $order,
+                $tech->user_id,
+                $this->invoiceService->shouldRegenerateForCompletion($order),
+                $validated['payment_collection'] ?? null
             );
 
             // پاپ‌آپِ بدهی: اگر این فاکتور سهمِ شرکت (بدهیِ تکنسین) ایجاد کرد،

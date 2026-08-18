@@ -177,13 +177,16 @@ class OrderActionController extends Controller
         ]);
 
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
-            // تکمیلِ رایگانِ برگشتیِ تأییدشده (return_type=1) فاکتورِ قبلی را
-            // supersede نمی‌کند — فاکتورِ اصلی سندِ مالیِ معتبرِ کارِ اول است
-            // و باید فعال و قابلِ مشاهده بماند (نه بایگانی، نه ۴۰۴).
+            // تصمیمِ بازصدور تنها در InvoiceService است: ادامهٔ **رایگانِ**
+            // برگشتیِ تأییدشده فاکتورِ قبلی را دست نمی‌زند، ولی اگر همان
+            // برگشتی مبلغ داشته باشد فاکتور بازصادر می‌شود (وگرنه بدهیِ
+            // تکنسین روی عددِ قدیمی می‌ماند).
             $order->refresh();
-            $forceRegenerate = (int) ($order->return_type ?? 0) !== 1;
             $this->invoiceService->generateForOrder(
-                $order, $tech->user_id, $forceRegenerate, $validated['payment_collection'] ?? null
+                $order,
+                $tech->user_id,
+                $this->invoiceService->shouldRegenerateForCompletion($order),
+                $validated['payment_collection'] ?? null
             );
         }
 

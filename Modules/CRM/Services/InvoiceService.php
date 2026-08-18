@@ -27,6 +27,29 @@ class InvoiceService
     public function __construct(protected CommissionCalculator $calc) {}
 
     /**
+     * آیا تکمیلِ (دوبارهٔ) این سفارش باید فاکتورِ تازه صادر کند؟
+     *
+     * قاعدهٔ عمومی: بله — مبلغ/قطعات عوض شده و فاکتور باید با سفارش بخواند.
+     *
+     * تنها استثنا: «ادامهٔ رایگانِ برگشتیِ گارانتی» (return_type=1) که مبلغش
+     * واقعاً **صفر** است؛ آن‌جا فاکتورِ اصلی سندِ مالیِ کارِ اول است و باید
+     * فعال بماند. اگر همان برگشتی مبلغ داشته باشد (اصلاحِ مبلغِ اشتباه یا
+     * کارِ اضافه)، فاکتور حتماً باید بازصادر شود — وگرنه سفارش مبلغِ جدید
+     * را نشان می‌دهد ولی فاکتور و سهمِ شرکت روی عددِ قدیمی می‌مانند و بدهیِ
+     * تکنسین هرگز اصلاح نمی‌شود (باگِ گزارش‌شدهٔ ۱۴۰۵/۰۵/۲۸).
+     *
+     * تنها مرجعِ این تصمیم — API اپ و پنلِ تکنسین هر دو از همین می‌خوانند.
+     */
+    public function shouldRegenerateForCompletion(Order $order): bool
+    {
+        if ((int) ($order->return_type ?? 0) !== 1) {
+            return true;
+        }
+
+        return $this->calc->orderTotal($order) > 0;
+    }
+
+    /**
      * @param  string|null  $collectionMethod  «روش دریافت» انتخابِ تکنسین
      *                                         (cash|online) — null = قدیمی
      */
@@ -65,16 +88,25 @@ class InvoiceService
 
         $invoice = DB::transaction(function () use ($order, $createdBy, $existing, $collectionMethod) {
             if ($existing) {
-                // فقط فاکتور قبلی را superseded می‌کنیم تا از لیست
-                // فعال خارج شود. **wallet tx آن را دست نمی‌زنیم** —
-                // طبق درخواست، فاکتور جدید کاملاً مجزا ثبت می‌شود و
-                // commission قبلی روی بدهی تکنسین باقی می‌ماند.
-                // تاریخچهٔ کامل (فاکتور قدیمی + tx قدیمی + فاکتور جدید
-                // + tx جدید) همگی در DB می‌مانند و قابل مشاهده‌اند.
-                Invoice::withoutGlobalScope('active')
+                // فاکتورهای فعالِ قبلی بایگانی (superseded) می‌شوند تا از
+                // لیستِ فعال خارج شوند — رکوردشان هرگز حذف نمی‌شود.
+                $superseded = Invoice::withoutGlobalScope('active')
                     ->where('order_id', $order->id)
                     ->whereNull('superseded_at')
+                    ->get();
+
+                Invoice::withoutGlobalScope('active')
+                    ->whereIn('id', $superseded->pluck('id'))
                     ->update(['superseded_at' => now()]);
+
+                // سهمِ شرکتِ فاکتورِ بایگانی‌شده برگشت می‌خورد (تصمیمِ
+                // ۱۴۰۵/۰۵/۲۸): سندِ مالیِ معتبر همان فاکتورِ فعال است، پس
+                // بدهیِ تکنسین هم فقط باید بابتِ همان باشد. تراکنشِ اصلی
+                // پاک نمی‌شود؛ یک تراکنشِ معکوس ثبت می‌شود تا تاریخچه کامل
+                // بماند و برآیندِ کیف‌پول درست شود.
+                foreach ($superseded as $old) {
+                    $this->reverseCommission($old, $createdBy);
+                }
             }
 
             $technician = $order->technician;
@@ -159,6 +191,50 @@ class InvoiceService
         }
 
         return $invoice;
+    }
+
+    /**
+     * برگشتِ سهمِ شرکتِ یک فاکتورِ بایگانی‌شده (superseded).
+     *
+     * تراکنشِ اصلی حذف نمی‌شود — یک تراکنشِ معکوس (+company_share) ثبت
+     * می‌شود تا هم تاریخچه کامل بماند و هم برآیندِ کیف‌پول فقط بابتِ
+     * فاکتورِ فعال باشد. idempotent: اگر برگشتِ همین فاکتور قبلاً ثبت شده
+     * باشد، دوباره ثبت نمی‌شود.
+     */
+    protected function reverseCommission(Invoice $old, ?int $createdBy = null): void
+    {
+        $companyShare = (int) $old->company_share;
+        if (! $old->technician_id || $companyShare <= 0 || ! $old->in_wallet) {
+            return;
+        }
+
+        $marker = '[reversal#'.$old->id.']';
+        $already = WalletTransaction::where('technician_id', $old->technician_id)
+            ->where('invoice_id', $old->id)
+            ->where('note', 'like', '%'.$marker.'%')
+            ->exists();
+
+        if ($already) {
+            return;
+        }
+
+        $last = (int) (WalletTransaction::where('technician_id', $old->technician_id)
+            ->orderByDesc('id')->value('balance_after') ?? 0);
+
+        WalletTransaction::create([
+            'technician_id' => $old->technician_id,
+            'order_id' => $old->order_id,
+            'invoice_id' => $old->id,
+            'wp_id' => null,
+            'type' => WalletTxType::Adjustment->value,
+            'amount' => $companyShare, // مثبت — بدهیِ قبلی برداشته می‌شود
+            'balance_after' => $last + $companyShare,
+            'note' => 'برگشت سهم شرکت فاکتور '.$old->invoice_code.' (بازصدور فاکتور) '.$marker,
+            'created_by' => $createdBy,
+        ]);
+
+        \Modules\CRM\Models\Technician::where('id', $old->technician_id)
+            ->update(['wallet_balance' => $last + $companyShare]);
     }
 
     /**
