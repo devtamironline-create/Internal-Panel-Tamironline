@@ -160,12 +160,13 @@ final class InvoiceBuilder
     private static function buildPayment(?Invoice $invoice, ?\DateTimeInterface $paidAt): array
     {
         $isPaid = $invoice?->status === 'paid';
-        // مرجعِ واحدِ «درگاه نشان بده؟» — فاکتورِ نقدی (تسویه در محل) و
-        // لغو/جایگزین‌شده/رایگان لینکِ پرداخت نمی‌گیرند.
-        $paymentUrl = null;
-        if ($invoice && $invoice->isPayableOnline()) {
-            $paymentUrl = route('crm.payment.pay', ['invoiceCode' => $invoice->public_token]);
-        }
+        // مرجعِ واحدِ «درگاه نشان بده؟» — فاکتورِ نقدی (تسویه در محل)،
+        // لغو/جایگزین‌شده/رایگان، و سفارشی که بدونِ انجامِ کار بسته شده
+        // (لغو/رد/ایاب و ذهاب) لینکِ پرداخت نمی‌گیرند.
+        $payable = (bool) $invoice?->isPayableOnline();
+        $paymentUrl = $payable
+            ? route('crm.payment.pay', ['invoiceCode' => $invoice->public_token])
+            : null;
 
         return [
             'method' => $isPaid ? 'online' : null,
@@ -179,6 +180,11 @@ final class InvoiceBuilder
             //  - pay_url فقط وقتی فاکتور قابلِ پرداخت است (همان payment_url؛
             //    payment_url برای سازگاری با نسخهٔ فعلیِ اپ می‌ماند).
             'public_token' => $invoice?->public_token,
+            // قرارداد صریح: اپ به‌جای حدس‌زدن از روی وضعیت سفارش، همین دو
+            // فیلد را بخواند. payable=false یعنی هیچ دکمهٔ پرداختی نشان
+            // ندهید و در صورت نیاز payable_reason را نمایش دهید.
+            'payable' => $payable,
+            'payable_reason' => $invoice?->notPayableReason(),
             // نقدی/آنلاین — نقدی یعنی «در محل تسویه می‌شود» و اپ نباید
             // هیچ دکمهٔ پرداختی نشان دهد. null = فاکتورِ قدیمی.
             'collection_method' => $invoice?->collection_method,
