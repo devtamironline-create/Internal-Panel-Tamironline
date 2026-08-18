@@ -75,6 +75,16 @@ class TechOrderDetailResource extends JsonResource
             // آیا تکنسین همین حالا مجاز است زمانِ مراجعه را تنظیم/تغییر/پاک کند؟
             // (سرور enforce می‌کند — فرانت نباید حدس بزند.)
             'can_schedule' => (bool) $status?->allowsVisitScheduling(),
+            // آیا همین حالا می‌توان برای این سفارش پیش‌فاکتور صادر کرد؟
+            // (پس از هماهنگی و پیش از بسته‌شدن، و مشروط به روشن‌بودنِ فلگِ
+            // پیش‌فاکتورِ تکنسین.) سرور همین قاعده را با ۴۲۲ enforce می‌کند.
+            'can_create_proforma' => $canProforma = \Modules\CRM\Models\Proforma::techEnabled()
+                && (bool) $status?->allowsProforma(),
+            'proforma_blocked_reason' => $canProforma ? null : match (true) {
+                ! \Modules\CRM\Models\Proforma::techEnabled() => 'سیستم پیش‌فاکتور غیرفعال است.',
+                (bool) $status?->isFinal() => 'این سفارش بسته شده است و دیگر پیش‌فاکتور نمی‌پذیرد.',
+                default => 'پیش‌فاکتور پس از هماهنگی و شروع کار قابلِ صدور است.',
+            },
 
             'customer' => [
                 'name' => $this->customer_name ?: ($this->customer->display_name ?? null),
