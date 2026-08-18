@@ -123,6 +123,17 @@ class PaymentController extends Controller
             ]);
         }
 
+        // سفارشی که بدونِ انجامِ کار بسته شده (لغو/رد/ایاب و ذهاب) —
+        // فاکتورِ قدیمی‌اش نباید درخواستی به درگاه بفرستد.
+        if ($invoice->orderClosedWithoutWork()) {
+            return view('crm::payment.result', [
+                'ok' => false,
+                'message' => 'این سفارش بسته شده است و پرداخت آنلاین برای آن فعال نیست. در صورت نیاز با پشتیبانی تماس بگیرید.',
+                'invoice' => $invoice,
+                'payment' => null,
+            ]);
+        }
+
         $amount = (int) $invoice->total_amount;
         if ($amount <= 0) {
             return view('crm::payment.result', [
@@ -254,6 +265,8 @@ class PaymentController extends Controller
                 // نقدی (تسویه در محل) یا آنلاین — null یعنی فاکتورِ قدیمی.
                 'collection_method' => $invoice->collection_method,
                 'payable' => $invoice->isPayableOnline(),
+                // چرا بسته است — متنِ آمادهٔ نمایش؛ null یعنی قابلِ پرداخت.
+                'payable_reason' => $invoice->notPayableReason(),
             ],
         ]);
     }

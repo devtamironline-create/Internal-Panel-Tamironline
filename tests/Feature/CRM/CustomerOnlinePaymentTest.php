@@ -342,6 +342,55 @@ class CustomerOnlinePaymentTest extends TestCase
         $this->assertSame(0, Payment::count());
     }
 
+    // ───────────────────────── سفارشِ بسته‌شده بدونِ انجامِ کار
+
+    /**
+     * سفارشی که تکمیل و فاکتور صادر شده بوده ولی بعداً لغو/رد/ایاب و ذهاب
+     * شده — درگاه باید همه‌جا خاموش شود (اپ مشتری، رسید، شروع پرداخت).
+     */
+    public function test_an_order_closed_without_work_turns_the_gateway_off(): void
+    {
+        $tech = $this->technician();
+
+        foreach (['cancelled' => 'm', 'declined' => 'n', 'transit' => 'o'] as $orderStatus => $letter) {
+            $invoice = $this->invoiceFor($tech, 800_000, ['public_token' => str_repeat($letter, 40)]);
+            $invoice->order->forceFill(['status' => $orderStatus])->save();
+            $invoice->refresh()->load('order');
+
+            $this->assertFalse($invoice->isPayableOnline(), $orderStatus.' نباید درگاه داشته باشد.');
+
+            $json = app(PaymentController::class)->status($invoice->public_token)->getData(true);
+            $this->assertFalse($json['data']['payable']);
+            $this->assertStringContainsString('بسته شده', (string) $json['data']['payable_reason']);
+
+            $view = app(PaymentController::class)->initiate(Request::create('/', 'POST'), $invoice->public_token);
+            $this->assertStringContainsString('بسته شده', $view->getData()['message']);
+        }
+
+        $this->assertSame(0, Payment::count(), 'هیچ درخواستی نباید به درگاه رفته باشد.');
+    }
+
+    /** سفارشِ «انجام کار» همچنان قابلِ پرداخت است — قاعده فقط بسته‌های بی‌کار را می‌گیرد. */
+    public function test_a_completed_order_stays_payable(): void
+    {
+        $tech = $this->technician();
+        $invoice = $this->invoiceFor($tech, 800_000, ['public_token' => str_repeat('p', 40)]);
+
+        $this->assertTrue($invoice->load('order')->isPayableOnline());
+        $this->assertNull($invoice->notPayableReason());
+        $this->assertTrue(app(PaymentController::class)->status($invoice->public_token)->getData(true)['data']['payable']);
+    }
+
+    /** سفارشِ در جریان (هنوز بسته نشده) هم قابلِ پرداخت است. */
+    public function test_an_open_order_stays_payable(): void
+    {
+        $tech = $this->technician();
+        $invoice = $this->invoiceFor($tech, 500_000, ['public_token' => str_repeat('q', 40)]);
+        $invoice->order->forceFill(['status' => 'repair_started'])->save();
+
+        $this->assertTrue($invoice->refresh()->load('order')->isPayableOnline());
+    }
+
     // ───────────────────────── فاکتورِ نقدی: درگاه خاموش
 
     public function test_a_cash_collected_invoice_shows_no_gateway_anywhere(): void

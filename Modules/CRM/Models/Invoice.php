@@ -135,6 +135,23 @@ class Invoice extends Model
     }
 
     /**
+     * سفارشِ این فاکتور «بدونِ انجامِ کار» بسته شده است؟
+     *
+     * لغو / ردِ سفارش / ایاب و ذهاب وضعیت‌های پایانی‌اند که در آن‌ها کاری
+     * تحویلِ مشتری نشده — اگر سفارش قبلاً تکمیل و فاکتور صادر شده بوده و
+     * بعداً به یکی از این‌ها برگشته، فاکتورِ قدیمی نباید همچنان درگاهِ
+     * پرداخت باز نگه دارد. (خودِ «انجام کار» طبیعتاً مستثناست.)
+     */
+    public function orderClosedWithoutWork(): bool
+    {
+        $status = $this->order?->status;
+
+        return $status instanceof \Modules\CRM\Enums\OrderStatus
+            && $status->isFinal()
+            && $status !== \Modules\CRM\Enums\OrderStatus::Completed;
+    }
+
+    /**
      * تنها مرجعِ «آیا درگاهِ آنلاین باید نشان داده شود؟» — صفحهٔ پرداخت،
      * endpoint وضعیت، رسیدِ عمومی و اپِ مشتری همه از همین می‌خوانند.
      * فاکتورِ نقدی (انتخابِ تکنسین هنگام تکمیل) درگاه ندارد.
@@ -144,7 +161,22 @@ class Invoice extends Model
         return $this->superseded_at === null
             && ! in_array($this->status, ['paid', 'cancelled'], true)
             && (int) $this->total_amount > 0
-            && ! $this->isCashCollected();
+            && ! $this->isCashCollected()
+            && ! $this->orderClosedWithoutWork();
+    }
+
+    /** چرا درگاه بسته است؟ null یعنی قابلِ پرداخت است. متنِ آمادهٔ نمایش. */
+    public function notPayableReason(): ?string
+    {
+        return match (true) {
+            $this->status === 'paid' => 'این فاکتور قبلاً پرداخت شده است.',
+            $this->status === 'cancelled' => 'این فاکتور لغو شده است.',
+            $this->superseded_at !== null => 'این فاکتور با نسخهٔ جدیدتری جایگزین شده است.',
+            $this->isCashCollected() => 'تسویهٔ این فاکتور نقدی و در محل انجام می‌شود.',
+            (int) $this->total_amount <= 0 => 'این فاکتور مبلغی برای پرداخت ندارد.',
+            $this->orderClosedWithoutWork() => 'این سفارش بسته شده است و پرداخت آنلاین ندارد.',
+            default => null,
+        };
     }
 
     /** برچسبِ فارسیِ روشِ دریافت — null یعنی قدیمی/نامشخص. */
