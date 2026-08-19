@@ -163,37 +163,43 @@ enum OrderStatus: string
                 self::Cancelled, self::Declined,
             ],
 
-            // هماهنگ شده: تکنسین در محل — شروعِ کار، حالت‌های انتظار، یا ردِ سفارش.
+            // خوشهٔ کاریِ غیرنهایی — کاملاً به هم وصل است تا تکنسین بتواند
+            // آزادانه به عقب برگردد (تصمیمِ ۱۴۰۵/۰۵/۲۸): مثلاً پس از «در
+            // انتظار مشتری»، اگر مشتری تأیید کرد، دوباره «هماهنگ شده» شود.
+            // مقصدهای نهایی (Completed/Transit/Cancelled/Declined) و NoAnswer
+            // به این خوشه اضافه می‌شوند اما خودشان نهایی/فازِ تماس‌اند.
             self::Coordinated => [
                 self::RepairStarted, self::Open, self::AwaitingPart,
                 self::AwaitingCustomerApproval, self::Suspended, self::NoAnswer,
                 self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
-            // شروع تعمیر (در حال انجام).
+            // شروع تعمیر (در حال انجام) — می‌تواند به هماهنگی/انتظار هم برگردد.
             self::RepairStarted => [
-                self::Open, self::AwaitingPart, self::AwaitingCustomerApproval,
-                self::Suspended, self::Transit, self::Completed, self::Cancelled,
+                self::Coordinated, self::Open, self::AwaitingPart,
+                self::AwaitingCustomerApproval, self::Suspended,
+                self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
-            // انتقال به تعمیرگاه.
+            // انتقال به تعمیرگاه — برگشت به هماهنگی/انتظار مجاز است.
             self::Open => [
-                self::RepairStarted, self::AwaitingPart, self::Suspended,
-                self::Transit, self::Completed, self::Cancelled,
+                self::Coordinated, self::RepairStarted, self::AwaitingPart,
+                self::AwaitingCustomerApproval, self::Suspended,
+                self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
-            // معلق: مثلِ حالت‌های انتظار + امکانِ ردِ سفارش توسط تکنسین.
+            // معلق: خوشهٔ کاری + امکانِ ردِ سفارش توسط تکنسین.
             self::Suspended => [
                 self::Coordinated, self::RepairStarted, self::Open,
                 self::AwaitingPart, self::AwaitingCustomerApproval,
-                self::Completed, self::Cancelled, self::Declined,
+                self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
-            // حالت‌های انتظار: مثلِ معلق + امکانِ ایاب و ذهاب و ردِ سفارش.
+            // حالت‌های انتظار: خوشهٔ کاری + ایاب و ذهاب و ردِ سفارش.
             self::AwaitingPart,
             self::AwaitingCustomerApproval => [
                 self::Coordinated, self::RepairStarted, self::Open,
-                self::AwaitingPart, self::AwaitingCustomerApproval,
+                self::AwaitingPart, self::AwaitingCustomerApproval, self::Suspended,
                 self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
@@ -270,6 +276,24 @@ enum OrderStatus: string
     public function allowsVisitScheduling(): bool
     {
         return match ($this) {
+            // فازِ هماهنگی + خوشهٔ کاریِ غیرنهایی — تا تکنسین بتواند در طول
+            // کار هم زمانِ مراجعه را دوباره تنظیم کند و «دوباره هماهنگ» شود
+            // (تصمیمِ ۱۴۰۵/۰۵/۲۸). وضعیت‌های نهایی همچنان قفل‌اند.
+            self::New, self::AwaitingCoordination, self::NoAnswer, self::Coordinated,
+            self::RepairStarted, self::Open, self::AwaitingPart,
+            self::AwaitingCustomerApproval, self::Suspended => true,
+            default => false,
+        };
+    }
+
+    /**
+     * آیا این وضعیت در «فازِ تماس/هماهنگی» است؟ (پیش از دیدنِ دستگاه.)
+     * جدا از allowsVisitScheduling نگه داشته می‌شود چون تنظیمِ زمانِ مراجعه
+     * حالا در طولِ کار هم مجاز است، ولی «فازِ هماهنگی» مفهومِ ثابت دارد.
+     */
+    public function isCoordinationPhase(): bool
+    {
+        return match ($this) {
             self::New, self::AwaitingCoordination, self::NoAnswer, self::Coordinated => true,
             default => false,
         };
@@ -281,15 +305,14 @@ enum OrderStatus: string
      * پیش‌فاکتور فقط «پس از هماهنگی و پیش از بسته‌شدن» معنا دارد: در فازِ
      * تماس/هماهنگی هنوز دستگاه دیده نشده، و بعد از بسته‌شدن سفارش، سندِ
      * مالی فاکتور است نه پیش‌فاکتور. «هماهنگ‌شده» خودش هنوز فازِ هماهنگی
-     * است (تکنسین می‌تواند زمان را عوض کند) — پیش‌فاکتور از «شروع تعمیر»
-     * به بعد باز می‌شود.
+     * است — پیش‌فاکتور از «شروع تعمیر» به بعد باز می‌شود.
      *
      * تنها مرجعِ این قاعده — هم API (گیتِ ۴۲۲) و هم ریسورس‌ها
      * (can_create_proforma) از همین می‌خوانند.
      */
     public function allowsProforma(): bool
     {
-        return ! $this->allowsVisitScheduling() && ! $this->isFinal();
+        return ! $this->isCoordinationPhase() && ! $this->isFinal();
     }
 
     /**

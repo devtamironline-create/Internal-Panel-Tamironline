@@ -681,9 +681,9 @@ class DashboardController extends Controller
         $tech = Auth::guard('tech')->user();
         $this->ensureOwnership($order, $tech);
 
-        // فقط در فازِ هماهنگی — پس از خروج (باز/شروع تعمیر/…) قفل است (enforce سمتِ سرور).
+        // در همهٔ وضعیت‌های غیرنهایی مجاز است — پس از بستنِ سفارش قفل می‌شود.
         if (! $order->status->allowsVisitScheduling()) {
-            return back()->with('error', 'تنظیم زمان مراجعه فقط در فازِ هماهنگی (جدید/هماهنگ‌شده) ممکن است.');
+            return back()->with('error', 'تنظیم زمان مراجعه پس از بسته‌شدن سفارش ممکن نیست.');
         }
 
         // پاک کردن

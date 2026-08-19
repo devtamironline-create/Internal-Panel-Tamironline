@@ -233,10 +233,10 @@ class OrderActionController extends Controller
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
 
-        // فقط در فازِ هماهنگی — پس از خروج (باز/شروع تعمیر/…) قفل است (enforce سمتِ سرور).
+        // در همهٔ وضعیت‌های غیرنهایی مجاز است — پس از بستنِ سفارش قفل می‌شود.
         if (! $order->status->allowsVisitScheduling()) {
             throw ValidationException::withMessages([
-                'status' => 'تنظیم زمان مراجعه فقط در فازِ هماهنگی (جدید/هماهنگ‌شده) ممکن است.',
+                'status' => 'تنظیم زمان مراجعه پس از بسته‌شدن سفارش ممکن نیست.',
             ]);
         }
 
