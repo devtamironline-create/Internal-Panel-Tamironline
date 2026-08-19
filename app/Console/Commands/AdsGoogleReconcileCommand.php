@@ -20,7 +20,8 @@ class AdsGoogleReconcileCommand extends Command
     protected $signature = 'ads:google-reconcile
         {--days=1 : چند روزِ اخیر (۱ = امروز)}
         {--from= : تاریخ شروع میلادی Y-m-d (اختیاری)}
-        {--to= : تاریخ پایان میلادی Y-m-d (اختیاری)}';
+        {--to= : تاریخ پایان میلادی Y-m-d (اختیاری)}
+        {--errors : نمایشِ متنِ کاملِ خطاهای گوگل به تفکیک تکرار}';
 
     protected $description = 'تطبیق کلیک‌های تماس پنل با کانورژن‌های Google Ads (روز تماس در برابر روز کلیک)';
 
@@ -108,6 +109,38 @@ class AdsGoogleReconcileCommand extends Command
         if ($failed !== []) {
             $this->comment('۴) خطاهای ارسال');
             $this->table(['کد خطا', 'تعداد'], collect($failed)->map(fn ($c, $k) => [$k ?: '—', number_format((int) $c)])->values()->all());
+
+            // متنِ واقعیِ خطا — چیزی که واقعاً می‌گوید چرا رد شده است.
+            $messages = (clone $base)->where('google_status', 'failed')
+                ->selectRaw('google_error, COUNT(*) as c')
+                ->groupBy('google_error')->orderByDesc('c')->limit(10)->get();
+
+            $rows = [];
+            foreach ($messages as $m) {
+                $text = (string) ($m->google_error ?? '—');
+                $rows[] = [
+                    $this->option('errors') ? $text : mb_substr($text, 0, 110).(mb_strlen($text) > 110 ? '…' : ''),
+                    number_format((int) $m->c),
+                ];
+            }
+            $this->table(['متن خطای گوگل', 'تعداد'], $rows);
+
+            if (! $this->option('errors')) {
+                $this->line('   (برای متنِ کاملِ خطاها: همین کامند با --errors)');
+            }
+
+            $sample = (clone $base)->where('google_status', 'failed')->latest('id')->first();
+            if ($sample) {
+                $this->line('   نمونه برای بررسی زنده:  php artisan ads:google-inspect '.$sample->id.' --live');
+            }
+        }
+
+        // نمونهٔ processingِ گیرکرده — برای دیدنِ پاسخِ خامِ requestStatus.
+        $stuck = (clone $base)->where('google_status', 'processing')->latest('id')->first();
+        if ($stuck) {
+            $this->line('');
+            $this->comment('۵) نمونهٔ در حال پردازش');
+            $this->line('   php artisan ads:google-inspect '.$stuck->id.' --live');
         }
 
         $this->line('');
