@@ -60,6 +60,12 @@ return [
             'password' => (string) env('GOOGLE_HTTP_PROXY_PASSWORD', ''),
         ],
 
+        // حداقل سنِ «کلیکِ تبلیغ» پیش از ارسالِ conversion (ساعت).
+        // گوگل کلیکِ خیلی تازه را نمی‌شناسد و رویداد را با
+        // TOO_RECENT_CLICK رد می‌کند؛ پس رویداد صبر می‌کند، نه اینکه
+        // بسوزد. توصیهٔ خودِ گوگل ≥ ۶ ساعت است.
+        'min_click_age_hours' => max(0, (int) env('ADS_GOOGLE_MIN_CLICK_AGE_HOURS', 6)),
+
         'batch_size' => max(1, (int) env('GOOGLE_DATA_MANAGER_BATCH_SIZE', 1)),
         'request_timeout' => (int) env('GOOGLE_DATA_MANAGER_REQUEST_TIMEOUT', 30),
         'connect_timeout' => (int) env('GOOGLE_DATA_MANAGER_CONNECT_TIMEOUT', 10),
