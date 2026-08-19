@@ -135,11 +135,56 @@ class AdsGoogleReconcileCommand extends Command
             }
         }
 
+        // ─── نشانه‌های مشکوک روی رویدادهای failed ──────────────────
+        // برای ریشه‌یابیِ INVALID_EVENT: رابطهٔ زمانی کلیک/تماس و اینکه
+        // اصلاً رکوردِ attribution دارند یا نه.
+        $failedIds = (clone $base)->where('google_status', 'failed')->pluck('id');
+
+        if ($failedIds->isNotEmpty()) {
+            $noAttribution = AdsCallClickEvent::whereIn('id', $failedIds)->whereNull('ads_attribution_id')->count();
+
+            $callBeforeClick = AdsCallClickEvent::whereIn('ads_call_click_events.id', $failedIds)
+                ->join('ads_attributions as a2', 'a2.id', '=', 'ads_call_click_events.ads_attribution_id')
+                ->whereColumn('ads_call_click_events.event_time', '<', 'a2.first_seen_at')
+                ->count();
+
+            $future = AdsCallClickEvent::whereIn('id', $failedIds)->where('event_time', '>', now())->count();
+
+            // فاصلهٔ کلیک تا تماس — اگر خطاها روی فاصله‌های کوتاه متمرکز
+            // باشند، یعنی همان مسئلهٔ «کلیکِ خیلی تازه» است.
+            $buckets = AdsCallClickEvent::whereIn('ads_call_click_events.id', $failedIds)
+                ->join('ads_attributions as a3', 'a3.id', '=', 'ads_call_click_events.ads_attribution_id')
+                ->get(['ads_call_click_events.event_time', 'a3.first_seen_at', 'ads_call_click_events.google_error'])
+                ->groupBy(function ($row) {
+                    $minutes = Carbon::parse($row->first_seen_at)->diffInMinutes(Carbon::parse($row->event_time), false);
+
+                    return match (true) {
+                        $minutes < 0 => 'تماس قبل از کلیک (!)',
+                        $minutes < 60 => 'کمتر از ۱ ساعت',
+                        $minutes < 360 => 'بین ۱ تا ۶ ساعت',
+                        $minutes < 1440 => 'بین ۶ تا ۲۴ ساعت',
+                        default => 'بیش از ۲۴ ساعت',
+                    };
+                })->map->count();
+
+            $this->comment('۵) نشانه‌های مشکوک روی رویدادهای failed');
+            $this->table(['بررسی', 'تعداد'], [
+                ['بدون رکورد attribution', number_format($noAttribution)],
+                ['زمان تماس قبل از زمان کلیک', number_format($callBeforeClick)],
+                ['زمان تماس در آینده', number_format($future)],
+            ]);
+
+            if ($buckets->isNotEmpty()) {
+                $this->line('   فاصلهٔ کلیک تا تماس (رویدادهای failed):');
+                $this->table(['فاصله', 'تعداد'], $buckets->map(fn ($c, $k) => [$k, number_format($c)])->values()->all());
+            }
+        }
+
         // نمونهٔ processingِ گیرکرده — برای دیدنِ پاسخِ خامِ requestStatus.
         $stuck = (clone $base)->where('google_status', 'processing')->latest('id')->first();
         if ($stuck) {
             $this->line('');
-            $this->comment('۵) نمونهٔ در حال پردازش');
+            $this->comment('۶) نمونهٔ در حال پردازش');
             $this->line('   php artisan ads:google-inspect '.$stuck->id.' --live');
         }
 

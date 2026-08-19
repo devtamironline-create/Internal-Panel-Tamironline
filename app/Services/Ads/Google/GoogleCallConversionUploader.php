@@ -37,15 +37,28 @@ class GoogleCallConversionUploader
 
         $batchSize = max(1, (int) ($this->config['batch_size'] ?? 1));
 
+        // کلیکِ خیلی تازه هنوز در سیستمِ گوگل ثبت نشده و رویداد را با
+        // TOO_RECENT_CLICK رد می‌کند. پس تا سنِ کلیک به آستانه نرسد
+        // اصلاً نمی‌فرستیم — رویداد فقط منتظر می‌ماند.
+        // مبنا: زمانِ کلیک از attribution؛ اگر نبود، زمانِ خودِ تماس
+        // (که همیشه بعد از کلیک است و محافظه‌کارانه‌تر).
+        $clickCutoff = now()->subHours((int) ($this->config['min_click_age_hours'] ?? 6));
+
         $candidates = AdsCallClickEvent::query()
-            ->where('google_status', 'pending')
+            ->leftJoin('ads_attributions as a', 'a.id', '=', 'ads_call_click_events.ads_attribution_id')
+            ->select('ads_call_click_events.*')
+            ->where('ads_call_click_events.google_status', 'pending')
             ->where(function ($q) {
-                $q->whereNotNull('gclid')->orWhereNotNull('wbraid')->orWhereNotNull('gbraid');
+                $q->whereNotNull('ads_call_click_events.gclid')
+                    ->orWhereNotNull('ads_call_click_events.wbraid')
+                    ->orWhereNotNull('ads_call_click_events.gbraid');
             })
             ->where(function ($q) {
-                $q->whereNull('google_next_retry_at')->orWhere('google_next_retry_at', '<=', now());
+                $q->whereNull('ads_call_click_events.google_next_retry_at')
+                    ->orWhere('ads_call_click_events.google_next_retry_at', '<=', now());
             })
-            ->orderBy('id')
+            ->whereRaw('COALESCE(a.first_seen_at, ads_call_click_events.event_time) <= ?', [$clickCutoff])
+            ->orderBy('ads_call_click_events.id')
             ->limit($limit)
             ->get();
 
@@ -259,8 +272,27 @@ class GoogleCallConversionUploader
                 // batch=1 → مثل FAILED رفتار می‌شود.
                 // no break
             case 'FAILED':
-                $transient = $result['errors'] !== null
-                    && preg_match('/internal|unavailable|deadline|timeout|retry/i', $result['errors']) === 1;
+                $errors = (string) ($result['errors'] ?? '');
+
+                // کلیک هنوز در سیستمِ گوگل ثبت نشده — خطای زمانی است نه
+                // دائمی. رویداد با فاصلهٔ آستانه دوباره تلاش می‌کند و در
+                // سقفِ تلاش هم نمی‌سوزد.
+                if (str_contains($errors, 'TOO_RECENT_CLICK')) {
+                    $event->forceFill($base + [
+                        'google_status' => 'pending',
+                        'google_error' => $errors,
+                        'google_error_code' => 'TOO_RECENT_CLICK',
+                        'google_next_retry_at' => now()->addHours(
+                            max(1, (int) ($this->config['min_click_age_hours'] ?? 6))
+                        ),
+                    ])->save();
+                    $stats['retried']++;
+                    $this->log('warning', 'too_recent_click', $event, ['request_id' => $event->google_request_id]);
+                    break;
+                }
+
+                $transient = $errors !== ''
+                    && preg_match('/internal|unavailable|deadline|timeout|retry/i', $errors) === 1;
                 $maxAttempts = max(1, (int) ($this->config['max_attempts'] ?? 10));
 
                 if ($transient && (int) $event->google_attempts < $maxAttempts) {

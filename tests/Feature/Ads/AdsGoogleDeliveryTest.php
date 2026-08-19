@@ -82,7 +82,7 @@ class AdsGoogleDeliveryTest extends TestCase
             'event_id' => 'call_TEST'.$i.'_'.uniqid(),
             'client_source' => 'website',
             'gclid' => 'Cj0KCQtestGclid'.$i,
-            'event_time' => now()->subMinutes(5),
+            'event_time' => now()->subDay(), // کلیک باید از آستانهٔ ۶ ساعت قدیمی‌تر باشد
             'google_status' => 'pending',
         ], $extra));
     }
@@ -148,6 +148,57 @@ class AdsGoogleDeliveryTest extends TestCase
         $this->assertSame(1, $event->google_attempts);
         $this->assertNotNull($event->google_next_retry_at, 'باید backoff داشته باشد.');
         $this->assertDatabaseCount('ads_call_click_events', 1); // هرگز حذف نمی‌شود
+    }
+
+    // ───────────────────────── سنِ کلیک (TOO_RECENT_CLICK)
+
+    /** گوگل کلیکِ خیلی تازه را نمی‌شناسد — رویداد باید صبر کند، نه اینکه بسوزد. */
+    public function test_a_too_recent_click_is_not_sent_yet(): void
+    {
+        $this->fakeGoogleOk();
+        $event = $this->event(['event_time' => now()->subMinutes(10)]);
+
+        $stats = GoogleCallConversionUploader::fromConfig()->uploadPending();
+
+        Http::assertNothingSent();
+        $this->assertSame(0, $stats['claimed']);
+        $this->assertSame('pending', $event->fresh()->google_status, 'رویداد باید در صف بماند.');
+    }
+
+    public function test_the_click_age_threshold_is_configurable(): void
+    {
+        config()->set('ads_tracking.google.min_click_age_hours', 0);
+        $this->fakeGoogleOk();
+        $event = $this->event(['event_time' => now()->subMinutes(10)]);
+
+        GoogleCallConversionUploader::fromConfig()->uploadPending();
+
+        $this->assertSame('processing', $event->fresh()->google_status);
+    }
+
+    /** پاسخِ TOO_RECENT_CLICK از requestStatus = تلاشِ دوباره، نه شکستِ دائمی. */
+    public function test_a_too_recent_click_failure_is_requeued_not_failed(): void
+    {
+        Http::fake([
+            'oauth2.googleapis.com/*' => Http::response(['access_token' => 't', 'expires_in' => 3600]),
+            'datamanager.googleapis.com/*' => Http::response([
+                'requestStatusPerDestination' => [[
+                    'requestStatus' => 'FAILED',
+                    'errorInfo' => [['reason' => 'PROCESSING_ERROR_REASON_TOO_RECENT_CLICK']],
+                ]],
+            ]),
+        ]);
+        $event = $this->event([
+            'google_status' => 'processing', 'google_request_id' => 'req-tr', 'google_attempts' => 9,
+            'google_last_attempt_at' => now(),
+        ]);
+
+        GoogleCallConversionUploader::fromConfig()->pollProcessing();
+
+        $event->refresh();
+        $this->assertSame('pending', $event->google_status, 'باید دوباره در صف برود، حتی نزدیک سقف تلاش.');
+        $this->assertSame('TOO_RECENT_CLICK', $event->google_error_code);
+        $this->assertNotNull($event->google_next_retry_at);
     }
 
     // ───────────────────────── OAuth
