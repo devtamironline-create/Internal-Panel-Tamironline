@@ -88,10 +88,11 @@ class TechOrderDetailResource extends JsonResource
 
             'customer' => [
                 'name' => $this->customer_name ?: ($this->customer->display_name ?? null),
-                // روی سفارشِ نهایی، شماره‌ها ماسک می‌شوند (حریمِ خصوصی).
-                'mobile' => $isFinal ? $this->mask($this->customer_mobile) : $this->customer_mobile,
-                'phone' => $isFinal ? $this->mask($this->customer_phone) : $this->customer_phone,
-                'contact_locked' => $isFinal,
+                // شمارهٔ کاملِ مشتری همیشه در دسترسِ تکنسین است (خواستِ
+                // ۱۴۰۵/۰۵/۲۸) — حتی روی سفارشِ نهایی، دیگر ماسک نمی‌شود.
+                'mobile' => $this->customer_mobile,
+                'phone' => $this->customer_phone,
+                'contact_locked' => false,
             ],
 
             'address' => $this->address(),
