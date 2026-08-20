@@ -173,7 +173,7 @@ class InvoiceCorrectionTest extends TestCase
 
         /** @var InvoiceService $service */
         $service = app(InvoiceService::class);
-        $old = $service->generateForOrder($order, null, 'supersede');
+        $old = $service->generateForOrder($order, null, 'idempotent');
         $this->assertSame(-1_800_000, (int) $tech->refresh()->wallet_balance);
 
         $new = $service->correctInvoice($old, 8_000_000, 'قطعه در فاکتور محاسبه نشده بود', null);
@@ -280,7 +280,7 @@ class InvoiceCorrectionTest extends TestCase
         $order = $this->completedOrder($tech, 6_000_000);
 
         $service = app(InvoiceService::class);
-        $old = $service->generateForOrder($order, null, 'supersede');
+        $old = $service->generateForOrder($order, null, 'idempotent');
         $new = $service->correctInvoice($old, 7_000_000, 'اصلاح برای تست ریدایرکت');
 
         $response = app(InvoiceController::class)->publicReceipt($old->refresh()->public_token);
@@ -295,7 +295,7 @@ class InvoiceCorrectionTest extends TestCase
         $order = $this->completedOrder($tech, 6_000_000);
 
         $service = app(InvoiceService::class);
-        $old = $service->generateForOrder($order, null, 'supersede');
+        $old = $service->generateForOrder($order, null, 'idempotent');
         $new = $service->correctInvoice($old, 7_000_000, 'اصلاح برای تست لینک پرداخت');
 
         $response = app(PaymentController::class)->pay($old->refresh()->public_token);
@@ -311,7 +311,7 @@ class InvoiceCorrectionTest extends TestCase
         $tech = $this->technician();
         $order = $this->completedOrder($tech, 6_000_000);
 
-        $invoice = app(InvoiceService::class)->generateForOrder($order, null, 'supersede');
+        $invoice = app(InvoiceService::class)->generateForOrder($order, null, 'idempotent');
         $this->assertSame(-1_800_000, (int) $tech->refresh()->wallet_balance);
 
         app(InvoiceController::class)->cancel($invoice);

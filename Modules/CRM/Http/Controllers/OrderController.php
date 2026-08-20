@@ -1170,8 +1170,9 @@ class OrderController extends Controller
         // تولید خودکار فاکتور در تکمیل سفارش (idempotent) — مگر اینکه پیش‌نویس باشد
         $draftWarning = null;
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
-            // حالت از completionInvoiceMode: سفارشِ بازگشتی → additive
-            // (فاکتور کنار قبلی‌ها)، سفارشِ عادی → supersede.
+            // حالت از completionInvoiceMode: دورِ بازگشتی → additive (فاکتور
+            // کنارِ قبلی‌ها)؛ غیرِ آن → idempotent (فاکتورِ قبلی دست‌نخورده).
+            // تکمیل هرگز فاکتوری را باطل نمی‌کند و تعدیلی نمی‌زند.
             $fresh = $order->refresh();
             $this->invoiceService->generateForOrder($fresh, auth()->id(), $this->invoiceService->completionInvoiceMode($fresh));
         } elseif ($newStatus === OrderStatus::Completed) {
@@ -1181,9 +1182,9 @@ class OrderController extends Controller
             $existing = \Modules\CRM\Models\Invoice::where('order_id', $order->id)->first();
             if ($existing && (int) $existing->total_amount !== (int) ($updates['price_customer'] ?? $order->price_customer ?? 0)) {
                 $draftWarning = '⚠ سفارش به‌صورت «پیش‌نویس» تکمیل شد، پس فاکتور '
-                    .$existing->invoice_code.' بازصادر نشد و همچنان روی '
+                    .$existing->invoice_code.' همچنان روی '
                     .number_format((int) $existing->total_amount).' تومان است — نه مبلغ جدید. '
-                    .'برای یکی‌کردن، سفارش را بدون تیک پیش‌نویس تکمیل کنید.';
+                    .'برای اصلاح، از دکمهٔ «اصلاح مبلغ فاکتور» در صفحهٔ همان فاکتور استفاده کنید.';
             }
         }
 

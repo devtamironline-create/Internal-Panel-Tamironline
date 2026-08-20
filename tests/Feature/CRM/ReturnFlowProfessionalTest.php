@@ -25,13 +25,15 @@ use Tests\TestCase;
  *   ۲) تا وقتی بررسی ثبت نشده: هماهنگی/مراجعه آزاد است ولی بستنِ سفارش
  *      (هر وضعیتِ نهایی) هم در لیست گذارها نیست و هم updateStatus آن را
  *      با پیامِ مشخص رد می‌کند.
- *   ۳) بستنِ مجددِ سفارشِ بازگشتی (return_type ست شده — چه گارانتی=۰ چه
- *      با هزینه) «جمع‌شونده» است: فاکتورِ جدید در کنارِ فاکتور(های) قبلی
- *      صادر می‌شود، هیچ‌چیز باطل نمی‌شود و هیچ کمیسیونی برنمی‌گردد —
- *      دو کارِ مستقل روی یک سفارش، بدهیِ تکنسین جمعِ سهمِ شرکتِ هر دو.
- *   ۴) رد شدنِ کارشناسی return_type را پاک می‌کند؛ سفارش دوباره عادی است
- *      و تکمیلِ جدید حالتِ supersede دارد: فاکتورِ قبلی باطل + برگشتِ
- *      خودکارِ کمیسیون + فاکتورِ جدید — قبلی قابلِ دسترسیِ ادمین می‌ماند.
+ *   ۳) بستنِ مجددِ دورِ بازگشتی (return_reviewed_at ست شده — چه گارانتی=۰
+ *      چه ایرادِ جدیدِ با هزینه) «جمع‌شونده» است: فاکتورِ جدید در کنارِ
+ *      فاکتور(های) قبلی؛ هیچ‌چیز باطل نمی‌شود و هیچ تعدیلی (برگشتِ
+ *      کمیسیون) ثبت نمی‌شود — بدهیِ تکنسین جمعِ سهمِ شرکتِ همه است.
+ *   ۴) حکمِ ۱۴۰۵/۰۵/۲۹ («در سفارشِ بازگشتی تعدیل معنی ندارد»): تکمیلِ
+ *      سفارش در هیچ حالتی فاکتورِ قبلی را باطل نمی‌کند و کمیسیونی
+ *      برنمی‌گرداند؛ تکمیلِ مجددِ خارج از چرخهٔ بازگشتی idempotent است
+ *      (فاکتورِ قبلی دست‌نخورده). باطل‌کردن + برگشتِ خودکار فقط در
+ *      «اصلاح مبلغ فاکتور» و «لغو فاکتور».
  *
  * کنترلرها مستقیم صدا زده می‌شوند؛ زنجیرهٔ auth موضوعِ این تست نیست.
  */
@@ -766,11 +768,15 @@ class ReturnFlowProfessionalTest extends TestCase
         $this->assertSame(1, Invoice::where('order_id', $order->id)->count());
     }
 
-    /** برگشتِ کمیسیون idempotent است — تکمیلِ دوباره بدهی را دوبار برنمی‌گرداند. */
-    public function test_the_commission_reversal_is_not_repeated(): void
+    /**
+     * حکمِ ۱۴۰۵/۰۵/۲۹: تکمیلِ مجددِ خارج از چرخهٔ بازگشتی هیچ‌کاری با
+     * فاکتور و کیف‌پول نمی‌کند — نه فاکتورِ جدید، نه باطل‌کردن، نه تعدیل.
+     * (حتی مقدارِ true قدیمی که سابقاً supersede بود، حالا idempotent است.)
+     */
+    public function test_recompletion_outside_a_return_round_touches_nothing(): void
     {
         $tech = $this->technician();
-        $order = $this->pendingReturnedOrder($tech);
+        $order = $this->pendingReturnedOrder($tech, ['return_reviewed_at' => null]);
         $old = Invoice::forceCreate([
             'invoice_code' => 'INV-OLD-3', 'order_id' => $order->id,
             'technician_id' => $tech->id, 'total_amount' => 1_000_000,
@@ -788,13 +794,15 @@ class ReturnFlowProfessionalTest extends TestCase
         $service = app(\Modules\CRM\Services\InvoiceService::class);
         $order->forceFill(['price_customer' => 2_000_000, 'status' => OrderStatus::Completed->value])->save();
 
-        $service->generateForOrder($order->fresh(), null, true);
-        $service->generateForOrder($order->fresh(), null, true);
+        $service->generateForOrder($order->fresh(), null, $service->completionInvoiceMode($order->fresh()));
+        $service->generateForOrder($order->fresh(), null, true); // مقدارِ bool قدیمی
 
-        // فقط یک برگشت برای فاکتورِ اولِ بایگانی‌شده ثبت شده باشد.
-        $reversals = WalletTransaction::where('invoice_id', $old->id)
-            ->where('amount', '>', 0)->count();
-        $this->assertSame(1, $reversals);
+        $old->refresh();
+        $this->assertNull($old->superseded_at, 'تکمیل نباید فاکتور قبلی را باطل کند.');
+        $this->assertSame(1, Invoice::withSuperseded()->where('order_id', $order->id)->count());
+        $this->assertSame(0, WalletTransaction::where('invoice_id', $old->id)->where('amount', '>', 0)->count(),
+            'تکمیل هرگز نباید تعدیل/برگشت کمیسیون بزند.');
+        $this->assertSame(-300_000, (int) $tech->refresh()->wallet_balance);
     }
 
     /**
@@ -821,20 +829,28 @@ class ReturnFlowProfessionalTest extends TestCase
         $this->assertFalse($invoice->isPayableOnline(), 'فاکتور صفرتومانی نباید درگاه پرداخت داشته باشد.');
     }
 
-    // ───────────────────────── ۴) رد → فلوی عادی؛ فاکتورِ قبلی بایگانی ولی در دسترس
+    // ───────────────────────── ۴) ردِ کارشناسی = ایرادِ جدید → باز هم جمع‌شونده
 
-    public function test_rejected_review_completion_supersedes_but_never_loses_the_old_invoice(): void
+    /**
+     * سناریوی ORD-2607-02619: تکنسین بررسی را «رد» می‌کند (ایرادِ جدید،
+     * با هزینه) و می‌بندد. فاکتورِ جدید باید در کنارِ فاکتورِ اول بنشیند —
+     * فاکتورِ اول فعال می‌ماند، هیچ باطل‌کردن و هیچ تعدیلی (برگشتِ
+     * کمیسیون) در کار نیست؛ بدهیِ تکنسین جمعِ سهمِ شرکتِ هر دو کار است.
+     */
+    public function test_rejected_review_completion_is_additive_with_no_reversal(): void
     {
         $tech = $this->technician();
         $order = $this->pendingReturnedOrder($tech);
         $original = Invoice::forceCreate([
             'invoice_code' => 'INV-OLD-2', 'order_id' => $order->id,
             'technician_id' => $tech->id, 'total_amount' => 2_000_000,
-            'company_share' => 600_000, 'status' => 'issued', 'issued_at' => now()->subDays(20),
+            'company_share' => 600_000, 'status' => 'issued', 'in_wallet' => true,
+            'issued_at' => now()->subDays(20), 'created_at' => now()->subDays(20),
         ]);
 
         $this->callReturnReview($order, $tech, ['approved' => '0', 'note' => 'ایراد جدید است']);
         $this->assertNull($order->fresh()->return_type);
+        $this->assertNotNull($order->fresh()->return_reviewed_at);
 
         $response = $this->callUpdateStatus($order->fresh(), $tech, [
             'status' => OrderStatus::Completed->value,
@@ -843,12 +859,20 @@ class ReturnFlowProfessionalTest extends TestCase
         ]);
 
         $this->assertTrue($response->getData(true)['success']);
-        // فاکتورِ قدیمی superseded شده ولی از DB و از صفحهٔ ادمین حذف نشده.
-        $this->assertNotNull($original->fresh()->superseded_at);
-        $this->assertSame(2, Invoice::withSuperseded()->where('order_id', $order->id)->count());
-        $this->assertSame(1, Invoice::where('order_id', $order->id)->count());
 
-        // صفحهٔ ادمینِ فاکتورِ بایگانی‌شده ۴۰۴ نمی‌شود (view برمی‌گردد).
+        // فاکتورِ اول فعال و دست‌نخورده؛ فاکتورِ دوم در کنارش.
+        $original->refresh();
+        $this->assertNull($original->superseded_at, 'فاکتور کار اول نباید باطل شود.');
+        $this->assertSame(2, Invoice::where('order_id', $order->id)->count(), 'هر دو فاکتور باید فعال باشند.');
+
+        $new = Invoice::where('order_id', $order->id)->latest('id')->first();
+        $this->assertSame(900_000, (int) $new->total_amount);
+
+        // هیچ تعدیلی (تراکنشِ مثبتِ برگشت) برای فاکتورِ اول ثبت نشده.
+        $this->assertSame(0, WalletTransaction::where('invoice_id', $original->id)
+            ->where('amount', '>', 0)->count(), 'در دور بازگشتی تعدیل معنا ندارد.');
+
+        // صفحهٔ ادمینِ هر دو فاکتور بازشدنی است.
         $view = app(\Modules\CRM\Http\Controllers\InvoiceController::class)->show($original->id);
         $this->assertInstanceOf(\Illuminate\Contracts\View\View::class, $view);
     }
