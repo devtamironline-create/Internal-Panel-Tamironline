@@ -36,6 +36,7 @@ class WalletAudit extends Command
         $tech = $this->resolveTechnician();
         if (! $tech) {
             $this->error('تکنسین پیدا نشد.');
+
             return self::FAILURE;
         }
 
@@ -94,7 +95,7 @@ class WalletAudit extends Command
 
         // ── تجمیع تراکنش‌ها بر اساس نوع ───────────────────────────
         $this->info('━━━ تجمیع تراکنش‌ها بر اساس نوع ─────────────────');
-        $byType = $txs->groupBy(fn($t) => $t->type instanceof WalletTxType ? $t->type->value : (string) $t->type);
+        $byType = $txs->groupBy(fn ($t) => $t->type instanceof WalletTxType ? $t->type->value : (string) $t->type);
         $rows = [];
         foreach ($byType as $typeKey => $group) {
             $enum = WalletTxType::tryFrom($typeKey);
@@ -130,10 +131,14 @@ class WalletAudit extends Command
         // تراکنش با علامت غلط نسبت به نوع
         foreach ($txs as $tx) {
             $enum = $tx->type instanceof WalletTxType ? $tx->type : WalletTxType::tryFrom((string) $tx->type);
-            if (! $enum || $enum === WalletTxType::Adjustment) continue;
+            if (! $enum || $enum === WalletTxType::Adjustment) {
+                continue;
+            }
             $expected = $enum->sign();
             $amount = (int) $tx->amount;
-            if ($amount === 0) continue;
+            if ($amount === 0) {
+                continue;
+            }
             $actual = $amount > 0 ? +1 : -1;
             if ($expected !== $actual) {
                 $issues[] = sprintf(
@@ -144,7 +149,7 @@ class WalletAudit extends Command
         }
 
         // wp_id تکراری
-        $dupWp = $txs->whereNotNull('wp_id')->groupBy('wp_id')->filter(fn($g) => $g->count() > 1);
+        $dupWp = $txs->whereNotNull('wp_id')->groupBy('wp_id')->filter(fn ($g) => $g->count() > 1);
         foreach ($dupWp as $wpId => $group) {
             $ids = $group->pluck('id')->implode(', ');
             $issues[] = sprintf('⚠ wp_id=%s در تراکنش‌های id=%s تکرار شده (احتمال double-import)', $wpId, $ids);
@@ -163,22 +168,68 @@ class WalletAudit extends Command
         // فاکتورها با invoice_code تکراری (شاید duplicate import)
         $dupInvoiceCode = $activeInvoices->whereNotNull('invoice_code')
             ->groupBy('invoice_code')
-            ->filter(fn($g) => $g->count() > 1);
+            ->filter(fn ($g) => $g->count() > 1);
         foreach ($dupInvoiceCode as $code => $group) {
             $issues[] = sprintf('⚠ invoice_code=%s در فاکتورهای id=%s تکرار شده', $code, $group->pluck('id')->implode(', '));
         }
 
         // فاکتورها با wp_id تکراری
-        $dupInvoiceWp = $invoices->whereNotNull('wp_id')->groupBy('wp_id')->filter(fn($g) => $g->count() > 1);
+        $dupInvoiceWp = $invoices->whereNotNull('wp_id')->groupBy('wp_id')->filter(fn ($g) => $g->count() > 1);
         foreach ($dupInvoiceWp as $wpId => $group) {
             $issues[] = sprintf('⚠ فاکتور با wp_id=%s در ids=%s تکرار شده', $wpId, $group->pluck('id')->implode(', '));
+        }
+
+        // ── چک‌های برگشتِ خودکارِ کمیسیون (بازصدور/اصلاح/لغو) ─────────
+        // قاعدهٔ ۱۴۰۵/۰۵/۲۹: باطل/لغوشدنِ فاکتورِ in_wallet باید یک تراکنشِ
+        // معکوس با مارکر [reversal#id] داشته باشد؛ و بعد از آن هیچ تعدیلِ
+        // دستی‌ای برای همان فاکتور مجاز نیست (جبرانِ دوباره می‌شود).
+        $reversedIds = [];
+        foreach ($txs as $tx) {
+            if ($tx->invoice_id && preg_match('/\[reversal#(\d+)\]/', (string) $tx->note)) {
+                $reversedIds[(int) $tx->invoice_id] = true;
+            }
+        }
+
+        $needReversal = $invoices->filter(fn ($inv) => $inv->in_wallet
+            && (int) $inv->company_share > 0
+            && ($inv->superseded_at !== null || $inv->status === 'cancelled'));
+
+        foreach ($needReversal as $inv) {
+            if (! isset($reversedIds[(int) $inv->id])) {
+                $issues[] = sprintf(
+                    '⚠ فاکتور id=%d (%s) %s است ولی تراکنش برگشت [reversal#%d] ندارد — سهم شرکت (%s) هنوز روی دوش تکنسین است (احتمالاً داده قدیمی، پیش از برگشت خودکار).',
+                    $inv->id, $inv->invoice_code,
+                    $inv->superseded_at ? 'باطل (superseded)' : 'لغوشده',
+                    $inv->id, $this->fmt((int) $inv->company_share)
+                );
+            }
+        }
+
+        // جبرانِ دوباره: فاکتوری که هم برگشتِ خودکار دارد و هم تعدیلِ دستیِ
+        // مثبت روی همان فاکتور/سفارش — الگوی دورهٔ گذار (مثل تکنسین ۴۲۵).
+        foreach (array_keys($reversedIds) as $invId) {
+            $inv = $invoices->firstWhere('id', $invId);
+            $manual = $txs->filter(fn ($tx) => (int) $tx->amount > 0
+                && ! str_contains((string) $tx->note, '[reversal#')
+                && ! str_contains((string) $tx->note, '[بازسازی')
+                && (string) ($tx->type instanceof WalletTxType ? $tx->type->value : $tx->type) === WalletTxType::Adjustment->value
+                && (
+                    (int) $tx->invoice_id === (int) $invId
+                    || ($inv && $inv->order_id && (int) $tx->order_id === (int) $inv->order_id)
+                ));
+            foreach ($manual as $tx) {
+                $issues[] = sprintf(
+                    '⚠ احتمال جبرانِ دوباره: فاکتور id=%d هم برگشت خودکار [reversal#%d] دارد و هم تعدیل دستی مثبت (tx id=%d، %s). یکی از این دو اضافه است — با ادمین مالی بررسی شود.',
+                    $invId, $invId, $tx->id, $this->fmt((int) $tx->amount)
+                );
+            }
         }
 
         if (empty($issues)) {
             $this->line('  ✓ ناهنجاری ساختاری پیدا نشد.');
         } else {
             foreach ($issues as $issue) {
-                $this->line('  ' . $issue);
+                $this->line('  '.$issue);
             }
         }
 
@@ -189,7 +240,7 @@ class WalletAudit extends Command
             $this->printTxTable($txs);
         } else {
             $this->line('بزرگ‌ترین ۲۰ تراکنش (بر اساس |amount|):');
-            $topByAbs = $txs->sortByDesc(fn($t) => abs((int) $t->amount))->take(20);
+            $topByAbs = $txs->sortByDesc(fn ($t) => abs((int) $t->amount))->take(20);
             $this->printTxTable($topByAbs);
             $this->newLine();
             $this->line('۲۰ تراکنش آخر (بر اساس id):');
@@ -216,7 +267,10 @@ class WalletAudit extends Command
             return Technician::where('mobile', $mobile)->first();
         }
         $id = $this->argument('tech');
-        if (! $id) return null;
+        if (! $id) {
+            return null;
+        }
+
         return Technician::find((int) $id);
     }
 
@@ -277,6 +331,7 @@ class WalletAudit extends Command
         }
         if (empty($rows)) {
             $this->line('  (هیچ فاکتوری یافت نشد)');
+
             return;
         }
         $this->table(
