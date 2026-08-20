@@ -486,9 +486,13 @@
                         @canany(['view-crm-technicians', 'view-crm-financial', 'manage-crm-wallet'])
                         <div class="px-3 pt-3 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">افراد</div>
                         @can('view-crm-technicians')
-                        <a href="{{ route('crm.technicians.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.technicians.*') ? 'sidebar-menu-item-active' : '' }}">
+                        <a href="{{ route('crm.technicians.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.technicians.*') && ! request()->routeIs('crm.technicians.coverage-map') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63"/></svg>
                             تکنسین‌های فعال
+                        </a>
+                        <a href="{{ route('crm.technicians.coverage-map') }}" class="sidebar-menu-item {{ request()->routeIs('crm.technicians.coverage-map') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                            نقشه پوشش تهران
                         </a>
                         @endcan
                         @can('view-crm-financial')
