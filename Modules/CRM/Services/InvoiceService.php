@@ -28,32 +28,41 @@ class InvoiceService
 
     /**
      * حالتِ صدورِ فاکتور برای تکمیلِ این سفارش — تنها مرجعِ تصمیم
-     * (API اپ و پنلِ تکنسین هر دو از همین می‌خوانند). تصمیمِ ۱۴۰۵/۰۵/۲۹:
+     * (API اپ، پنلِ تکنسین و پنلِ ادمین همه از همین می‌خوانند).
+     * حکمِ نهاییِ ۱۴۰۵/۰۵/۲۹: «در تکمیلِ سفارش هیچ فاکتوری باطل نمی‌شود
+     * و هیچ تعدیلی (برگشتِ کمیسیون) ثبت نمی‌شود — هرگز.»
      *
-     *   - سفارشِ بازگشتی (گارانتی=۰ یا با هزینه) → «additive»: فاکتورِ
-     *     جدید در کنارِ فاکتور(های) قبلی؛ هیچ‌چیز باطل نمی‌شود، هیچ
-     *     کمیسیونی برنمی‌گردد — دو کارِ جدا روی یک سفارش.
-     *   - سفارشِ عادی → «supersede»: بازتکمیل یعنی مبلغ/قطعات عوض شده؛
-     *     فاکتورِ قبلی باطل و کمیسیونش خودکار برگشت می‌خورد.
+     *   - دورِ بازگشتی (بررسیِ تکنسین ثبت شده — چه گارانتی=۰ چه ایرادِ
+     *     جدیدِ با هزینه) → «additive»: فاکتورِ جدید در کنارِ قبلی‌ها؛
+     *     بدهیِ تکنسین جمعِ سهمِ شرکتِ همه است.
+     *   - تکمیلِ مجددِ خارج از چرخهٔ بازگشتی → «idempotent»: فاکتورِ
+     *     قبلی دست‌نخورده برمی‌گردد؛ اگر مبلغ عوض شده، بنرِ مغایرت هشدار
+     *     می‌دهد و مسیرِ درست دکمهٔ «اصلاح مبلغ فاکتور» است.
      *
-     * اصلاحِ «عددِ اشتباه» دیگر از مسیرِ بازگشتی انجام نمی‌شود — برای آن
-     * دکمهٔ اختصاصیِ ادمین (correctInvoice) است.
+     * باطل‌کردن + برگشتِ خودکارِ کمیسیون فقط در دو جا مجاز است:
+     * correctInvoice (اصلاحِ ادمین) و لغوِ فاکتور.
+     *
+     * ملاک، return_reviewed_at است نه return_type — چون «ردِ کارشناسی»
+     * (ایرادِ جدید) return_type را خالی می‌کند ولی همچنان دورِ بازگشتی
+     * است و باید جمع‌شونده بماند (گزارشِ ORD-2607-02619).
      */
     public function completionInvoiceMode(Order $order): string
     {
-        return is_null($order->return_type) ? 'supersede' : 'additive';
+        return $order->return_reviewed_at !== null ? 'additive' : 'idempotent';
     }
 
     /**
-     * صدورِ فاکتورِ سفارش — سه حالت:
+     * صدورِ فاکتورِ سفارش — دو حالت (خروجیِ completionInvoiceMode):
      *
-     *   false / 'idempotent' : اگر فاکتورِ فعال هست، همان برمی‌گردد
-     *                          (ضدِ double-click؛ مسیرِ «فاکتورهای جامانده»)
-     *   true  / 'supersede'  : فاکتور(های) قبلی باطل + برگشتِ خودکارِ
-     *                          کمیسیون + فاکتورِ جدید (بازتکمیلِ سفارشِ
-     *                          عادی و اصلاحِ ادمین)
-     *   'additive'           : فاکتورِ جدید در کنارِ قبلی‌ها — سفارشِ
+     *   false / 'idempotent' : اگر فاکتوری هست، همان برمی‌گردد — بدونِ
+     *                          هیچ تغییری (ضدِ double-click؛ «فاکتورهای
+     *                          جامانده»؛ تکمیلِ مجددِ غیربازگشتی)
+     *   'additive'           : فاکتورِ جدید در کنارِ قبلی‌ها — دورِ
      *                          بازگشتی؛ هیچ‌چیز باطل نمی‌شود
+     *
+     * حالتِ «supersede» عمداً حذف شده (حکمِ ۱۴۰۵/۰۵/۲۹): تکمیلِ سفارش
+     * هرگز فاکتورِ قبلی را باطل نمی‌کند و تعدیلی نمی‌زند — باطل‌کردن +
+     * برگشتِ کمیسیون فقط در correctInvoice و لغوِ فاکتور.
      *
      * @param  bool|string  $mode  خروجیِ completionInvoiceMode یا bool قدیمی
      * @param  string|null  $collectionMethod  «روش دریافت» انتخابِ تکنسین
@@ -61,11 +70,9 @@ class InvoiceService
      */
     public function generateForOrder(Order $order, ?int $createdBy = null, bool|string $mode = false, ?string $collectionMethod = null): ?Invoice
     {
-        $mode = match (true) {
-            $mode === true => 'supersede',
-            $mode === false => 'idempotent',
-            default => in_array($mode, ['idempotent', 'supersede', 'additive'], true) ? $mode : 'idempotent',
-        };
+        // هر مقدارِ ناشناخته (از جمله true و 'supersede' قدیمی) به حالتِ
+        // امنِ idempotent می‌افتد — هیچ مسیری نباید ناخواسته باطل/برگشت بزند.
+        $mode = $mode === 'additive' ? 'additive' : 'idempotent';
 
         // گاردِ سفت: سفارش‌های legacy-closed (از لاگ قدیمیِ WP بسته شده‌اند و
         // حسابداری‌شان قطعی‌ست) هرگز نباید فاکتور/wallet-tx بگیرند. اگر فاکتوری
@@ -101,7 +108,7 @@ class InvoiceService
             $collectionMethod = 'cash';
         }
 
-        $invoice = DB::transaction(function () use ($order, $createdBy, $existing, $collectionMethod, $mode) {
+        $invoice = DB::transaction(function () use ($order, $createdBy, $collectionMethod) {
             $technician = $order->technician;
 
             $totals = $technician
@@ -129,27 +136,10 @@ class InvoiceService
 
             $this->postCommission($invoice, $order, $createdBy);
 
-            // ─── فقط حالتِ supersede: باطل‌کردنِ قبلی‌ها + برگشتِ کمیسیون ───
-            // در حالتِ additive (بازگشتی) به فاکتورهای قبلی دست نمی‌زنیم:
-            // هر دو کارِ معتبرند و بدهیِ تکنسین جمعِ سهمِ شرکتِ هر دو است.
-            if ($mode === 'supersede' && $existing) {
-                $superseded = Invoice::withoutGlobalScope('active')
-                    ->where('order_id', $order->id)
-                    ->whereNull('superseded_at')
-                    ->where('id', '!=', $invoice->id)
-                    ->get();
-
-                Invoice::withoutGlobalScope('active')
-                    ->whereIn('id', $superseded->pluck('id'))
-                    ->update(['superseded_at' => now(), 'superseded_by_id' => $invoice->id]);
-
-                // سهمِ شرکتِ فاکتورِ باطل‌شده با تراکنشِ معکوس برمی‌گردد —
-                // تراکنشِ اصلی حذف نمی‌شود (تاریخچهٔ کامل) و برآیندِ کیف‌پول
-                // فقط بابتِ فاکتورِ فعال می‌ماند. idempotent با [reversal#id].
-                foreach ($superseded as $old) {
-                    $this->reverseCommission($old, $createdBy);
-                }
-            }
+            // در تکمیلِ سفارش به فاکتورهای قبلی هرگز دست نمی‌زنیم — نه
+            // باطل‌کردن، نه برگشتِ کمیسیون (حکمِ ۱۴۰۵/۰۵/۲۹). در حالتِ
+            // additive هر دو فاکتور معتبرند و بدهیِ تکنسین جمعِ سهمِ
+            // شرکتِ همه است.
 
             return $invoice;
         });
@@ -331,7 +321,9 @@ class InvoiceService
     }
 
     /**
-     * برگشتِ سهمِ شرکتِ یک فاکتورِ بایگانی‌شده (superseded).
+     * برگشتِ سهمِ شرکتِ یک فاکتور — فقط از دو مسیرِ مجاز صدا زده می‌شود:
+     * اصلاحِ مبلغ (correctInvoice) و لغوِ فاکتور. تکمیلِ سفارش هرگز از
+     * این متد استفاده نمی‌کند (حکمِ ۱۴۰۵/۰۵/۲۹).
      *
      * تراکنشِ اصلی حذف نمی‌شود — یک تراکنشِ معکوس (+company_share) ثبت
      * می‌شود تا هم تاریخچه کامل بماند و هم برآیندِ کیف‌پول فقط بابتِ
