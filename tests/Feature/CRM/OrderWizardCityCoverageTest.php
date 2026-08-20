@@ -16,9 +16,13 @@ use Tests\TestCase;
  * پوششِ خدماتِ شهر در ویزاردِ ثبتِ سفارشِ ادمین (تصمیمِ ۱۴۰۵/۰۵/۲۹):
  *
  *   - «سفارش» فقط برای دستگاهی ثبت می‌شود که در شهرِ انتخاب‌شده حداقل یک
- *     تکنسینِ فعال مهارتش (تگِ دستگاه) را دارد — مثالِ مشهد: فقط لباسشویی.
- *   - همان معناشناسیِ تگ‌های سیستمِ پیشنهاد: تگِ شهرِ خالی = همهٔ شهرها؛
- *     تگِ دستگاهِ خالی = همهٔ دستگاه‌ها.
+ *     تکنسینِ فعال با تگِ صریحِ همان شهر مهارتش (تگِ دستگاه) را دارد —
+ *     مثالِ مشهد: فقط لباسشویی؛ اردبیلِ بدونِ تکنسین: هیچ.
+ *   - سخت‌گیرانه‌تر از سیستمِ پیشنهاد: تکنسینِ بدونِ تگِ شهر پوششِ هیچ
+ *     شهری حساب نمی‌شود (وگرنه شهرِ بدونِ تکنسین همه‌چیز را باز می‌کرد).
+ *     تگِ دستگاهِ خالی برای تکنسینِ تگ‌خورده = همه‌کاره.
+ *   - ایمنی: اگر هیچ تکنسینِ فعالی تگِ شهر نداشته باشد، محدودیت غیرفعال
+ *     است (با بنرِ هشدار) تا ثبتِ سفارش سراسری قفل نشود.
  *   - ثبتِ «لید» هیچ محدودیتی ندارد.
  *   - تغییرِ شهر انتخابِ دستگاهِ خارج از پوشش را پاک می‌کند.
  */
@@ -198,10 +202,23 @@ class OrderWizardCityCoverageTest extends TestCase
             ->assertHasNoErrors(['deviceId']);
     }
 
-    public function test_an_empty_city_tag_covers_every_city(): void
+    public function test_a_technician_without_city_tags_does_not_open_other_cities(): void
     {
-        // تکنسینِ بدونِ تگِ شهر همه‌جا را پوشش می‌دهد (سازگار با rejectionFor).
+        // گزارشِ اردبیل: تکنسینِ بدونِ تگِ شهر نباید شهرِ بدونِ تکنسین را باز کند.
+        // (یک تکنسینِ تگ‌خورده در شهرِ دیگر هست تا فیچر «با داده» حساب شود.)
+        $this->technician([$this->tehran->id], [$this->washer->id]);
         $this->technician([], [$this->fridge->id]);
+
+        $this->wizard($this->mashhad->id)
+            ->set('deviceId', $this->fridge->id)
+            ->call('next')
+            ->assertHasErrors(['deviceId']);
+    }
+
+    public function test_the_restriction_is_disabled_when_no_technician_has_city_tags(): void
+    {
+        // فیچر بدونِ داده: هیچ تکنسینی تگِ شهر ندارد → قفلِ سراسری ممنوع.
+        $this->technician([], [$this->washer->id]);
 
         $this->wizard($this->mashhad->id)
             ->set('deviceId', $this->fridge->id)
@@ -212,6 +229,9 @@ class OrderWizardCityCoverageTest extends TestCase
     public function test_an_inactive_technician_does_not_count_as_coverage(): void
     {
         $this->technician([$this->mashhad->id], [$this->fridge->id], status: 'inactive');
+        // یک تکنسینِ فعالِ تگ‌خورده در شهرِ دیگر، تا فیچر «با داده» بماند و
+        // fallback ایمنی (بدونِ هیچ تگی) فعال نشود.
+        $this->technician([$this->tehran->id], [$this->washer->id]);
 
         $this->wizard($this->mashhad->id)
             ->set('deviceId', $this->fridge->id)
