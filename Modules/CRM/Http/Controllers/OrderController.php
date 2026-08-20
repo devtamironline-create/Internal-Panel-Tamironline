@@ -1165,7 +1165,10 @@ class OrderController extends Controller
         // تولید خودکار فاکتور در تکمیل سفارش (idempotent) — مگر اینکه پیش‌نویس باشد
         $draftWarning = null;
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
-            $this->invoiceService->generateForOrder($order->refresh(), auth()->id(), true);
+            // حالت از completionInvoiceMode: سفارشِ بازگشتی → additive
+            // (فاکتور کنار قبلی‌ها)، سفارشِ عادی → supersede.
+            $fresh = $order->refresh();
+            $this->invoiceService->generateForOrder($fresh, auth()->id(), $this->invoiceService->completionInvoiceMode($fresh));
         } elseif ($newStatus === OrderStatus::Completed) {
             // تکمیلِ پیش‌نویس عمداً فاکتور نمی‌سازد. ولی اگر سفارش از قبل
             // فاکتور دارد و مبلغش همین حالا عوض شد، آن فاکتور دیگر با

@@ -177,9 +177,12 @@ class TechDashboardController extends Controller
             'created_at' => now(),
         ]);
 
-        // فاکتور خودکار موقع تکمیل (مشابه مسیر ادمین)
+        // فاکتور خودکار موقع تکمیل (مشابه مسیر ادمین) — حالت از
+        // completionInvoiceMode تا سفارشِ بازگشتی از این مسیرِ قدیمی هم
+        // فاکتورِ جمع‌شونده بگیرد، نه فاکتورِ قبلی را.
         if ($newStatus === OrderStatus::Completed) {
-            $this->invoiceService->generateForOrder($order->refresh(), auth()->id());
+            $fresh = $order->refresh();
+            $this->invoiceService->generateForOrder($fresh, auth()->id(), $this->invoiceService->completionInvoiceMode($fresh));
         }
 
         // SMS خودکار
