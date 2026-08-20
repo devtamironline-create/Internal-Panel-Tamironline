@@ -185,7 +185,7 @@ class OrderActionController extends Controller
             $this->invoiceService->generateForOrder(
                 $order,
                 $tech->user_id,
-                $this->invoiceService->shouldRegenerateForCompletion($order),
+                $this->invoiceService->completionInvoiceMode($order),
                 $validated['payment_collection'] ?? null
             );
         }

@@ -74,7 +74,15 @@
                         @forelse($transactions as $tx)
                         <tr>
                             <td class="px-4 py-2 text-xs text-gray-500" dir="ltr">@jdatetime($tx->created_at)</td>
-                            <td class="px-4 py-2"><span class="px-2 py-0.5 text-xs font-medium rounded-full {{ $tx->type->badgeClass() }}">{{ $tx->type->label() }}</span></td>
+                            <td class="px-4 py-2">
+                                <span class="px-2 py-0.5 text-xs font-medium rounded-full {{ $tx->type->badgeClass() }}">{{ $tx->type->label() }}</span>
+                                @if(str_contains((string) $tx->note, '[reversal#'))
+                                    <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-purple-100 text-purple-800"
+                                          title="برگشت خودکار سهم شرکت (بازصدور/اصلاح/لغو فاکتور) — تعدیل دستی برای همین فاکتور نزنید؛ جبران دوباره می‌شود.">
+                                        ⚙ خودکار
+                                    </span>
+                                @endif
+                            </td>
                             <td class="px-4 py-2 font-bold {{ $tx->amount >= 0 ? 'text-green-600' : 'text-red-600' }}">{{ ($tx->amount >= 0 ? '+' : '') . number_format($tx->amount) }}</td>
                             <td class="px-4 py-2">{{ number_format($tx->balance_after) }}</td>
                             <td class="px-4 py-2 text-xs text-gray-600">

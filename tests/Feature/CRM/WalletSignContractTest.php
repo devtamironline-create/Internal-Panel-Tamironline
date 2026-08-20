@@ -96,6 +96,7 @@ class WalletSignContractTest extends TestCase
             $t->timestamp('issued_at')->nullable();
             $t->timestamp('paid_at')->nullable();
             $t->timestamp('superseded_at')->nullable();
+            $t->unsignedBigInteger('superseded_by_id')->nullable();
             $t->unsignedBigInteger('created_by')->nullable();
             $t->timestamps();
         });

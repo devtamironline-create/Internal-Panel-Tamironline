@@ -246,6 +246,7 @@ class PermissionController extends Controller
             'edit-invoices' => 'ویرایش فاکتور',
             'delete-invoices' => 'حذف فاکتور',
             'mark-invoices-paid' => 'علامت‌گذاری فاکتور به‌عنوان پرداخت‌شده',
+            'correct-invoices' => 'اصلاح مبلغ فاکتور (باطل‌کردن + برگشت خودکار کمیسیون + صدور فاکتور جدید — فقط ادمین ارشد)',
             'manage-crm-payment-gateway' => 'مدیریت درگاه پرداخت (زیبال)',
 
             // CRM - گزارش‌ها و ابزارهای جدید

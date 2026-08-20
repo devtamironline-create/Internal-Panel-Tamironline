@@ -32,7 +32,19 @@
                     <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">لغو فاکتور</button>
                 </form>
                 @endif
+            @endcan
 
+            {{-- اصلاح مبلغ — permission ویژه؛ فقط فاکتور صادرشدهٔ فعال --}}
+            @can('correct-invoices')
+                @if($invoice->status === 'issued' && ! $invoice->superseded_at)
+                <a href="{{ route('crm.invoices.correct', $invoice) }}"
+                   class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm">
+                    ✏️ اصلاح مبلغ فاکتور
+                </a>
+                @endif
+            @endcan
+
+            @can('manage-crm-financial')
                 {{-- Push دستی به WP — مفید برای فاکتورهایی که هنوز سینک نشده‌اند --}}
                 <form action="{{ route('crm.invoices.push-to-wp', $invoice) }}" method="POST" class="inline"
                       onsubmit="return confirm('این فاکتور به WP CRM ارسال شود؟');">
@@ -113,6 +125,12 @@
                     این فاکتور با مبلغ سفارش یکی نیست
                 </div>
                 <div class="text-xs text-red-700 dark:text-red-300 mb-2">{{ $mismatch['reason_label'] }}</div>
+                @if(($mismatch['active_count'] ?? 1) > 1)
+                <div class="text-xs text-red-700 dark:text-red-300 mb-2">
+                    سفارش {{ $mismatch['active_count'] }} فاکتور فعال دارد
+                    (مجموع {{ number_format($mismatch['active_sum']) }} تومان — بازگشتی با فاکتور جمع‌شونده).
+                </div>
+                @endif
                 <div class="text-xs text-red-900 dark:text-red-200">
                     مبلغ این فاکتور <b>{{ number_format($mismatch['invoice_total']) }}</b> تومان است،
                     ولی سفارش

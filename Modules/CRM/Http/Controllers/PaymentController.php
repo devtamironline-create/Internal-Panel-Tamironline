@@ -35,6 +35,12 @@ class PaymentController extends Controller
             ->first();
 
         if (! $invoice) {
+            // لینکِ پرداختِ فاکتورِ باطل‌شده شفاف به فاکتورِ جایگزین می‌رود —
+            // مشتری نباید بفهمد فاکتوری باطل شده (تصمیمِ ۱۴۰۵/۰۵/۲۹).
+            if ($redirect = $this->supersededPayRedirect($invoiceCode)) {
+                return $redirect;
+            }
+
             return view('crm::payment.result', [
                 'ok' => false,
                 'message' => $this->missingInvoiceMessage($invoiceCode),
@@ -54,6 +60,20 @@ class PaymentController extends Controller
      * مشتری لینکِ پیامکِ قدیمی را باز کرده — پیامِ راهنما بهتر از
      * «یافت نشد» خشک است. فاکتورِ جایگزین‌شده قابلِ پرداخت نیست.
      */
+    /**
+     * اگر توکن به فاکتورِ superseded می‌خورد، ریدایرکت به صفحهٔ پرداختِ
+     * فاکتورِ جایگزین — null یعنی چنین فاکتوری نیست/جایگزین ندارد.
+     */
+    protected function supersededPayRedirect(string $publicToken)
+    {
+        $old = Invoice::onlySuperseded()->where('public_token', $publicToken)->first();
+        $replacement = $old?->resolveReplacement();
+
+        return ($replacement && $replacement->id !== $old->id)
+            ? redirect()->route('crm.payment.pay', $replacement->public_token)
+            : null;
+    }
+
     protected function missingInvoiceMessage(string $publicToken): string
     {
         $superseded = Invoice::onlySuperseded()->where('public_token', $publicToken)->exists();
@@ -85,6 +105,12 @@ class PaymentController extends Controller
         $invoice = Invoice::with('customer')->where('public_token', $invoiceCode)->first();
 
         if (! $invoice) {
+            // POST روی فاکتورِ باطل‌شده → صفحهٔ پیش‌نمایشِ فاکتورِ جایگزین
+            // (GET) تا مشتری مبلغِ درست را ببیند و دوباره تأیید کند.
+            if ($redirect = $this->supersededPayRedirect($invoiceCode)) {
+                return $redirect;
+            }
+
             return view('crm::payment.result', [
                 'ok' => false,
                 'message' => $this->missingInvoiceMessage($invoiceCode),

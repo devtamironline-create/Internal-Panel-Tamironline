@@ -124,7 +124,7 @@ class RoleController extends Controller
 
             // CRM — همه permissionهای شامل crm را در گروه‌های فرعی CRM
             if (str_contains($name, 'crm-reports') || str_contains($name, 'crm-orphan') || str_contains($name, 'crm-legacy')) return 'CRM — گزارش‌ها و ابزارها';
-            if (str_contains($name, 'crm-financial') || str_contains($name, 'crm-wallet') || str_contains($name, 'crm-invoice') || str_contains($name, 'crm-payment')) return 'CRM — مالی و فاکتور';
+            if (str_contains($name, 'crm-financial') || str_contains($name, 'crm-wallet') || str_contains($name, 'crm-invoice') || str_contains($name, 'crm-payment') || str_contains($name, 'wallet-transaction') || $name === 'correct-invoices') return 'CRM — مالی و فاکتور';
             if (str_contains($name, 'crm-tickets') || str_contains($name, 'reply-crm')) return 'CRM — تیکت‌های تکنسین';
             // view-tech-suggestions برای ادمین/اپراتور در صفحهٔ جزئیات
             // سفارش استفاده می‌شود (نه پنل تکنسین) — قبل از گروه پنل

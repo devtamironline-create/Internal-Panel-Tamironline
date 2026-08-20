@@ -476,9 +476,13 @@ class OrderController extends Controller
             ->limit(10)
             ->get();
 
-        // فاکتور فعال این سفارش (اگر وجود دارد) — برای نمایش دکمه «صدور فاکتور»
-        // در حالت‌هایی که سفارش Completed است ولی فاکتور ندارد.
-        $activeInvoice = \Modules\CRM\Models\Invoice::where('order_id', $order->id)->first();
+        // فاکتورهای فعال این سفارش — سفارشِ بازگشتیِ جمع‌شونده می‌تواند
+        // بیش از یکی داشته باشد؛ دکمه‌های تک‌فاکتوری روی «آخرین» می‌روند
+        // و اگر بیش از یکی بود، کارتِ لیستِ کامل هم نمایش داده می‌شود.
+        $activeInvoices = \Modules\CRM\Models\Invoice::where('order_id', $order->id)
+            ->orderBy('id')
+            ->get();
+        $activeInvoice = $activeInvoices->last();
 
         // فاکتورهای قبلی (superseded) برای تاریخچه — این‌ها به‌خاطر برگشت
         // سفارش و تکمیل مجدد به‌وجود آمده‌اند و در DB موجودند.
@@ -528,6 +532,7 @@ class OrderController extends Controller
             'previousTechnician' => $previousTechnician,
             'assignmentLogs' => $assignmentLogs,
             'activeInvoice' => $activeInvoice,
+            'activeInvoices' => $activeInvoices,
             'customerOrders' => $customerOrders,
             'supersededInvoices' => $supersededInvoices,
             'affectedInvoiceIds' => $affectedInvoiceIds,
@@ -1165,7 +1170,10 @@ class OrderController extends Controller
         // تولید خودکار فاکتور در تکمیل سفارش (idempotent) — مگر اینکه پیش‌نویس باشد
         $draftWarning = null;
         if ($newStatus === OrderStatus::Completed && empty($updates['save_as_draft'])) {
-            $this->invoiceService->generateForOrder($order->refresh(), auth()->id(), true);
+            // حالت از completionInvoiceMode: سفارشِ بازگشتی → additive
+            // (فاکتور کنار قبلی‌ها)، سفارشِ عادی → supersede.
+            $fresh = $order->refresh();
+            $this->invoiceService->generateForOrder($fresh, auth()->id(), $this->invoiceService->completionInvoiceMode($fresh));
         } elseif ($newStatus === OrderStatus::Completed) {
             // تکمیلِ پیش‌نویس عمداً فاکتور نمی‌سازد. ولی اگر سفارش از قبل
             // فاکتور دارد و مبلغش همین حالا عوض شد، آن فاکتور دیگر با

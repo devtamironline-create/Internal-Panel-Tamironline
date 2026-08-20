@@ -643,6 +643,62 @@
                 @endcan
             </div>
 
+            {{-- ─── فاکتورهای فعال (بیش از یکی = سفارش بازگشتی جمع‌شونده) ─── --}}
+            @if(($activeInvoices ?? collect())->count() > 1)
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border-r-4 border-emerald-400">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">فاکتورهای فعال این سفارش</h2>
+                    <span class="text-xs text-gray-500">{{ $activeInvoices->count() }} فاکتور فعال</span>
+                </div>
+                <p class="text-xs text-gray-500 mb-3">
+                    این سفارش بازگشتی است و برای هر بار انجام کار یک فاکتور جداگانه دارد؛ همهٔ فاکتورهای زیر معتبرند،
+                    به مشتری نمایش داده می‌شوند و بدهی تکنسین جمعِ سهم شرکتِ همهٔ آن‌هاست.
+                </p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30">
+                                <th class="py-2 px-3 text-right">کد فاکتور</th>
+                                <th class="py-2 px-3 text-right">صدور</th>
+                                <th class="py-2 px-3 text-right">مبلغ کل</th>
+                                <th class="py-2 px-3 text-right">سهم تکنسین</th>
+                                <th class="py-2 px-3 text-right">سهم شرکت</th>
+                                <th class="py-2 px-3 text-right">وضعیت</th>
+                                <th class="py-2 px-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach($activeInvoices as $actInv)
+                                <tr class="text-xs">
+                                    <td class="py-2 px-3 font-mono" dir="ltr">{{ $actInv->invoice_code }}</td>
+                                    <td class="py-2 px-3 text-gray-500" dir="ltr">@jdatetime($actInv->issued_at ?? $actInv->created_at)</td>
+                                    <td class="py-2 px-3 font-bold">{{ number_format((int) $actInv->total_amount) }}</td>
+                                    <td class="py-2 px-3">{{ number_format((int) $actInv->tech_share) }}</td>
+                                    <td class="py-2 px-3">{{ number_format((int) $actInv->company_share) }}</td>
+                                    <td class="py-2 px-3">
+                                        <span class="px-2 py-0.5 rounded-full {{ $actInv->statusBadge() }}">{{ $actInv->statusLabel() }}</span>
+                                    </td>
+                                    <td class="py-2 px-3">
+                                        @can('view-crm-invoices')
+                                        <a href="{{ route('crm.invoices.show', $actInv->id) }}" class="text-brand-700 hover:underline">مشاهده →</a>
+                                        @endcan
+                                    </td>
+                                </tr>
+                            @endforeach
+                            <tr class="text-xs bg-emerald-50/50 dark:bg-emerald-900/10 font-bold">
+                                <td class="py-2 px-3">مجموع</td>
+                                <td class="py-2 px-3"></td>
+                                <td class="py-2 px-3">{{ number_format((int) $activeInvoices->sum('total_amount')) }}</td>
+                                <td class="py-2 px-3">{{ number_format((int) $activeInvoices->sum('tech_share')) }}</td>
+                                <td class="py-2 px-3">{{ number_format((int) $activeInvoices->sum('company_share')) }}</td>
+                                <td class="py-2 px-3" colspan="2"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+
             {{-- ─── فاکتورهای قبلی (superseded) — تاریخچه برگشت و تکمیل مجدد ─── --}}
             @if($supersededInvoices->isNotEmpty())
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border-r-4 border-rose-400">
@@ -937,6 +993,13 @@
                                 این اعداد با فاکتور صادرشده یکی نیستند
                             </div>
                             <div class="text-red-700 dark:text-red-300">{{ $mismatch['reason_label'] }}</div>
+                            @if(($mismatch['active_count'] ?? 1) > 1)
+                            <div class="text-red-700 dark:text-red-300 mt-1">
+                                این سفارش {{ $mismatch['active_count'] }} فاکتور فعال دارد
+                                (مجموع {{ number_format($mismatch['active_sum']) }} تومان — سفارش بازگشتی با فاکتور جمع‌شونده).
+                                مقایسهٔ زیر با آخرین فاکتور است.
+                            </div>
+                            @endif
                             <table class="w-full mt-2 text-[11px]">
                                 <thead class="text-red-700 dark:text-red-300">
                                     <tr>
@@ -1062,8 +1125,9 @@
                 {{-- ارسال/ارسال مجدد فاکتور به WP CRM —
                      فقط برای سفارش‌های Completed که فاکتور فعال دارند --}}
                 @php
-                    // global scope active روی Invoice فاکتورهای superseded را خارج می‌کند
-                    $activeInvoice = \Modules\CRM\Models\Invoice::where('order_id', $order->id)->first();
+                    // global scope active روی Invoice فاکتورهای superseded را خارج می‌کند؛
+                    // «آخرین» فعال، چون سفارش بازگشتی چند فاکتور فعال دارد.
+                    $activeInvoice = \Modules\CRM\Models\Invoice::where('order_id', $order->id)->latest('id')->first();
                 @endphp
                 @can('manage-crm-financial')
                 @if($activeInvoice)

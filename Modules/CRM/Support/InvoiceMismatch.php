@@ -69,7 +69,16 @@ final class InvoiceMismatch
 
         $reason = self::reasonFor($order, $invoice, $orderTotal, $invoiceTotal);
 
+        // سفارشِ بازگشتیِ جمع‌شونده چند فاکتورِ فعال دارد؛ مقایسهٔ بالا با
+        // «آخرین» فاکتور (کارِ آخر) است و مجموعِ فعال‌ها جدا گزارش می‌شود
+        // تا بنر گمراه‌کننده نباشد (تصمیمِ ۱۴۰۵/۰۵/۲۹: «مجموع دو فاکتور»).
+        $actives = $order->relationLoaded('invoices')
+            ? $order->invoices->whereNull('superseded_at')
+            : Invoice::where('order_id', $order->id)->get();
+
         return [
+            'active_count' => $actives->count(),
+            'active_sum' => (int) $actives->sum('total_amount'),
             'order_total' => $orderTotal,
             'invoice_total' => $invoiceTotal,
             'order_tech' => $orderTech,
@@ -97,9 +106,13 @@ final class InvoiceMismatch
      */
     public static function activeInvoiceOf(Order $order): ?Invoice
     {
+        // «آخرین» فاکتورِ فعال، نه اولین — روی سفارشِ بازگشتیِ جمع‌شونده
+        // چند فاکتورِ فعال هست و مبلغِ سفارش (price_customer) متعلق به
+        // آخرین تکمیل است؛ مقایسه با فاکتورِ کارِ اول مغایرتِ کاذب می‌سازد.
         if ($order->relationLoaded('invoices')) {
-            return $order->invoices->firstWhere('superseded_at', null)
-                ?? $order->invoices->last();
+            $actives = $order->invoices->whereNull('superseded_at')->sortBy('id');
+
+            return $actives->last() ?? $order->invoices->sortBy('id')->last();
         }
 
         return Invoice::where('order_id', $order->id)->latest('id')->first();

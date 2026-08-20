@@ -30,6 +30,7 @@ class Invoice extends Model
         'issued_at',
         'paid_at',
         'superseded_at',
+        'superseded_by_id',
         'created_by',
     ];
 
@@ -98,6 +99,39 @@ class Invoice extends Model
     }
 
     /** Scope: فقط فاکتورهای superseded. */
+    /**
+     * فاکتورِ جایگزینِ نهاییِ این فاکتورِ باطل‌شده — دنبال‌کردنِ زنجیرهٔ
+     * superseded_by تا رسیدن به فاکتورِ فعال. برای ریدایرکتِ لینکِ قدیمی.
+     *
+     * fallback برای رکوردهای قدیمی (بدونِ اشاره‌گر): اولین فاکتورِ فعالِ
+     * همان سفارش که بعد از باطل‌شدنِ این ساخته شده؛ وگرنه آخرین فاکتورِ فعال.
+     */
+    public function resolveReplacement(int $maxHops = 10): ?Invoice
+    {
+        $current = $this;
+
+        while ($current->superseded_at !== null && $maxHops-- > 0) {
+            $next = $current->superseded_by_id
+                ? Invoice::withSuperseded()->find($current->superseded_by_id)
+                : null;
+
+            if (! $next) {
+                $next = Invoice::where('order_id', $current->order_id)
+                    ->when($current->superseded_at, fn ($q) => $q->where('created_at', '>=', $current->superseded_at))
+                    ->orderBy('id')
+                    ->first()
+                    ?? Invoice::where('order_id', $current->order_id)->latest('id')->first();
+            }
+
+            if (! $next || $next->id === $current->id) {
+                return null;
+            }
+            $current = $next;
+        }
+
+        return $current->superseded_at === null ? $current : null;
+    }
+
     public function scopeOnlySuperseded(Builder $q): Builder
     {
         return $q->withoutGlobalScope('active')->whereNotNull('superseded_at');

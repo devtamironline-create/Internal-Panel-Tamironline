@@ -55,8 +55,9 @@ class InvoiceController extends Controller
             abort(401, 'احراز هویت مشتری لازم است.');
         }
 
-        // withoutGlobalScope('active') تا فاکتورِ superseded هم (مثلِ رسیدِ عمومی)
-        // برای صاحبش قابل دیدن باشد.
+        // withoutGlobalScope('active') تا لینکِ قدیمی ۴۰۴ نشود؛ ولی فاکتورِ
+        // superseded به مشتری نمایش داده نمی‌شود — شفاف payload فاکتورِ
+        // جایگزین برمی‌گردد (بدونِ هیچ توضیحی، مثل فاکتورِ عادی).
         $invoice = Invoice::withoutGlobalScope('active')
             ->with(['order.items', 'order.technician:id,first_name,last_name,firstname_tech,mobile', 'customer'])
             ->where('public_token', $token)
@@ -68,6 +69,16 @@ class InvoiceController extends Controller
         );
         if (! $owns) {
             abort(404, 'این فاکتور در دسترس شما نیست.');
+        }
+
+        if ($invoice->superseded_at !== null) {
+            $replacement = $invoice->resolveReplacement();
+            if ($replacement && $replacement->id !== $invoice->id
+                && (int) $replacement->order_id === (int) $invoice->order_id) {
+                $invoice = $replacement->load([
+                    'order.items', 'order.technician:id,first_name,last_name,firstname_tech,mobile', 'customer',
+                ]);
+            }
         }
 
         $order = $invoice->order;
