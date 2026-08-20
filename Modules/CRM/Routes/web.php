@@ -284,6 +284,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
 
     // ─── تکنسین‌های فعال ──────────────────────────────────────────
     Route::middleware('can:view-crm-technicians')->group(function () {
+        // نقشهٔ پوشش تهران — قبل از {technician} تا مسیر ثابت گیرِ wildcard نشود
+        Route::get('technicians/coverage-map', [\Modules\CRM\Http\Controllers\CoverageMapController::class, 'index'])
+            ->name('technicians.coverage-map');
         Route::get('technicians', [TechnicianController::class, 'index'])->name('technicians.index');
         Route::get('technicians/export/{format}', [TechnicianController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('technicians.export');
