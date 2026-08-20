@@ -69,6 +69,12 @@
          که در شهرِ انتخاب‌شده تکنسینِ فعال دارند (خودکار از مهارتِ
          تکنسین‌ها). لید محدودیتی ندارد. --}}
     @php $deviceListMain = $isOrderable ? $this->orderableDevices : $this->devices; @endphp
+    @if($isOrderable && $cityId && $this->cityCoverageUnavailable)
+        <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs leading-6">
+            ⚠ هیچ تکنسین فعالی «تگ شهر» ندارد؛ محدودیت پوشش شهر موقتاً غیرفعال است و همهٔ دستگاه‌ها باز می‌مانند.
+            برای فعال‌شدن، در پروفایل تکنسین‌ها شهرهای تحت پوشش را تنظیم کنید.
+        </div>
+    @endif
     @if($isOrderable && $cityId && $this->coveredDeviceIds !== null)
         @if($deviceListMain->isEmpty())
             <div class="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs leading-6">

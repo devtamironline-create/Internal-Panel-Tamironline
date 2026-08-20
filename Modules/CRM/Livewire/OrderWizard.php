@@ -201,43 +201,83 @@ class OrderWizard extends Component
 
     /**
      * دستگاه‌های تحتِ پوششِ شهرِ انتخاب‌شده — خودکار از مهارتِ (تگِ دستگاهِ)
-     * تکنسین‌های فعالی که آن شهر را پوشش می‌دهند. همان معناشناسیِ تگ‌ها در
-     * سیستمِ پیشنهاد (TechnicianSuggestionService::rejectionFor):
-     *   - تگِ شهرِ خالی = پوششِ همهٔ شهرها
-     *   - تگِ دستگاهِ خالی = همهٔ دستگاه‌ها
+     * تکنسین‌های فعالی که **صریحاً** تگِ آن شهر را دارند.
      *
-     * خروجی: null = بدونِ محدودیت (شهری انتخاب نشده یا تکنسینی همه‌کاره
-     * آن شهر را پوشش می‌دهد)؛ Collection از idها (شاید خالی = هیچ سرویسی).
+     * ⚠ عمداً سخت‌گیرانه‌تر از سیستمِ پیشنهاد است: در rejectionFor «تگِ شهرِ
+     * خالی = پوششِ همه‌جا» (backward-compatible برای تخصیص)، ولی این‌جا
+     * تکنسینِ بدونِ تگِ شهر پوششِ هیچ شهری حساب نمی‌شود — وگرنه در شهری
+     * مثل اردبیل که هیچ تکنسینی نداریم، همهٔ دستگاه‌ها باز می‌ماند
+     * (گزارشِ ۱۴۰۵/۰۵/۲۹). تگِ دستگاهِ خالی برای تکنسینِ تگ‌خوردهٔ همان
+     * شهر همچنان یعنی همه‌کاره.
+     *
+     * ایمنی: اگر هیچ تکنسینِ فعالی در کلِ سیستم تگِ شهر نداشته باشد
+     * (فیچر بدونِ داده)، محدودیت غیرفعال می‌ماند تا ثبتِ سفارش در کلِ
+     * کشور قفل نشود — بنرِ هشدار در فرم همین را می‌گوید.
+     *
+     * خروجی: null = بدونِ محدودیت؛ Collection از idها (خالی = هیچ سرویسی).
      * فقط برای ثبتِ «سفارش» اعمال می‌شود — لید مستثناست.
      */
     #[Computed]
     public function coveredDeviceIds(): ?\Illuminate\Support\Collection
     {
+        return $this->coverageState()['ids'];
+    }
+
+    /** فیچرِ پوشش داده ندارد؟ (هیچ تکنسینِ فعالی تگِ شهر ندارد) — برای بنرِ هشدار. */
+    #[Computed]
+    public function cityCoverageUnavailable(): bool
+    {
+        return $this->coverageState()['unavailable'];
+    }
+
+    /** cache درون‌درخواستی به تفکیکِ شهر — private، بینِ درخواست‌ها نمی‌ماند. */
+    private array $coverageCache = [];
+
+    /** @return array{ids: \Illuminate\Support\Collection|null, unavailable: bool} */
+    protected function coverageState(): array
+    {
+        $key = (string) $this->cityId;
+
+        return $this->coverageCache[$key] ??= $this->computeCoverage();
+    }
+
+    /** @return array{ids: \Illuminate\Support\Collection|null, unavailable: bool} */
+    protected function computeCoverage(): array
+    {
         if (! $this->cityId) {
-            return null;
+            return ['ids' => null, 'unavailable' => false];
         }
 
-        $covering = Technician::query()
+        $actives = Technician::query()
             ->where('status', 'active')
             ->with(['cities:id,is_active', 'devices:id'])
-            ->get()
-            ->filter(function (Technician $t) {
-                $cityIds = $t->cities->where('is_active', true)->pluck('id');
+            ->get();
 
-                return $cityIds->isEmpty() || $cityIds->contains($this->cityId);
-            });
+        // فیچر بدونِ داده: هیچ تکنسینی تگِ شهر ندارد → محدودیت غیرفعال.
+        $anyTagged = $actives->contains(
+            fn (Technician $t) => $t->cities->where('is_active', true)->isNotEmpty()
+        );
+        if (! $anyTagged) {
+            return ['ids' => null, 'unavailable' => true];
+        }
+
+        $covering = $actives->filter(
+            fn (Technician $t) => $t->cities->where('is_active', true)->pluck('id')->contains($this->cityId)
+        );
 
         if ($covering->isEmpty()) {
-            return collect();
+            return ['ids' => collect(), 'unavailable' => false];
         }
 
-        // تکنسینی بدونِ تگِ دستگاه که این شهر را پوشش می‌دهد = همه‌کاره.
+        // تکنسینِ تگ‌خوردهٔ همین شهر بدونِ تگِ دستگاه = همه‌کاره.
         if ($covering->contains(fn (Technician $t) => $t->devices->isEmpty())) {
-            return null;
+            return ['ids' => null, 'unavailable' => false];
         }
 
-        return $covering->flatMap(fn (Technician $t) => $t->devices->pluck('id'))
-            ->unique()->values();
+        return [
+            'ids' => $covering->flatMap(fn (Technician $t) => $t->devices->pluck('id'))->unique()->values(),
+            'unavailable' => false,
+        ];
     }
 
     /** لیستِ دستگاه برای انتخابِ «سفارش» — محدود به پوششِ شهر. لید از devices کامل می‌خواند. */
@@ -545,7 +585,7 @@ class OrderWizard extends Component
         // پوششِ شهرِ جدید ممکن است دستگاهِ انتخاب‌شدهٔ قبلی را در بر
         // نگیرد — انتخابِ کهنه پاک می‌شود تا اپراتور از لیستِ مجازِ شهرِ
         // جدید انتخاب کند. فقط برای ردیف‌های «قابل سفارش»؛ لید آزاد است.
-        unset($this->coveredDeviceIds, $this->orderableDevices);
+        unset($this->coveredDeviceIds, $this->orderableDevices, $this->cityCoverageUnavailable);
 
         if ($this->isOrderable && $this->deviceId && ! $this->deviceCoveredInCity((int) $this->deviceId)) {
             $this->deviceId = null;
