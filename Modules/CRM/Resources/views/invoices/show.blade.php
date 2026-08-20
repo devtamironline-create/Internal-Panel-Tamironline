@@ -125,6 +125,12 @@
                     این فاکتور با مبلغ سفارش یکی نیست
                 </div>
                 <div class="text-xs text-red-700 dark:text-red-300 mb-2">{{ $mismatch['reason_label'] }}</div>
+                @if(($mismatch['active_count'] ?? 1) > 1)
+                <div class="text-xs text-red-700 dark:text-red-300 mb-2">
+                    سفارش {{ $mismatch['active_count'] }} فاکتور فعال دارد
+                    (مجموع {{ number_format($mismatch['active_sum']) }} تومان — بازگشتی با فاکتور جمع‌شونده).
+                </div>
+                @endif
                 <div class="text-xs text-red-900 dark:text-red-200">
                     مبلغ این فاکتور <b>{{ number_format($mismatch['invoice_total']) }}</b> تومان است،
                     ولی سفارش

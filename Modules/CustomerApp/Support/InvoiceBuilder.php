@@ -89,7 +89,46 @@ final class InvoiceBuilder
             'pdf_url' => $invoice?->invoice_code
                 ? route('crm.invoice.public.pdf', ['invoiceCode' => $invoice->public_token])
                 : null,
+            // سفارشِ بازگشتیِ جمع‌شونده چند فاکتورِ فعال دارد — بقیه این‌جا
+            // کنارِ فاکتورِ اصلی به مشتری نمایش داده می‌شوند (تصمیمِ
+            // ۱۴۰۵/۰۵/۲۹). فاکتورهای باطل (superseded) هرگز نمی‌آیند —
+            // global scope فیلترشان می‌کند.
+            'other_invoices' => self::siblings($order, $invoice),
         ];
+    }
+
+    /**
+     * سایر فاکتورهای فعالِ همین سفارش (به‌جز فاکتورِ در حالِ نمایش) —
+     * خلاصهٔ قابلِ نمایش کنارِ فاکتورِ اصلی در اپِ مشتری.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private static function siblings(Order $order, ?Invoice $current): array
+    {
+        return Invoice::where('order_id', $order->id)
+            ->when($current?->id, fn ($q) => $q->where('id', '!=', $current->id))
+            ->orderBy('id')
+            ->get()
+            ->map(function (Invoice $inv) {
+                $payable = $inv->isPayableOnline();
+
+                return [
+                    'invoice_number' => $inv->invoice_code,
+                    'status' => $inv->status,
+                    'is_paid' => $inv->status === 'paid',
+                    'total' => (int) $inv->total_amount,
+                    'total_formatted' => self::faMoney((int) $inv->total_amount),
+                    'issued_at_jalali' => self::jalali($inv->issued_at ?? $inv->created_at),
+                    'public_token' => $inv->public_token,
+                    'view_url' => route('crm.invoice.public', ['invoiceCode' => $inv->public_token]),
+                    'pdf_url' => route('crm.invoice.public.pdf', ['invoiceCode' => $inv->public_token]),
+                    'payable' => $payable,
+                    'payable_reason' => $inv->notPayableReason(),
+                    'pay_url' => $payable ? route('crm.payment.pay', ['invoiceCode' => $inv->public_token]) : null,
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     /**

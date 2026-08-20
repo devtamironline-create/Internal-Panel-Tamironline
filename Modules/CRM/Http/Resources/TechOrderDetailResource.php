@@ -123,8 +123,11 @@ class TechOrderDetailResource extends JsonResource
             'my_notes' => $this->myNotes($request),
 
             'financial' => [
-                // «روش دریافت وجه» فاکتورِ فعالِ سفارش — cash|online|null.
+                // «روش دریافت وجه» آخرین فاکتورِ فعالِ سفارش — cash|online|null.
+                // latest('id') چون سفارشِ بازگشتیِ جمع‌شونده چند فاکتورِ فعال
+                // دارد و روشِ دریافتِ کارِ آخر ملاک است.
                 'collection_method' => $collection = \Modules\CRM\Models\Invoice::where('order_id', $this->id)
+                    ->latest('id')
                     ->value('collection_method'),
                 'collection_method_label' => match ($collection) {
                     'cash' => 'نقدی (دریافت در محل)',
