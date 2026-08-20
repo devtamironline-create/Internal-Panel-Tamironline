@@ -25,10 +25,13 @@ use Tests\TestCase;
  *   ۲) تا وقتی بررسی ثبت نشده: هماهنگی/مراجعه آزاد است ولی بستنِ سفارش
  *      (هر وضعیتِ نهایی) هم در لیست گذارها نیست و هم updateStatus آن را
  *      با پیامِ مشخص رد می‌کند.
- *   ۳) بعد از تأیید (return_type=1) تکمیلِ رایگان فاکتورِ قبلی را
- *      supersede نمی‌کند — سندِ مالیِ کارِ اول فعال می‌ماند.
- *   ۴) بعد از رد، سفارش عادی است؛ تکمیلِ جدید فاکتورِ جدید می‌سازد و
- *      فاکتورِ قبلی superseded ولی قابلِ دسترسی می‌ماند (نه ۴۰۴).
+ *   ۳) بستنِ مجددِ سفارشِ بازگشتی (return_type ست شده — چه گارانتی=۰ چه
+ *      با هزینه) «جمع‌شونده» است: فاکتورِ جدید در کنارِ فاکتور(های) قبلی
+ *      صادر می‌شود، هیچ‌چیز باطل نمی‌شود و هیچ کمیسیونی برنمی‌گردد —
+ *      دو کارِ مستقل روی یک سفارش، بدهیِ تکنسین جمعِ سهمِ شرکتِ هر دو.
+ *   ۴) رد شدنِ کارشناسی return_type را پاک می‌کند؛ سفارش دوباره عادی است
+ *      و تکمیلِ جدید حالتِ supersede دارد: فاکتورِ قبلی باطل + برگشتِ
+ *      خودکارِ کمیسیون + فاکتورِ جدید — قبلی قابلِ دسترسیِ ادمین می‌ماند.
  *
  * کنترلرها مستقیم صدا زده می‌شوند؛ زنجیرهٔ auth موضوعِ این تست نیست.
  */
@@ -95,6 +98,7 @@ class ReturnFlowProfessionalTest extends TestCase
             $t->timestamp('issued_at')->nullable();
             $t->timestamp('paid_at')->nullable();
             $t->timestamp('superseded_at')->nullable();
+            $t->unsignedBigInteger('superseded_by_id')->nullable();
             $t->unsignedBigInteger('created_by')->nullable();
             $t->timestamps();
         });
@@ -668,6 +672,7 @@ class ReturnFlowProfessionalTest extends TestCase
             'technician_id' => $tech->id, 'total_amount' => 2_000_000,
             'company_share' => 600_000, 'status' => 'issued', 'issued_at' => now()->subDays(20),
         ]);
+        $original->forceFill(['created_at' => now()->subDays(20)])->saveQuietly();
 
         $this->callReturnReview($order, $tech, ['approved' => '1', 'days' => 3]);
         $this->assertSame(1, (int) $order->fresh()->return_type);
@@ -680,56 +685,85 @@ class ReturnFlowProfessionalTest extends TestCase
 
         $this->assertTrue($response->getData(true)['success']);
         $this->assertSame(OrderStatus::Completed, $order->fresh()->status);
-        // فاکتورِ اصلی نه superseded شده نه فاکتورِ جدیدی ساخته شده.
+
+        // مدلِ جمع‌شونده (۱۴۰۵/۰۵/۲۹): فاکتورِ اصلی فعال و دست‌نخورده می‌ماند
+        // و یک فاکتورِ صفرتومانیِ گزارشِ گارانتی کنارش صادر می‌شود.
         $this->assertNull($original->fresh()->superseded_at);
-        $this->assertSame(1, Invoice::withSuperseded()->where('order_id', $order->id)->count());
+        $invoices = Invoice::where('order_id', $order->id)->orderBy('id')->get();
+        $this->assertCount(2, $invoices);
+        $this->assertSame(0, (int) $invoices->last()->total_amount);
+        $this->assertFalse($invoices->last()->isPayableOnline());
+
+        // فاکتورِ صفر هیچ اثرِ مالی ندارد — نه کمیسیون، نه برگشتی.
+        $this->assertSame(0, WalletTransaction::where('invoice_id', $invoices->last()->id)->count());
+        $this->assertSame(0, (int) $tech->fresh()->wallet_balance);
     }
 
     /**
-     * باگِ گزارش‌شدهٔ ۱۴۰۵/۰۵/۲۸: برگشتیِ تأییدشده که با **مبلغ** دوباره
-     * تکمیل می‌شود (اصلاحِ عددِ اشتباه یا کارِ اضافه) باید فاکتورِ تازه
-     * بگیرد — وگرنه سفارش عددِ جدید را نشان می‌دهد ولی بدهیِ تکنسین روی
-     * عددِ قدیمی می‌ماند.
+     * مدلِ جمع‌شونده (تصمیمِ ۱۴۰۵/۰۵/۲۹): برگشتیِ بدونِ گارانتی که با مبلغ
+     * دوباره بسته می‌شود = کارِ دوم. فاکتورِ جدید **کنارِ** فاکتورِ اول
+     * می‌نشیند؛ هیچ‌چیز باطل نمی‌شود و بدهیِ تکنسین جمعِ سهمِ شرکتِ هر دو
+     * کار است. (اصلاحِ عددِ اشتباه دیگر از این مسیر نیست — دکمهٔ ادمین.)
      */
-    public function test_a_priced_return_redo_reissues_the_invoice_and_fixes_the_debt(): void
+    public function test_a_priced_return_redo_adds_a_second_invoice_beside_the_first(): void
     {
         $tech = $this->technician();
         $order = $this->pendingReturnedOrder($tech);
 
-        // فاکتورِ اشتباهِ اول: ۳۲۸ میلیون (سهم شرکت ۳۰٪ = ۹۸٫۴ میلیون)
-        $wrong = Invoice::forceCreate([
-            'invoice_code' => 'INV-WRONG-1', 'order_id' => $order->id,
-            'technician_id' => $tech->id, 'total_amount' => 328_000_000,
-            'company_share' => 98_400_000, 'status' => 'issued',
-            'in_wallet' => true, 'issued_at' => now()->subDay(),
+        // کارِ اول: ۶ میلیون (سهم شرکت ۳۰٪ = ۱٫۸ میلیون) — از قبل بسته شده.
+        $first = Invoice::forceCreate([
+            'invoice_code' => 'INV-JOB1', 'order_id' => $order->id,
+            'technician_id' => $tech->id, 'total_amount' => 6_000_000,
+            'company_share' => 1_800_000, 'status' => 'issued',
+            'in_wallet' => true, 'issued_at' => now()->subDays(20),
         ]);
+        $first->forceFill(['created_at' => now()->subDays(20)])->saveQuietly();
         WalletTransaction::forceCreate([
-            'technician_id' => $tech->id, 'order_id' => $order->id, 'invoice_id' => $wrong->id,
+            'technician_id' => $tech->id, 'order_id' => $order->id, 'invoice_id' => $first->id,
             'type' => \Modules\CRM\Enums\WalletTxType::Commission->value,
-            'amount' => -98_400_000, 'balance_after' => -98_400_000,
-            'note' => 'سهم شرکت از فاکتور '.$wrong->invoice_code,
+            'amount' => -1_800_000, 'balance_after' => -1_800_000,
+            'note' => 'سهم شرکت از فاکتور '.$first->invoice_code,
         ]);
-        $tech->forceFill(['wallet_balance' => -98_400_000])->save();
+        $tech->forceFill(['wallet_balance' => -1_800_000])->save();
 
         $this->callReturnReview($order, $tech, ['approved' => '1', 'days' => 3]);
-        $this->assertSame(1, (int) $order->fresh()->return_type);
 
-        // تکمیلِ دوباره با عددِ درست: ۳۲٫۸ میلیون
+        // کارِ دوم با هزینهٔ خودش: ۲ میلیون (سهم شرکت ۶۰۰ هزار)
         $this->callUpdateStatus($order->fresh(), $tech, [
             'status' => OrderStatus::Completed->value,
-            'price_customer' => 32_800_000,
-            'invoice_descripotion' => 'اصلاح مبلغ فاکتور — همان کار قبلی',
+            'price_customer' => 2_000_000,
+            'invoice_descripotion' => 'تعویض قطعهٔ دیگر — کار دوم',
         ]);
 
-        // فاکتورِ اشتباه بایگانی شد و فاکتورِ تازه با عددِ درست صادر شد.
-        $this->assertNotNull($wrong->fresh()->superseded_at);
-        $fresh = Invoice::where('order_id', $order->id)->firstOrFail();
-        $this->assertSame(32_800_000, (int) $fresh->total_amount);
-        $this->assertSame(9_840_000, (int) $fresh->company_share);
+        // فاکتورِ اول دست‌نخورده و فعال؛ فاکتورِ دوم کنارش.
+        $this->assertNull($first->fresh()->superseded_at, 'فاکتور کار اول نباید باطل شود.');
+        $invoices = Invoice::where('order_id', $order->id)->orderBy('id')->get();
+        $this->assertCount(2, $invoices);
+        $this->assertSame(2_000_000, (int) $invoices->last()->total_amount);
+        $this->assertSame(600_000, (int) $invoices->last()->company_share);
 
-        // برآیندِ کیف‌پول: بدهی فقط بابتِ فاکتورِ فعال (۹٫۸۴ میلیون) —
-        // کمیسیونِ فاکتورِ اشتباه برگشت خورده، نه اینکه روی هم جمع شود.
-        $this->assertSame(-9_840_000, (int) $tech->fresh()->wallet_balance);
+        // بدهی = جمعِ سهمِ شرکتِ هر دو کار — هیچ برگشتی در کار نیست.
+        $this->assertSame(-2_400_000, (int) $tech->fresh()->wallet_balance);
+        $this->assertSame(0, WalletTransaction::where('invoice_id', $first->id)->where('amount', '>', 0)->count(),
+            'برای فاکتور کار اول نباید تراکنش برگشت ثبت شود.');
+    }
+
+    /** additive هم idempotent است — double-submit فاکتور دوم را تکرار نمی‌کند. */
+    public function test_the_additive_invoice_is_not_duplicated_on_double_submit(): void
+    {
+        $tech = $this->technician();
+        $order = $this->pendingReturnedOrder($tech);
+        $this->callReturnReview($order, $tech, ['approved' => '1', 'days' => 2]);
+
+        $order = $order->fresh();
+        $order->forceFill(['price_customer' => 500_000, 'status' => OrderStatus::Completed->value])->save();
+
+        $service = app(\Modules\CRM\Services\InvoiceService::class);
+        $a = $service->generateForOrder($order->fresh(), null, 'additive');
+        $b = $service->generateForOrder($order->fresh(), null, 'additive');
+
+        $this->assertSame($a->id, $b->id, 'فراخوانی دوم باید همان فاکتور دور جاری را برگرداند.');
+        $this->assertSame(1, Invoice::where('order_id', $order->id)->count());
     }
 
     /** برگشتِ کمیسیون idempotent است — تکمیلِ دوباره بدهی را دوبار برنمی‌گرداند. */

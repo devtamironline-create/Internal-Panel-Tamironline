@@ -526,6 +526,27 @@ class Order extends Model
         return $this->hasMany(Invoice::class);
     }
 
+    /**
+     * فاکتورهای معتبرِ (فعالِ) سفارش — سفارشِ بازگشتی می‌تواند بیش از یکی
+     * داشته باشد (کارِ اول + کارِ دوم). global scope مدلِ Invoice خودش
+     * باطل‌شده‌ها را حذف می‌کند.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Invoice>
+     */
+    public function activeInvoices()
+    {
+        return $this->invoices()->orderBy('id')->get();
+    }
+
+    /**
+     * آخرین فاکتورِ معتبر — «فاکتورِ جاری» برای روش دریافت، بنر مغایرت و
+     * پیش‌فرض‌های UI. با مدلِ جمع‌شونده، این یعنی فاکتورِ آخرین کار.
+     */
+    public function latestActiveInvoice(): ?Invoice
+    {
+        return $this->invoices()->latest('id')->first();
+    }
+
     public function statusLogs(): HasMany
     {
         return $this->hasMany(OrderStatusLog::class)->latest('created_at');

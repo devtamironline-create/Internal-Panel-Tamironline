@@ -55,6 +55,7 @@ class MissingInvoicesTest extends TestCase
             // هوکِ creating مدل این را همیشه پر می‌کند.
             $t->string('public_token', 64)->nullable();
             $t->timestamp('superseded_at')->nullable();
+            $t->unsignedBigInteger('superseded_by_id')->nullable();
             $t->timestamps();
         });
 

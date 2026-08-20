@@ -60,6 +60,7 @@ class TechWalletBalanceAndTransitCloseTest extends TestCase
             $t->boolean('in_wallet')->default(false);
             $t->string('public_token', 64)->nullable();
             $t->timestamp('superseded_at')->nullable();
+            $t->unsignedBigInteger('superseded_by_id')->nullable();
             $t->timestamps();
         });
 

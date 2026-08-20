@@ -27,51 +27,66 @@ class InvoiceService
     public function __construct(protected CommissionCalculator $calc) {}
 
     /**
-     * آیا تکمیلِ (دوبارهٔ) این سفارش باید فاکتورِ تازه صادر کند؟
+     * حالتِ صدورِ فاکتور برای تکمیلِ این سفارش — تنها مرجعِ تصمیم
+     * (API اپ و پنلِ تکنسین هر دو از همین می‌خوانند). تصمیمِ ۱۴۰۵/۰۵/۲۹:
      *
-     * قاعدهٔ عمومی: بله — مبلغ/قطعات عوض شده و فاکتور باید با سفارش بخواند.
+     *   - سفارشِ بازگشتی (گارانتی=۰ یا با هزینه) → «additive»: فاکتورِ
+     *     جدید در کنارِ فاکتور(های) قبلی؛ هیچ‌چیز باطل نمی‌شود، هیچ
+     *     کمیسیونی برنمی‌گردد — دو کارِ جدا روی یک سفارش.
+     *   - سفارشِ عادی → «supersede»: بازتکمیل یعنی مبلغ/قطعات عوض شده؛
+     *     فاکتورِ قبلی باطل و کمیسیونش خودکار برگشت می‌خورد.
      *
-     * تنها استثنا: «ادامهٔ رایگانِ برگشتیِ گارانتی» (return_type=1) که مبلغش
-     * واقعاً **صفر** است؛ آن‌جا فاکتورِ اصلی سندِ مالیِ کارِ اول است و باید
-     * فعال بماند. اگر همان برگشتی مبلغ داشته باشد (اصلاحِ مبلغِ اشتباه یا
-     * کارِ اضافه)، فاکتور حتماً باید بازصادر شود — وگرنه سفارش مبلغِ جدید
-     * را نشان می‌دهد ولی فاکتور و سهمِ شرکت روی عددِ قدیمی می‌مانند و بدهیِ
-     * تکنسین هرگز اصلاح نمی‌شود (باگِ گزارش‌شدهٔ ۱۴۰۵/۰۵/۲۸).
-     *
-     * تنها مرجعِ این تصمیم — API اپ و پنلِ تکنسین هر دو از همین می‌خوانند.
+     * اصلاحِ «عددِ اشتباه» دیگر از مسیرِ بازگشتی انجام نمی‌شود — برای آن
+     * دکمهٔ اختصاصیِ ادمین (correctInvoice) است.
      */
-    public function shouldRegenerateForCompletion(Order $order): bool
+    public function completionInvoiceMode(Order $order): string
     {
-        if ((int) ($order->return_type ?? 0) !== 1) {
-            return true;
-        }
-
-        return $this->calc->orderTotal($order) > 0;
+        return is_null($order->return_type) ? 'supersede' : 'additive';
     }
 
     /**
+     * صدورِ فاکتورِ سفارش — سه حالت:
+     *
+     *   false / 'idempotent' : اگر فاکتورِ فعال هست، همان برمی‌گردد
+     *                          (ضدِ double-click؛ مسیرِ «فاکتورهای جامانده»)
+     *   true  / 'supersede'  : فاکتور(های) قبلی باطل + برگشتِ خودکارِ
+     *                          کمیسیون + فاکتورِ جدید (بازتکمیلِ سفارشِ
+     *                          عادی و اصلاحِ ادمین)
+     *   'additive'           : فاکتورِ جدید در کنارِ قبلی‌ها — سفارشِ
+     *                          بازگشتی؛ هیچ‌چیز باطل نمی‌شود
+     *
+     * @param  bool|string  $mode  خروجیِ completionInvoiceMode یا bool قدیمی
      * @param  string|null  $collectionMethod  «روش دریافت» انتخابِ تکنسین
      *                                         (cash|online) — null = قدیمی
      */
-    public function generateForOrder(Order $order, ?int $createdBy = null, bool $forceRegenerate = false, ?string $collectionMethod = null): ?Invoice
+    public function generateForOrder(Order $order, ?int $createdBy = null, bool|string $mode = false, ?string $collectionMethod = null): ?Invoice
     {
+        $mode = match (true) {
+            $mode === true => 'supersede',
+            $mode === false => 'idempotent',
+            default => in_array($mode, ['idempotent', 'supersede', 'additive'], true) ? $mode : 'idempotent',
+        };
+
         // گاردِ سفت: سفارش‌های legacy-closed (از لاگ قدیمیِ WP بسته شده‌اند و
         // حسابداری‌شان قطعی‌ست) هرگز نباید فاکتور/wallet-tx بگیرند. اگر فاکتوری
         // از قبل دارند همان برمی‌گردد؛ در غیر این صورت null — بدون ساختِ چیزی.
-        // این جلوی بازتولیدِ فاکتورِ سفارش‌های قدیمی (که دوره‌ی مالیِ بسته را
-        // به‌هم می‌ریزد) را در همه‌ی مسیرها می‌گیرد.
         if ($order->is_legacy_closed) {
             return Invoice::where('order_id', $order->id)->first();
         }
 
-        // اگر سفارش از قبل فاکتور active دارد:
-        //   - بدون forceRegenerate: همان برمی‌گردد (idempotent برای double-click)
-        //   - با forceRegenerate=true: فاکتور قبلی superseded و فاکتور جدید
-        //     با مقادیر فعلی Order ساخته می‌شود. این برای موقعی است که
-        //     تکنسین قیمت/قطعات را عوض کرده و دوباره Complete زده.
-        $existing = Invoice::where('order_id', $order->id)->first();
-        if ($existing && ! $forceRegenerate) {
+        $existing = Invoice::where('order_id', $order->id)->latest('id')->first();
+
+        if ($existing && $mode === 'idempotent') {
             return $existing;
+        }
+
+        // additive هم idempotent است — اگر برای همین دورِ بازگشتی قبلاً
+        // فاکتور صادر شده (double-submit / race)، دوباره نمی‌سازد.
+        if ($existing && $mode === 'additive') {
+            $roundStart = $order->return_reviewed_at ?? $order->status_changed_at;
+            if ($roundStart && $existing->created_at && $existing->created_at->gte($roundStart)) {
+                return $existing;
+            }
         }
 
         $collectionMethod = in_array($collectionMethod, ['cash', 'online'], true) ? $collectionMethod : null;
@@ -86,29 +101,7 @@ class InvoiceService
             $collectionMethod = 'cash';
         }
 
-        $invoice = DB::transaction(function () use ($order, $createdBy, $existing, $collectionMethod) {
-            if ($existing) {
-                // فاکتورهای فعالِ قبلی بایگانی (superseded) می‌شوند تا از
-                // لیستِ فعال خارج شوند — رکوردشان هرگز حذف نمی‌شود.
-                $superseded = Invoice::withoutGlobalScope('active')
-                    ->where('order_id', $order->id)
-                    ->whereNull('superseded_at')
-                    ->get();
-
-                Invoice::withoutGlobalScope('active')
-                    ->whereIn('id', $superseded->pluck('id'))
-                    ->update(['superseded_at' => now()]);
-
-                // سهمِ شرکتِ فاکتورِ بایگانی‌شده برگشت می‌خورد (تصمیمِ
-                // ۱۴۰۵/۰۵/۲۸): سندِ مالیِ معتبر همان فاکتورِ فعال است، پس
-                // بدهیِ تکنسین هم فقط باید بابتِ همان باشد. تراکنشِ اصلی
-                // پاک نمی‌شود؛ یک تراکنشِ معکوس ثبت می‌شود تا تاریخچه کامل
-                // بماند و برآیندِ کیف‌پول درست شود.
-                foreach ($superseded as $old) {
-                    $this->reverseCommission($old, $createdBy);
-                }
-            }
-
+        $invoice = DB::transaction(function () use ($order, $createdBy, $existing, $collectionMethod, $mode) {
             $technician = $order->technician;
 
             $totals = $technician
@@ -161,6 +154,28 @@ class InvoiceService
                     ->update(['wallet_balance' => $last + $amount]);
 
                 $invoice->update(['in_wallet' => true]);
+            }
+
+            // ─── فقط حالتِ supersede: باطل‌کردنِ قبلی‌ها + برگشتِ کمیسیون ───
+            // در حالتِ additive (بازگشتی) به فاکتورهای قبلی دست نمی‌زنیم:
+            // هر دو کارِ معتبرند و بدهیِ تکنسین جمعِ سهمِ شرکتِ هر دو است.
+            if ($mode === 'supersede' && $existing) {
+                $superseded = Invoice::withoutGlobalScope('active')
+                    ->where('order_id', $order->id)
+                    ->whereNull('superseded_at')
+                    ->where('id', '!=', $invoice->id)
+                    ->get();
+
+                Invoice::withoutGlobalScope('active')
+                    ->whereIn('id', $superseded->pluck('id'))
+                    ->update(['superseded_at' => now(), 'superseded_by_id' => $invoice->id]);
+
+                // سهمِ شرکتِ فاکتورِ باطل‌شده با تراکنشِ معکوس برمی‌گردد —
+                // تراکنشِ اصلی حذف نمی‌شود (تاریخچهٔ کامل) و برآیندِ کیف‌پول
+                // فقط بابتِ فاکتورِ فعال می‌ماند. idempotent با [reversal#id].
+                foreach ($superseded as $old) {
+                    $this->reverseCommission($old, $createdBy);
+                }
             }
 
             return $invoice;
