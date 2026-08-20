@@ -1,0 +1,233 @@
+<?php
+
+namespace Tests\Feature\CRM;
+
+use Illuminate\Support\Facades\Schema;
+use Livewire\Livewire;
+use Modules\CRM\Livewire\OrderWizard;
+use Modules\CRM\Models\Brand;
+use Modules\CRM\Models\City;
+use Modules\CRM\Models\Device;
+use Modules\CRM\Models\Province;
+use Modules\CRM\Models\Technician;
+use Tests\TestCase;
+
+/**
+ * پوششِ خدماتِ شهر در ویزاردِ ثبتِ سفارشِ ادمین (تصمیمِ ۱۴۰۵/۰۵/۲۹):
+ *
+ *   - «سفارش» فقط برای دستگاهی ثبت می‌شود که در شهرِ انتخاب‌شده حداقل یک
+ *     تکنسینِ فعال مهارتش (تگِ دستگاه) را دارد — مثالِ مشهد: فقط لباسشویی.
+ *   - همان معناشناسیِ تگ‌های سیستمِ پیشنهاد: تگِ شهرِ خالی = همهٔ شهرها؛
+ *     تگِ دستگاهِ خالی = همهٔ دستگاه‌ها.
+ *   - ثبتِ «لید» هیچ محدودیتی ندارد.
+ *   - تغییرِ شهر انتخابِ دستگاهِ خارج از پوشش را پاک می‌کند.
+ */
+class OrderWizardCityCoverageTest extends TestCase
+{
+    private Province $province;
+
+    private City $mashhad;
+
+    private City $tehran;
+
+    private Brand $brand;
+
+    private Device $washer;
+
+    private Device $fridge;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Schema::create('crm_provinces', function ($t) {
+            $t->id();
+            $t->string('name');
+            $t->boolean('is_active')->default(true);
+            $t->unsignedInteger('sort_order')->default(0);
+            $t->timestamps();
+        });
+
+        Schema::create('crm_cities', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('province_id')->nullable();
+            $t->unsignedBigInteger('parent_city_id')->nullable();
+            $t->string('name');
+            $t->string('slug')->nullable();
+            $t->boolean('is_active')->default(true);
+            $t->unsignedInteger('sort_order')->default(0);
+            $t->timestamps();
+        });
+
+        foreach (['crm_brands', 'crm_devices'] as $table) {
+            Schema::create($table, function ($t) {
+                $t->id();
+                $t->string('name');
+                $t->string('slug')->nullable();
+                $t->boolean('is_active')->default(true);
+                $t->boolean('is_featured')->default(false);
+                $t->unsignedInteger('sort_order')->default(0);
+                $t->timestamps();
+            });
+        }
+
+        Schema::create('crm_technicians', function ($t) {
+            $t->id();
+            $t->string('first_name')->nullable();
+            $t->string('firstname_tech')->nullable();
+            $t->string('mobile')->nullable();
+            $t->string('status', 20)->default('active');
+            $t->timestamps();
+            $t->softDeletes();
+        });
+
+        Schema::create('crm_technician_cities', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('technician_id');
+            $t->unsignedBigInteger('city_id');
+        });
+
+        Schema::create('crm_technician_devices', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('technician_id');
+            $t->unsignedBigInteger('device_id');
+            $t->integer('priority')->nullable();
+        });
+
+        // ساخت شهر، نسخهٔ کشِ اپ را bump می‌کند (AppCacheVersion → settings).
+        Schema::create('settings', function ($t) {
+            $t->id();
+            $t->string('key')->unique();
+            $t->text('value')->nullable();
+        });
+
+        Schema::create('crm_settings', function ($t) {
+            $t->id();
+            $t->string('key')->unique();
+            $t->text('value')->nullable();
+            $t->timestamps();
+        });
+
+        Schema::create('crm_lead_reasons', function ($t) {
+            $t->id();
+            $t->string('title')->nullable();
+            $t->boolean('is_active')->default(true);
+            $t->unsignedInteger('sort_order')->default(0);
+            $t->timestamps();
+        });
+
+        Schema::create('crm_customers', function ($t) {
+            $t->id();
+            $t->string('first_name')->nullable();
+            $t->string('mobile')->nullable();
+            $t->string('phone')->nullable();
+            $t->timestamps();
+            $t->softDeletes();
+        });
+
+        $this->province = Province::create(['name' => 'خراسان رضوی']);
+        $this->mashhad = City::create(['province_id' => $this->province->id, 'name' => 'مشهد', 'slug' => 'mashhad']);
+        $this->tehran = City::create(['province_id' => $this->province->id, 'name' => 'شهر دوم', 'slug' => 'city2']);
+        $this->brand = Brand::create(['name' => 'اسنوا', 'slug' => 'snowa']);
+        $this->washer = Device::create(['name' => 'لباسشویی', 'slug' => 'washer']);
+        $this->fridge = Device::create(['name' => 'یخچال', 'slug' => 'fridge']);
+    }
+
+    /** تکنسین فعال با تگ شهر و دستگاه مشخص. */
+    private function technician(array $cityIds, array $deviceIds, string $status = 'active'): Technician
+    {
+        $t = Technician::forceCreate([
+            'first_name' => 'تکنسین', 'mobile' => '0912'.random_int(1000000, 9999999), 'status' => $status,
+        ]);
+        $t->cities()->sync($cityIds);
+        $t->devices()->sync($deviceIds);
+
+        return $t;
+    }
+
+    private function wizard(int $cityId)
+    {
+        return Livewire::test(OrderWizard::class)
+            ->set('provinceId', $this->province->id)
+            ->set('cityId', $cityId)
+            ->set('brandId', $this->brand->id);
+    }
+
+    public function test_an_uncovered_device_cannot_be_ordered_in_that_city(): void
+    {
+        // مشهد فقط تکنسین لباسشویی دارد — یخچال قابل سفارش نیست.
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+
+        $this->wizard($this->mashhad->id)
+            ->set('deviceId', $this->fridge->id)
+            ->call('next')
+            ->assertHasErrors(['deviceId']);
+    }
+
+    public function test_a_covered_device_passes(): void
+    {
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+
+        $this->wizard($this->mashhad->id)
+            ->set('deviceId', $this->washer->id)
+            ->call('next')
+            ->assertHasNoErrors(['deviceId']);
+    }
+
+    public function test_leads_are_exempt_from_coverage(): void
+    {
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+        $reason = \Modules\CRM\Models\LeadReason::forceCreate(['title' => 'خارج از پوشش', 'is_active' => true]);
+
+        $this->wizard($this->mashhad->id)
+            ->set('isOrderable', false)
+            ->set('leadReasonId', $reason->id)
+            ->set('deviceId', $this->fridge->id)
+            ->call('next')
+            ->assertHasNoErrors(['deviceId']);
+    }
+
+    public function test_a_generalist_technician_opens_all_devices(): void
+    {
+        // تگِ دستگاهِ خالی = همه‌کاره — هیچ محدودیتی روی لیست نمی‌ماند.
+        $this->technician([$this->mashhad->id], []);
+
+        $this->wizard($this->mashhad->id)
+            ->set('deviceId', $this->fridge->id)
+            ->call('next')
+            ->assertHasNoErrors(['deviceId']);
+    }
+
+    public function test_an_empty_city_tag_covers_every_city(): void
+    {
+        // تکنسینِ بدونِ تگِ شهر همه‌جا را پوشش می‌دهد (سازگار با rejectionFor).
+        $this->technician([], [$this->fridge->id]);
+
+        $this->wizard($this->mashhad->id)
+            ->set('deviceId', $this->fridge->id)
+            ->call('next')
+            ->assertHasNoErrors(['deviceId']);
+    }
+
+    public function test_an_inactive_technician_does_not_count_as_coverage(): void
+    {
+        $this->technician([$this->mashhad->id], [$this->fridge->id], status: 'inactive');
+
+        $this->wizard($this->mashhad->id)
+            ->set('deviceId', $this->fridge->id)
+            ->call('next')
+            ->assertHasErrors(['deviceId']);
+    }
+
+    public function test_changing_the_city_clears_an_uncovered_selection(): void
+    {
+        // لباسشویی فقط در مشهد پوشش دارد؛ یخچال فقط در شهر دوم.
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+        $this->technician([$this->tehran->id], [$this->fridge->id]);
+
+        $this->wizard($this->mashhad->id)
+            ->set('deviceId', $this->washer->id)
+            ->set('cityId', $this->tehran->id)
+            ->assertSet('deviceId', null);
+    }
+}

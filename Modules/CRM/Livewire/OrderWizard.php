@@ -199,6 +199,66 @@ class OrderWizard extends Component
         return Device::ordered()->get(['id', 'name']);
     }
 
+    /**
+     * دستگاه‌های تحتِ پوششِ شهرِ انتخاب‌شده — خودکار از مهارتِ (تگِ دستگاهِ)
+     * تکنسین‌های فعالی که آن شهر را پوشش می‌دهند. همان معناشناسیِ تگ‌ها در
+     * سیستمِ پیشنهاد (TechnicianSuggestionService::rejectionFor):
+     *   - تگِ شهرِ خالی = پوششِ همهٔ شهرها
+     *   - تگِ دستگاهِ خالی = همهٔ دستگاه‌ها
+     *
+     * خروجی: null = بدونِ محدودیت (شهری انتخاب نشده یا تکنسینی همه‌کاره
+     * آن شهر را پوشش می‌دهد)؛ Collection از idها (شاید خالی = هیچ سرویسی).
+     * فقط برای ثبتِ «سفارش» اعمال می‌شود — لید مستثناست.
+     */
+    #[Computed]
+    public function coveredDeviceIds(): ?\Illuminate\Support\Collection
+    {
+        if (! $this->cityId) {
+            return null;
+        }
+
+        $covering = Technician::query()
+            ->where('status', 'active')
+            ->with(['cities:id,is_active', 'devices:id'])
+            ->get()
+            ->filter(function (Technician $t) {
+                $cityIds = $t->cities->where('is_active', true)->pluck('id');
+
+                return $cityIds->isEmpty() || $cityIds->contains($this->cityId);
+            });
+
+        if ($covering->isEmpty()) {
+            return collect();
+        }
+
+        // تکنسینی بدونِ تگِ دستگاه که این شهر را پوشش می‌دهد = همه‌کاره.
+        if ($covering->contains(fn (Technician $t) => $t->devices->isEmpty())) {
+            return null;
+        }
+
+        return $covering->flatMap(fn (Technician $t) => $t->devices->pluck('id'))
+            ->unique()->values();
+    }
+
+    /** لیستِ دستگاه برای انتخابِ «سفارش» — محدود به پوششِ شهر. لید از devices کامل می‌خواند. */
+    #[Computed]
+    public function orderableDevices()
+    {
+        $covered = $this->coveredDeviceIds;
+
+        return $covered === null
+            ? $this->devices
+            : $this->devices->whereIn('id', $covered->all())->values();
+    }
+
+    /** آیا این دستگاه در شهرِ انتخاب‌شده تکنسینِ فعال دارد؟ */
+    protected function deviceCoveredInCity(int $deviceId): bool
+    {
+        $covered = $this->coveredDeviceIds;
+
+        return $covered === null || $covered->contains($deviceId);
+    }
+
     #[Computed]
     public function selectedBrand(): ?Brand
     {
@@ -481,6 +541,45 @@ class OrderWizard extends Component
         // تا dropdown منطقه از نو بارگذاری شود (یا اگر شهر جدید منطقه
         // ندارد، مخفی بماند).
         $this->regionId = null;
+
+        // پوششِ شهرِ جدید ممکن است دستگاهِ انتخاب‌شدهٔ قبلی را در بر
+        // نگیرد — انتخابِ کهنه پاک می‌شود تا اپراتور از لیستِ مجازِ شهرِ
+        // جدید انتخاب کند. فقط برای ردیف‌های «قابل سفارش»؛ لید آزاد است.
+        unset($this->coveredDeviceIds, $this->orderableDevices);
+
+        if ($this->isOrderable && $this->deviceId && ! $this->deviceCoveredInCity((int) $this->deviceId)) {
+            $this->deviceId = null;
+        }
+        foreach ($this->extraDevices as $i => $d) {
+            if (($d['is_orderable'] ?? true) && ! empty($d['device_id'])
+                && ! $this->deviceCoveredInCity((int) $d['device_id'])) {
+                $this->extraDevices[$i]['device_id'] = null;
+            }
+        }
+    }
+
+    public function updatedIsOrderable(): void
+    {
+        // لید → سفارش: دستگاهی که برای لید آزاد بود شاید در این شهر
+        // پوشش نداشته باشد — پاک می‌شود تا از لیستِ مجاز انتخاب شود.
+        if ($this->isOrderable && $this->cityId && $this->deviceId
+            && ! $this->deviceCoveredInCity((int) $this->deviceId)) {
+            $this->deviceId = null;
+        }
+    }
+
+    public function updatedExtraDevices($value, $key): void
+    {
+        // همان قاعده برای تَوگلِ هر دستگاهِ اضافه.
+        if (! str_ends_with((string) $key, '.is_orderable')) {
+            return;
+        }
+        $i = (int) explode('.', (string) $key)[0];
+        $d = $this->extraDevices[$i] ?? null;
+        if ($d && ($d['is_orderable'] ?? true) && $this->cityId && ! empty($d['device_id'])
+            && ! $this->deviceCoveredInCity((int) $d['device_id'])) {
+            $this->extraDevices[$i]['device_id'] = null;
+        }
     }
 
     public function clearVisitTime(): void
@@ -698,6 +797,27 @@ class OrderWizard extends Component
             'leadReasonId' => 'دلیل عدم سفارش',
             'objections' => 'ایراد دستگاه',
         ]);
+
+        // ─── پوششِ خدماتِ شهر (فقط سفارش، نه لید) ───────────────────
+        // دفاعِ سمتِ سرور در کنارِ فیلترِ dropdown: سفارشی برای دستگاهی که
+        // در آن شهر هیچ تکنسینِ فعالی ندارد ثبت نمی‌شود — وگرنه سفارشی
+        // ساخته می‌شد که سیستمِ تخصیص هرگز نمی‌تواند به کسی بدهد.
+        $coverageErrors = [];
+        if ($this->isOrderable && $this->cityId && $this->deviceId
+            && ! $this->deviceCoveredInCity((int) $this->deviceId)) {
+            $coverageErrors['deviceId'] = 'در شهر انتخاب‌شده برای این دستگاه تکنسین فعالی نداریم. '
+                .'در صورت نیاز، تَوگل «قابل سفارش» را خاموش کنید تا به‌عنوان لید ثبت شود.';
+        }
+        foreach ($this->extraDevices as $i => $d) {
+            if (($d['is_orderable'] ?? true) && $this->cityId && ! empty($d['device_id'])
+                && ! $this->deviceCoveredInCity((int) $d['device_id'])) {
+                $coverageErrors["extraDevices.$i.device_id"] = 'برای دستگاه اضافه #'.($i + 1)
+                    .' در شهر انتخاب‌شده تکنسین فعالی نداریم — یا دستگاه دیگری انتخاب کنید یا به‌صورت لید ثبت کنید.';
+            }
+        }
+        if ($coverageErrors !== []) {
+            throw \Illuminate\Validation\ValidationException::withMessages($coverageErrors);
+        }
     }
 
     public function submit(): void

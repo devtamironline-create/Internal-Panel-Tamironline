@@ -65,15 +65,34 @@
         </div>
     </div>
 
+    {{-- پوششِ خدماتِ شهر — لیستِ دستگاهِ «سفارش» محدود به دستگاه‌هایی است
+         که در شهرِ انتخاب‌شده تکنسینِ فعال دارند (خودکار از مهارتِ
+         تکنسین‌ها). لید محدودیتی ندارد. --}}
+    @php $deviceListMain = $isOrderable ? $this->orderableDevices : $this->devices; @endphp
+    @if($isOrderable && $cityId && $this->coveredDeviceIds !== null)
+        @if($deviceListMain->isEmpty())
+            <div class="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs leading-6">
+                ⚠ در {{ $this->selectedCity?->name ?: 'شهر انتخاب‌شده' }} هیچ تکنسین فعالی نداریم؛
+                ثبت «سفارش» ممکن نیست — تَوگل «قابل سفارش» را خاموش کنید تا به‌عنوان لید ثبت شود.
+            </div>
+        @else
+            <div class="p-3 rounded-lg bg-sky-50 border border-sky-200 text-sky-800 text-xs leading-6">
+                ℹ در {{ $this->selectedCity?->name ?: 'این شهر' }} فقط {{ $deviceListMain->count() }} نوع دستگاه
+                تکنسین فعال دارد؛ لیست دستگاه بر همین اساس محدود شده است. (ثبت لید محدودیتی ندارد.)
+            </div>
+        @endif
+    @endif
+
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">نوع دستگاه *</label>
             <select wire:model="deviceId" data-searchable class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
                 <option value="">— انتخاب کنید —</option>
-                @foreach($this->devices as $d)
+                @foreach($deviceListMain as $d)
                     <option value="{{ $d->id }}">{{ $d->name }}</option>
                 @endforeach
             </select>
+            @error('deviceId')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
         </div>
 
         <div>
@@ -221,13 +240,15 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">نوع دستگاه *</label>
+                    @php $deviceListExtra = $edOrderable ? $this->orderableDevices : $this->devices; @endphp
                     <select wire:model="extraDevices.{{ $i }}.device_id" data-searchable
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
                         <option value="">— انتخاب —</option>
-                        @foreach($this->devices as $d)
+                        @foreach($deviceListExtra as $d)
                             <option value="{{ $d->id }}">{{ $d->name }}</option>
                         @endforeach
                     </select>
+                    @error('extraDevices.'.$i.'.device_id')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-700 mb-1">برند *</label>
