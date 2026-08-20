@@ -86,7 +86,11 @@ return [
             'path' => storage_path('logs/ads-google.log'),
             'level' => 'info',
             'days' => (int) env('ADS_GOOGLE_LOG_DAYS', 30),
-            'permission' => 0640,
+            // 0666 عمداً: روی سرور، دستورهای دستی گاهی با root اجرا می‌شوند و
+            // فایلِ روزانه را root می‌سازند؛ با 0640 یوزرِ panel (scheduler)
+            // دیگر نمی‌توانست append کند و ads:google-poll کرش می‌کرد
+            // (خطای ۱۴۰۵/۰۵/۲۶: chmod(): Operation not permitted).
+            'permission' => 0666,
             'ignore_exceptions' => true,
         ],
 
