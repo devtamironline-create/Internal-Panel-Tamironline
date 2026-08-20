@@ -32,7 +32,19 @@
                     <button class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">لغو فاکتور</button>
                 </form>
                 @endif
+            @endcan
 
+            {{-- اصلاح مبلغ — permission ویژه؛ فقط فاکتور صادرشدهٔ فعال --}}
+            @can('correct-invoices')
+                @if($invoice->status === 'issued' && ! $invoice->superseded_at)
+                <a href="{{ route('crm.invoices.correct', $invoice) }}"
+                   class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm">
+                    ✏️ اصلاح مبلغ فاکتور
+                </a>
+                @endif
+            @endcan
+
+            @can('manage-crm-financial')
                 {{-- Push دستی به WP — مفید برای فاکتورهایی که هنوز سینک نشده‌اند --}}
                 <form action="{{ route('crm.invoices.push-to-wp', $invoice) }}" method="POST" class="inline"
                       onsubmit="return confirm('این فاکتور به WP CRM ارسال شود؟');">

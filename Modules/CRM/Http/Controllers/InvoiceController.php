@@ -110,18 +110,37 @@ class InvoiceController extends Controller
      */
     public function publicReceipt(string $invoiceCode)
     {
-        // withoutGlobalScope('active') اضافه شده تا فاکتورهای superseded
-        // (بسته‌شدهٔ قبلی روی سفارش بازگشتی) هم با لینک عمومی قابل دیدن
-        // باشند. در غیر این صورت مشتری که لینک پیامک قبلی را باز می‌کند،
-        // ۴۰۴ می‌گیرد — حتی اگر فاکتور هنوز در DB موجود است. منطق
-        // superseded فقط برای مخفی کردن این فاکتورها از لیست فعال است،
-        // نه برای حذف شدن از تاریخچه.
+        // withoutGlobalScope('active') تا لینکِ قدیمی ۴۰۴ نشود؛ ولی فاکتورِ
+        // superseded به مشتری «نمایش» داده نمی‌شود — لینکش شفاف به فاکتورِ
+        // جایگزین ریدایرکت می‌شود (تصمیمِ ۱۴۰۵/۰۵/۲۹: بدون توضیح، دقیقاً
+        // مثل فاکتورِ عادی). اگر جایگزینی پیدا نشد (داده‌ی خراب)، همان
+        // قبلی نشان داده می‌شود تا سندِ مالی گم نشود.
         $invoice = Invoice::withoutGlobalScope('active')
-            ->with(['order.items', 'customer'])
             ->where('public_token', $invoiceCode)
             ->firstOrFail();
 
+        if ($replacement = $this->publicReplacementOf($invoice)) {
+            return redirect()->route('crm.invoice.public', $replacement->public_token);
+        }
+
+        $invoice->load(['order.items', 'customer']);
+
         return view('crm::invoices.print', compact('invoice'));
+    }
+
+    /**
+     * فاکتورِ جایگزینِ قابلِ نمایش به مشتری — null یعنی همین را نشان بده
+     * (فعال است، یا superseded بدونِ جایگزینِ سالم).
+     */
+    protected function publicReplacementOf(Invoice $invoice): ?Invoice
+    {
+        if ($invoice->superseded_at === null) {
+            return null;
+        }
+
+        $replacement = $invoice->resolveReplacement();
+
+        return ($replacement && $replacement->id !== $invoice->id) ? $replacement : null;
     }
 
     /**
@@ -132,9 +151,14 @@ class InvoiceController extends Controller
     public function publicReceiptDownload(string $invoiceCode)
     {
         $invoice = Invoice::withoutGlobalScope('active')
-            ->with(['order.items', 'order.device', 'order.brand', 'order.city', 'order.province', 'customer'])
             ->where('public_token', $invoiceCode)
             ->firstOrFail();
+
+        if ($replacement = $this->publicReplacementOf($invoice)) {
+            return redirect()->route('crm.invoice.public.download', $replacement->public_token);
+        }
+
+        $invoice->load(['order.items', 'order.device', 'order.brand', 'order.city', 'order.province', 'customer']);
 
         $qrDataUri = InvoicePdf::qr(route('crm.invoice.public', $invoice->public_token));
 
@@ -147,9 +171,14 @@ class InvoiceController extends Controller
     public function publicReceiptPdf(string $invoiceCode)
     {
         $invoice = Invoice::withoutGlobalScope('active')
-            ->with(['order.items', 'customer'])
             ->where('public_token', $invoiceCode)
             ->firstOrFail();
+
+        if ($replacement = $this->publicReplacementOf($invoice)) {
+            return redirect()->route('crm.invoice.public.pdf', $replacement->public_token);
+        }
+
+        $invoice->load(['order.items', 'customer']);
 
         $pdf = InvoicePdf::render($invoice);
 
@@ -373,9 +402,97 @@ class InvoiceController extends Controller
             return back();
         }
 
-        $invoice->update(['status' => 'cancelled']);
+        // فاکتورِ پرداخت‌شده پولِ واقعیِ مشتری پشتش است — لغوش یعنی
+        // ناهم‌خوانیِ مالی. اول باید تکلیفِ پرداخت روشن شود.
+        if ($invoice->status === 'paid') {
+            return back()->with('error', 'فاکتور پرداخت‌شده قابل لغو نیست. ابتدا وضعیت پرداخت مشتری را تعیین تکلیف کنید.');
+        }
 
-        return back()->with('success', 'فاکتور لغو شد.');
+        $reversed = false;
+        \Illuminate\Support\Facades\DB::transaction(function () use ($invoice, &$reversed) {
+            $invoice->update(['status' => 'cancelled']);
+
+            // سهمِ شرکتی که موقعِ صدور از کیف‌پولِ تکنسین کم شده بود، با
+            // تراکنشِ معکوس برمی‌گردد (idempotent — تعدیلِ دستی لازم نیست).
+            $reversed = $this->invoices->reverseCommission($invoice, auth()->id(), 'لغو فاکتور');
+        });
+
+        return back()->with('success', $reversed
+            ? 'فاکتور لغو شد و سهم شرکت آن به‌صورت خودکار به کیف‌پول تکنسین برگشت.'
+            : 'فاکتور لغو شد.');
+    }
+
+    /**
+     * فرمِ «اصلاح مبلغ فاکتور» — پیش‌نمایشِ قبل/بعد + مبلغِ جدید + دلیلِ
+     * اجباری. فقط ادمینِ دارای permission ویژهٔ correct-invoices
+     * (روی route). فاکتورِ superseded با scope فعال اصلاً پیدا نمی‌شود.
+     */
+    public function correctForm(int $invoice)
+    {
+        $invoice = Invoice::findOrFail($invoice);
+        $invoice->load(['order.technician', 'customer', 'technician']);
+
+        if ($reason = $this->notCorrectableReason($invoice)) {
+            return redirect()->route('crm.invoices.show', $invoice)->with('error', $reason);
+        }
+
+        // دادهٔ پیش‌نمایشِ سهم‌ها برای JS — همان فرمولِ CommissionCalculator
+        // (سهم شرکت = intdiv(total × percent, 100)). transit یعنی ۱۰۰٪ تکنسین.
+        $order = $invoice->order;
+        $technician = $order?->technician;
+        $preview = ['percent' => 0, 'transit' => false, 'has_technician' => (bool) $technician];
+        if ($order && $technician) {
+            $calc = app(\Modules\CRM\Services\CommissionCalculator::class)->calculate($order, $technician, 1000000);
+            $preview['percent'] = (int) $calc['percent'];
+            $preview['transit'] = (int) $calc['company_share'] === 0 && (int) $calc['percent'] === 100;
+        }
+
+        return view('crm::invoices.correct', compact('invoice', 'preview'));
+    }
+
+    /** اجرای اصلاح — باطل‌کردنِ همین فاکتور + برگشتِ کمیسیون + فاکتورِ جدید. */
+    public function correct(Request $request, int $invoice)
+    {
+        $invoice = Invoice::findOrFail($invoice);
+
+        $validated = $request->validate([
+            'total_amount' => 'required|integer|min:0|max:10000000000',
+            'reason' => 'required|string|min:5|max:1000',
+        ], [
+            'total_amount.required' => 'مبلغ جدید فاکتور را وارد کنید.',
+            'total_amount.integer' => 'مبلغ باید عدد صحیح (تومان) باشد.',
+            'total_amount.min' => 'مبلغ نمی‌تواند منفی باشد.',
+            'total_amount.max' => 'مبلغ واردشده خارج از محدودهٔ مجاز است.',
+            'reason.required' => 'نوشتنِ دلیل اصلاح اجباری است — در تاریخچهٔ سفارش ثبت می‌شود.',
+            'reason.min' => 'دلیل اصلاح حداقل ۵ کاراکتر.',
+        ]);
+
+        try {
+            $new = $this->invoices->correctInvoice(
+                $invoice,
+                (int) $validated['total_amount'],
+                trim($validated['reason']),
+                auth()->id(),
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('crm.invoices.show', $new)
+            ->with('success', 'فاکتور '.$invoice->invoice_code.' اصلاح شد — فاکتور جدید: '.$new->invoice_code
+                .'. لینک قبلی مشتری خودکار به فاکتور جدید هدایت می‌شود.');
+    }
+
+    /** چرا این فاکتور اصلاح‌پذیر نیست؟ null یعنی قابلِ اصلاح است. */
+    protected function notCorrectableReason(Invoice $invoice): ?string
+    {
+        return match (true) {
+            $invoice->superseded_at !== null => 'این فاکتور قبلاً با نسخهٔ جدیدتری جایگزین شده و قابل اصلاح نیست.',
+            $invoice->status === 'paid' => 'فاکتور پرداخت‌شده قابل اصلاح نیست — ابتدا وضعیت پرداخت را بررسی کنید.',
+            $invoice->status === 'cancelled' => 'فاکتور لغوشده قابل اصلاح نیست؛ در صورت نیاز از سفارش فاکتور جدید صادر کنید.',
+            ! $invoice->order => 'سفارش مرتبط با این فاکتور یافت نشد.',
+            default => null,
+        };
     }
 
     /**

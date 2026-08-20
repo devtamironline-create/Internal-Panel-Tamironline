@@ -563,6 +563,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('invoices/{invoice}/push-to-wp', [InvoiceController::class, 'pushToWp'])->name('invoices.push-to-wp');
     });
 
+    // ─── اصلاح مبلغ فاکتور — permission ویژه (فقط ادمین ارشد) ───────────
+    Route::middleware('can:correct-invoices')->group(function () {
+        Route::get('invoices/{invoice}/correct', [InvoiceController::class, 'correctForm'])
+            ->name('invoices.correct')->whereNumber('invoice');
+        Route::post('invoices/{invoice}/correct', [InvoiceController::class, 'correct'])
+            ->name('invoices.correct.store')->whereNumber('invoice');
+    });
+
     // ─── retro-close (بستن از لاگ قدیمی بدون فاکتور) — permission مجزا ───
     Route::middleware('can:manage-crm-legacy-close')->group(function () {
         Route::post('orders/{order}/retro-close', [OrderController::class, 'retroClose'])->name('orders.retro-close');
