@@ -47,7 +47,9 @@ class NavasanService
             return $cached;
         }
 
-        $items = collect(config('investment.assets'))->pluck('item')->unique()->values();
+        // دارایی‌های با قیمتِ ثابت (item=null، مثل پول نقد) از درخواستِ نوسان
+        // حذف می‌شوند — filter تا item خالی در query string ننشیند.
+        $items = collect(config('investment.assets'))->pluck('item')->filter()->unique()->values();
 
         try {
             $response = Http::timeout(15)->get(

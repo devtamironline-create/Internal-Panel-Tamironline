@@ -29,5 +29,9 @@ return [
         'usd' => ['label' => 'دلار', 'unit' => 'دلار', 'item' => 'usd_sell', 'step' => '0.01', 'multiplier' => 1],
         'usdt' => ['label' => 'تتر', 'unit' => 'تتر', 'item' => 'usdt', 'step' => '0.01', 'multiplier' => 1],
         'btc' => ['label' => 'بیت‌کوین', 'unit' => 'BTC', 'item' => 'btc', 'step' => '0.00000001', 'multiplier' => 1],
+        'doge' => ['label' => 'دوج‌کوین', 'unit' => 'DOGE', 'item' => 'doge', 'step' => '0.00000001', 'multiplier' => 1],
+        // پول نقد: قیمتِ واحد ثابت است (۱ تومان به ازای هر تومان) و از نوسان
+        // خوانده نمی‌شود — «fixed_price» به‌جای «item». مقدار = مبلغ به تومان.
+        'cash' => ['label' => 'پول نقد', 'unit' => 'تومان', 'item' => null, 'fixed_price' => 1, 'step' => '1', 'multiplier' => 1],
     ],
 ];

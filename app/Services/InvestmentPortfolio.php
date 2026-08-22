@@ -69,7 +69,17 @@ class InvestmentPortfolio
     public function unitPrice(string $asset, ?array $prices = null): ?int
     {
         $meta = config('investment.assets.'.$asset);
-        if (! $meta || ($meta['item'] ?? null) === null) {
+        if (! $meta) {
+            return null;
+        }
+
+        // دارایی با قیمتِ ثابت (مثل «پول نقد» = ۱ تومان به ازای هر تومان) —
+        // بدونِ نوسان همیشه قیمت دارد؛ افزودن/برداشت هیچ‌وقت قفل نمی‌شود.
+        if (isset($meta['fixed_price'])) {
+            return (int) $meta['fixed_price'];
+        }
+
+        if (($meta['item'] ?? null) === null) {
             return null;
         }
 

@@ -277,6 +277,63 @@ class InvestmentFundTest extends TestCase
         $this->assertSame(0, InvestmentAsset::where('type', 'sell')->count());
     }
 
+    // ───────────── پول نقد (قیمت ثابت) و دوج‌کوین ─────────────
+
+    /**
+     * «پول نقد» قیمتِ ثابتِ ۱ تومان دارد و به نوسان وابسته نیست — افزودن و
+     * برداشت حتی وقتی نوسان قطع است کار می‌کند و سود/زیانش همیشه صفر است.
+     */
+    public function test_cash_can_be_added_and_withdrawn_even_when_navasan_is_down(): void
+    {
+        Http::fake(['*' => Http::response('upstream error', 502)]);
+
+        $this->actingAs($this->user(access: true))
+            ->post('/admin/investment', [
+                'asset' => 'cash',
+                'amount' => '250000000',
+                'source' => 'tamir',
+                'bought_at' => '1405/05/01',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $row = InvestmentAsset::firstOrFail();
+        $this->assertSame('cash', $row->asset);
+        $this->assertSame(1, (int) $row->buy_unit_price);
+        $this->assertSame(250_000_000, $row->cost());
+
+        // برداشت (کاهش سرمایه) هم بدونِ نوسان کار می‌کند.
+        $this->actingAs($this->user(access: true))
+            ->post('/admin/investment/sell', ['asset' => 'cash', 'amount' => '100000000'])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $cash = collect($this->indexData()['positions'])->firstWhere('asset', 'cash');
+        $this->assertSame(150_000_000.0, $cash['amount']);
+        $this->assertSame(150_000_000, $cash['value']);   // ارزش = مقدار (تومان)
+        $this->assertSame(0, $cash['profit']);            // پول نقد سود/زیان ندارد
+    }
+
+    public function test_dogecoin_is_priced_from_navasan_like_other_cryptos(): void
+    {
+        Http::fake(['*' => Http::response(['doge' => ['value' => '14500']], 200)]);
+
+        $this->actingAs($this->user(access: true))
+            ->post('/admin/investment', [
+                'asset' => 'doge',
+                'amount' => '1000',
+                'source' => 'ganje',
+                'bought_at' => '1405/05/01',
+            ])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $row = InvestmentAsset::firstOrFail();
+        $this->assertSame('doge', $row->asset);
+        $this->assertSame(14_500, (int) $row->buy_unit_price);
+        $this->assertSame(14_500_000, $row->cost());
+    }
+
     public function test_a_sell_is_rejected_when_navasan_is_down(): void
     {
         Http::fake(['*' => Http::response('upstream error', 502)]);
