@@ -7,8 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Modules\CRM\Models\Technician;
 use Modules\CRM\Models\TechChatMessage;
+use Modules\CRM\Models\Technician;
 
 /**
  * چت ۱:۱ اپراتور↔تکنسین — سمت ادمین.
@@ -36,7 +36,7 @@ class TechChatController extends Controller
         // تکنسین‌های در دامنهٔ این اپراتور — تخصیص یا همه برای manage-tech.
         $scopeQuery = Technician::query()->select('id');
         if (! $showAll) {
-            $scopeQuery->whereHas('operators', fn($q) => $q->where('users.id', $user->id));
+            $scopeQuery->whereHas('operators', fn ($q) => $q->where('users.id', $user->id));
         }
         $scopeIds = $scopeQuery->pluck('id');
 
@@ -81,13 +81,14 @@ class TechChatController extends Controller
             // پیام بی‌پاسخ: آخرین پیام از تکنسین بوده و هنوز خوانده/پاسخ نشده.
             $t->needs_reply = $t->last_sender_type === TechChatMessage::SENDER_TECH
                 && $t->unread_count > 0;
+
             return $t;
         });
 
         $stats = [
-            'unread'  => $technicians->where('needs_reply', true)->count(),
+            'unread' => $technicians->where('needs_reply', true)->count(),
             'replied' => $technicians->where('needs_reply', false)->count(),
-            'total'   => $technicians->count(),
+            'total' => $technicians->count(),
             'unread_messages' => (int) $unread->sum(),
         ];
 
@@ -99,17 +100,17 @@ class TechChatController extends Controller
 
         // اولویت: بی‌پاسخ بالا، سپس آخرین فعالیت.
         $technicians = $technicians
-            ->sortBy(fn($t) => $t->needs_reply ? 0 : 1)
-            ->groupBy(fn($t) => $t->needs_reply ? 0 : 1)
-            ->map(fn($group) => $group->sortByDesc(fn($t) => $t->last_message_at ?? ''))
+            ->sortBy(fn ($t) => $t->needs_reply ? 0 : 1)
+            ->groupBy(fn ($t) => $t->needs_reply ? 0 : 1)
+            ->map(fn ($group) => $group->sortByDesc(fn ($t) => $t->last_message_at ?? ''))
             ->flatten();
 
         return view('crm::tech-chats.index', [
             'technicians' => $technicians,
-            'stats'       => $stats,
-            'showAll'     => $showAll,
-            'filter'      => $filter,
-            'canManage'   => $canManage,
+            'stats' => $stats,
+            'showAll' => $showAll,
+            'filter' => $filter,
+            'canManage' => $canManage,
         ]);
     }
 
@@ -130,24 +131,25 @@ class TechChatController extends Controller
             ->select('id', 'first_name', 'last_name', 'firstname_tech', 'mobile')
             ->where(function ($w) use ($q) {
                 $w->where('first_name', 'like', "%{$q}%")
-                  ->orWhere('last_name', 'like', "%{$q}%")
-                  ->orWhere('firstname_tech', 'like', "%{$q}%")
-                  ->orWhere('mobile', 'like', "%{$q}%");
+                    ->orWhere('last_name', 'like', "%{$q}%")
+                    ->orWhere('firstname_tech', 'like', "%{$q}%")
+                    ->orWhere('mobile', 'like', "%{$q}%");
             });
 
         if (! $user->can('manage-technicians')) {
-            $query->whereHas('operators', fn($w) => $w->where('users.id', $user->id));
+            $query->whereHas('operators', fn ($w) => $w->where('users.id', $user->id));
         }
 
         $results = $query->orderBy('first_name')->limit(15)->get()
             ->map(function ($t) {
-                $name = trim($t->firstname_tech ?: ($t->first_name . ' ' . ($t->last_name ?? '')));
-                $name = $name !== '' ? $name : ('تکنسین #' . $t->id);
+                $name = trim($t->firstname_tech ?: ($t->first_name.' '.($t->last_name ?? '')));
+                $name = $name !== '' ? $name : ('تکنسین #'.$t->id);
+
                 return [
-                    'id'     => $t->id,
-                    'name'   => $name,
+                    'id' => $t->id,
+                    'name' => $name,
                     'mobile' => $t->mobile,
-                    'url'    => route('crm.tech-chats.show', $t),
+                    'url' => route('crm.tech-chats.show', $t),
                 ];
             });
 
@@ -188,10 +190,10 @@ class TechChatController extends Controller
 
         $msg = TechChatMessage::create([
             'technician_id' => $technician->id,
-            'sender_type'   => TechChatMessage::SENDER_OPERATOR,
-            'sender_id'     => Auth::id(),
-            'body'          => $validated['body'],
-            'created_at'    => now(),
+            'sender_type' => TechChatMessage::SENDER_OPERATOR,
+            'sender_id' => Auth::id(),
+            'body' => $validated['body'],
+            'created_at' => now(),
         ]);
 
         // خلاصهٔ پیام روی اعلان می‌نشیند، نه کلِ متن: بدنهٔ پوش سقفِ ۴۰۰
@@ -241,7 +243,7 @@ class TechChatController extends Controller
             ->update(['read_at' => now()]);
 
         return response()->json([
-            'messages' => $messages->map(fn($m) => [
+            'messages' => $messages->map(fn ($m) => [
                 'id' => $m->id,
                 'sender_type' => $m->sender_type,
                 'body' => $m->body,
@@ -256,7 +258,7 @@ class TechChatController extends Controller
         $user = Auth::user();
 
         $count = TechChatMessage::query()
-            ->whereHas('technician.operators', fn($q) => $q->where('users.id', $user->id))
+            ->whereHas('technician.operators', fn ($q) => $q->where('users.id', $user->id))
             ->where('sender_type', TechChatMessage::SENDER_TECH)
             ->whereNull('read_at')
             ->count();
@@ -287,13 +289,56 @@ class TechChatController extends Controller
         ]);
     }
 
+    /**
+     * تخصیصِ گروهی: افزودن/حذفِ «یک اپراتور» به/از همهٔ تکنسین‌های فعال —
+     * با یک کلیک، به‌جای تیک‌زدن و ذخیرهٔ تک‌تکِ کارت‌ها.
+     * افزودن با syncWithoutDetaching است تا تخصیص‌های فعلیِ بقیه دست نخورد.
+     */
+    public function bulkAssign(Request $request)
+    {
+        abort_unless(Auth::user()?->can('manage-technicians'), 403);
+
+        $validated = $request->validate([
+            'operator_id' => 'required|integer|exists:users,id',
+            'bulk_action' => 'required|in:attach,detach',
+        ], [
+            'operator_id.required' => 'ابتدا اپراتور را انتخاب کنید.',
+        ]);
+
+        $operator = User::findOrFail((int) $validated['operator_id']);
+        $opName = trim($operator->first_name.' '.$operator->last_name);
+
+        $technicians = Technician::query()->active()->with('operators:id')->get(['id']);
+
+        $now = now();
+        $changed = 0;
+        foreach ($technicians as $tech) {
+            if ($validated['bulk_action'] === 'attach') {
+                $result = $tech->operators()->syncWithoutDetaching([
+                    $operator->id => ['assigned_at' => $now],
+                ]);
+                $changed += count($result['attached']);
+            } else {
+                $changed += (int) $tech->operators()->detach($operator->id);
+            }
+        }
+
+        $message = $validated['bulk_action'] === 'attach'
+            ? "«{$opName}» به {$changed} تکنسین اضافه شد"
+                .($changed < $technicians->count() ? ' (بقیه از قبل داشتند)' : '')
+                .' — مجموعاً به همهٔ '.$technicians->count().' تکنسین فعال دسترسی دارد.'
+            : "«{$opName}» از {$changed} تکنسین حذف شد.";
+
+        return back()->with('success', $message);
+    }
+
     /** به‌روزرسانی لیست اپراتورهای تخصیص‌داده‌شده برای یک تکنسین. */
     public function updateAssignment(Request $request, Technician $technician)
     {
         abort_unless(Auth::user()?->can('manage-technicians'), 403);
 
         $validated = $request->validate([
-            'operator_ids'   => 'nullable|array',
+            'operator_ids' => 'nullable|array',
             'operator_ids.*' => 'integer|exists:users,id',
         ]);
 
@@ -301,7 +346,7 @@ class TechChatController extends Controller
 
         // sync با timestamp
         $now = now();
-        $sync = collect($ids)->mapWithKeys(fn($id) => [$id => ['assigned_at' => $now]])->all();
+        $sync = collect($ids)->mapWithKeys(fn ($id) => [$id => ['assigned_at' => $now]])->all();
         $technician->operators()->sync($sync);
 
         return back()->with('success', 'اپراتورهای پشتیبانیِ تکنسین به‌روزرسانی شد.');
@@ -314,8 +359,12 @@ class TechChatController extends Controller
     protected function authorizeAccess(Technician $technician): void
     {
         $user = Auth::user();
-        if ($user->can('manage-technicians')) return;
-        if ($technician->operators()->where('users.id', $user->id)->exists()) return;
+        if ($user->can('manage-technicians')) {
+            return;
+        }
+        if ($technician->operators()->where('users.id', $user->id)->exists()) {
+            return;
+        }
         abort(403, 'این تکنسین به شما تخصیص داده نشده است.');
     }
 }

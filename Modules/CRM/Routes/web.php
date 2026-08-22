@@ -721,6 +721,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('/search', [\Modules\CRM\Http\Controllers\TechChatController::class, 'search'])->name('search');
         Route::middleware('can:manage-technicians')->group(function () {
             Route::get('/assignments', [\Modules\CRM\Http\Controllers\TechChatController::class, 'assignments'])->name('assignments');
+            Route::post('/assignments/bulk', [\Modules\CRM\Http\Controllers\TechChatController::class, 'bulkAssign'])->name('assignments.bulk');
             Route::patch('/{technician}/assign', [\Modules\CRM\Http\Controllers\TechChatController::class, 'updateAssignment'])->name('assign');
         });
         Route::get('/{technician}', [\Modules\CRM\Http\Controllers\TechChatController::class, 'show'])->name('show')->whereNumber('technician');
