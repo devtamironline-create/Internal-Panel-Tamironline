@@ -22,6 +22,41 @@
     @if(session('success'))
         <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-3 text-sm mb-4">{{ session('success') }}</div>
     @endif
+    @if($errors->any())
+        <div class="bg-rose-50 border border-rose-200 text-rose-800 rounded-lg p-3 text-sm mb-4">{{ $errors->first() }}</div>
+    @endif
+
+    {{-- ── تخصیص گروهی: یک اپراتور → همه تکنسین‌ها با یک کلیک ── --}}
+    <form action="{{ route('crm.tech-chats.assignments.bulk') }}" method="POST"
+          class="bg-indigo-50/60 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-700 rounded-xl p-4 mb-4"
+          x-data="{ op: '', opName: '' }">
+        @csrf
+        <div class="text-sm font-bold text-indigo-900 dark:text-indigo-200 mb-1">تخصیص گروهی</div>
+        <p class="text-[11px] text-indigo-700 dark:text-indigo-300 mb-3">
+            یک اپراتور را انتخاب کنید و با یک کلیک به <b>همه تکنسین‌های فعال</b> اضافه (یا از همه حذف) کنید —
+            تخصیص‌های فعلی بقیه اپراتورها دست نمی‌خورد.
+        </p>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+            <select name="operator_id" required
+                    x-model="op" @change="opName = $event.target.selectedOptions[0]?.text || ''"
+                    class="flex-1 max-w-xs px-3 py-2 border border-indigo-200 dark:border-indigo-700 dark:bg-gray-800 dark:text-gray-100 rounded-lg text-sm">
+                <option value="">— انتخاب اپراتور —</option>
+                @foreach($operators as $op)
+                    <option value="{{ $op->id }}">{{ $op->first_name }} {{ $op->last_name }}</option>
+                @endforeach
+            </select>
+            <button type="submit" name="bulk_action" value="attach" :disabled="!op"
+                    @click="return confirm('«' + opName + '» به همه تکنسین‌های فعال اضافه شود؟')"
+                    class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold disabled:opacity-50">
+                ➕ افزودن به همه تکنسین‌ها
+            </button>
+            <button type="submit" name="bulk_action" value="detach" :disabled="!op"
+                    @click="return confirm('«' + opName + '» از همه تکنسین‌ها حذف شود؟ تخصیص‌های تکی این اپراتور هم پاک می‌شود.')"
+                    class="px-4 py-2 rounded-lg bg-rose-100 hover:bg-rose-200 text-rose-700 text-sm font-bold disabled:opacity-50">
+                حذف از همه
+            </button>
+        </div>
+    </form>
 
     <div class="space-y-3">
         @foreach($technicians as $tech)
