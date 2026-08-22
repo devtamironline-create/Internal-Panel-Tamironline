@@ -38,8 +38,13 @@
         </div>
 
         <form @submit.prevent="send()" class="p-3 border-t border-gray-100 dark:border-gray-700 flex items-end gap-2">
-            <textarea x-model="body" rows="1" placeholder="پیام بنویسید…"
-                      class="flex-1 resize-none border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-100 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-brand-400"></textarea>
+            {{-- اینتر = خطِ بعدی + کش‌آمدنِ خودکارِ باکس (تا سقف ~۶ خط، بعد اسکرول
+                 داخلی). ارسال با دکمه یا Ctrl+Enter. --}}
+            <textarea x-ref="input" x-model="body" rows="1" placeholder="پیام بنویسید… (Ctrl+Enter = ارسال)"
+                      @input="autoGrow()"
+                      @keydown.ctrl.enter.prevent="send()"
+                      style="max-height: 160px; overflow-y: auto;"
+                      class="flex-1 resize-none border border-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-100 rounded-xl px-3 py-2 text-sm leading-6 focus:outline-none focus:border-brand-400"></textarea>
             <button type="submit" :disabled="!body.trim() || sending"
                     class="px-4 py-2 rounded-xl bg-brand-600 text-white text-sm font-bold disabled:opacity-50">
                 ارسال
@@ -68,6 +73,15 @@ function techChat() {
             });
         },
 
+        // باکسِ پیام با محتوای چند‌خطی کش می‌آید (سقف با max-height خودِ
+        // textarea کنترل می‌شود؛ بعد از آن اسکرولِ داخلی).
+        autoGrow() {
+            const el = this.$refs.input;
+            if (!el) return;
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        },
+
         async send() {
             if (!this.body.trim() || this.sending) return;
             this.sending = true;
@@ -85,6 +99,8 @@ function techChat() {
                 if (json.success) {
                     this.appendMessage(json.message);
                     this.body = '';
+                    // بعد از خالی شدن، ارتفاعِ باکس به یک خط برگردد.
+                    this.$nextTick(() => this.autoGrow());
                 }
             } finally {
                 this.sending = false;
