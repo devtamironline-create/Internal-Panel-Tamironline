@@ -83,6 +83,11 @@ Route::prefix('v1/customer')
         Route::get('/bootstrap', BootstrapController::class)
             ->name('api.customer.bootstrap');
 
+        // جدول پوشش خدمات — source-of-truth سئو برای سایت وردپرسی
+        // (areaServed/schema/local pages). public و فقط‌خواندنی.
+        Route::get('/seo/coverage', \Modules\CustomerApp\Http\Controllers\Api\V1\SeoCoverageController::class)
+            ->name('api.customer.seo.coverage');
+
         // ─── Private — auth:sanctum + rolling token + device tracking ──
         Route::middleware(['auth:sanctum', RollingToken::class, TrackTokenUsage::class])->group(function () {
 
