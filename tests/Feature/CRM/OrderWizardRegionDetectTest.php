@@ -447,4 +447,65 @@ class OrderWizardRegionDetectTest extends TestCase
             ->set('mapSearchTerm', 'قا')
             ->assertSet('mapSearchResults', []);
     }
+
+    // ─── سهمیهٔ تمام‌شدهٔ نشان (481) → مسیرِ کاملاً رایگانِ OSM ─────
+
+    public function test_a_map_point_still_resolves_via_osm_when_the_neshan_quota_is_exhausted(): void
+    {
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+        config([
+            'services.neshan.service_key' => 'test-key',
+            'services.neshan.base_url' => 'https://api.neshan.org',
+        ]);
+        Http::fake([
+            'api.neshan.org/*' => Http::response(['status' => 'ERROR', 'code' => 481, 'message' => 'API Key limit exceeded.'], 481),
+            'nominatim.openstreetmap.org/reverse*' => Http::response([
+                'display_name' => 'خیابان قائم، احمدآباد، منطقه ۳، مشهد، ایران',
+                'address' => [
+                    'road' => 'خیابان قائم',
+                    'neighbourhood' => 'احمدآباد',
+                    'city_district' => 'منطقه ۳',
+                    'city' => 'مشهد',
+                    'state' => 'خراسان رضوی',
+                ],
+            ]),
+        ]);
+
+        $this->wizard()
+            ->call('selectPointOnMap', 36.2972, 59.6067)
+            ->assertSet('regionId', $this->d3->id)
+            ->assertSet('regionDetectStatus', 'ok');
+    }
+
+    public function test_typed_address_detection_works_fully_free_when_the_neshan_quota_is_exhausted(): void
+    {
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+        config([
+            'services.neshan.service_key' => 'test-key',
+            'services.neshan.base_url' => 'https://api.neshan.org',
+        ]);
+        Http::fake([
+            'api.neshan.org/*' => Http::response(['status' => 'ERROR', 'code' => 481, 'message' => 'API Key limit exceeded.'], 481),
+            'nominatim.openstreetmap.org/search*' => Http::response([[
+                'name' => 'خیابان قائم',
+                'display_name' => 'خیابان قائم، مشهد',
+                'lat' => '36.2972',
+                'lon' => '59.6067',
+            ]]),
+            'nominatim.openstreetmap.org/reverse*' => Http::response([
+                'display_name' => 'خیابان قائم، احمدآباد، منطقه ۳، مشهد، ایران',
+                'address' => [
+                    'city_district' => 'منطقه ۳',
+                    'neighbourhood' => 'احمدآباد',
+                    'city' => 'مشهد',
+                ],
+            ]),
+        ]);
+
+        $this->wizard()
+            ->set('address', 'بلوار احمدآباد، خیابان قائم، پلاک ۷')
+            ->call('detectRegionFromAddress')
+            ->assertSet('regionId', $this->d3->id)
+            ->assertSet('regionDetectStatus', 'ok');
+    }
 }
