@@ -448,6 +448,30 @@ class OrderWizardRegionDetectTest extends TestCase
             ->assertSet('mapSearchResults', []);
     }
 
+    public function test_a_city_without_districts_still_gets_the_map_and_address_autofill(): void
+    {
+        // شهرِ بدونِ ردیفِ منطقه (مثل ردیف‌های قدیمی/کوچک) — نقشه باید کار
+        // کند: موقعیت ثبت و آدرسِ خالی پر می‌شود، بدونِ انتخابِ منطقه.
+        $plainCity = City::create(['province_id' => $this->province->id, 'name' => 'نیشابور', 'slug' => 'neyshabur']);
+        $this->technician([$plainCity->id], [$this->washer->id]);
+        $this->fakeNeshan([
+            'formatted_address' => 'نیشابور، خیابان امام',
+            'city' => 'نیشابور',
+            'municipality_zone' => null,
+            'neighbourhood' => null,
+        ]);
+
+        Livewire::test(OrderWizard::class)
+            ->set('provinceId', $this->province->id)
+            ->set('cityId', $plainCity->id)
+            ->set('brandId', $this->brand->id)
+            ->set('deviceId', $this->washer->id)
+            ->call('selectPointOnMap', 36.21, 58.79)
+            ->assertSet('regionId', null)
+            ->assertSet('regionDetectStatus', 'ok')
+            ->assertSet('address', 'نیشابور، خیابان امام');
+    }
+
     // ─── سهمیهٔ تمام‌شدهٔ نشان (481) → مسیرِ کاملاً رایگانِ OSM ─────
 
     public function test_a_map_point_still_resolves_via_osm_when_the_neshan_quota_is_exhausted(): void
