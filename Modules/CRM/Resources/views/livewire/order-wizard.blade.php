@@ -131,8 +131,10 @@
 
 {{-- کارخانهٔ Alpine برای نقشهٔ «انتخاب منطقه روی نقشه» در مرحلهٔ مشتری.
      اینجا تعریف می‌شود (نه داخل partial مرحله) چون مرحلهٔ ۲ با morph
-     می‌آید و <script> داخل HTMLِ morph شده اجرا نمی‌شود. SDK لیفلتِ نشان
-     فقط بارِ اول که نقشه باز می‌شود لود می‌شود. --}}
+     می‌آید و <script> داخل HTMLِ morph شده اجرا نمی‌شود.
+     SDK: همان Web SDK رسمیِ نشان (mapbox-gl) که اپِ مشتری هم استفاده
+     می‌کند — docs/FRONTEND_LOCATIONS_NESHAN.md — و فقط بارِ اول که نقشه
+     باز می‌شود لود می‌شود. ⚠ mapbox مختصات را [lng, lat] می‌گیرد. --}}
 if (! window.wizardRegionMap) {
     window.wizardRegionMap = function (key, center) {
         return {
@@ -145,21 +147,21 @@ if (! window.wizardRegionMap) {
             toggleMap() {
                 this.open = ! this.open;
                 if (this.open && ! this.map && ! this.loadingMap) this.bootMap();
-                // بعد از نمایشِ دوباره، Leaflet باید اندازهٔ ظرف را از نو بخواند.
-                if (this.open && this.map) this.$nextTick(() => this.map.invalidateSize());
+                // بعد از نمایشِ دوباره، mapbox باید اندازهٔ ظرف را از نو بخواند.
+                if (this.open && this.map) this.$nextTick(() => this.map.resize());
             },
 
             bootMap() {
                 this.loadingMap = true;
                 this.failedMap = false;
                 const ready = () => this.initMap();
-                if (window.L && window.L.Map) return ready();
+                if (window.nmp_mapboxgl) return ready();
                 const css = document.createElement('link');
                 css.rel = 'stylesheet';
-                css.href = 'https://static.neshan.org/sdk/leaflet/1.4.0/leaflet.css';
+                css.href = 'https://static.neshan.org/sdk/mapboxgl/v1.13.2/neshan-sdk/v1.1.5/index.css';
                 document.head.appendChild(css);
                 const s = document.createElement('script');
-                s.src = 'https://static.neshan.org/sdk/leaflet/1.4.0/leaflet.js';
+                s.src = 'https://static.neshan.org/sdk/mapboxgl/v1.13.2/neshan-sdk/v1.1.5/index.js';
                 s.onload = ready;
                 s.onerror = () => { this.loadingMap = false; this.failedMap = true; };
                 document.head.appendChild(s);
@@ -171,16 +173,17 @@ if (! window.wizardRegionMap) {
                 setTimeout(() => {
                     this.loadingMap = false;
                     try {
-                        this.map = new L.Map(this.$refs.mapBox, {
-                            key: key,
-                            maptype: 'neshan',
+                        this.map = new nmp_mapboxgl.Map({
+                            mapType: nmp_mapboxgl.Map.mapTypes.neshanVector,
+                            container: this.$refs.mapBox,
+                            mapKey: key,
                             poi: true,
                             traffic: false,
-                            center: center ? [center.lat, center.lng] : [32.5, 53.7],
-                            zoom: center ? (center.zoom || 12) : 5,
+                            center: center ? [center.lng, center.lat] : [53.7, 32.5],
+                            zoom: center ? (center.zoom || 12) : 4.5,
                         });
-                        this.map.on('click', (e) => this.pickPoint(e.latlng.lat, e.latlng.lng));
-                        this.$nextTick(() => this.map.invalidateSize());
+                        this.map.on('click', (e) => this.pickPoint(e.lngLat.lat, e.lngLat.lng));
+                        this.$nextTick(() => this.map.resize());
                     } catch (err) {
                         this.failedMap = true;
                     }
@@ -189,11 +192,13 @@ if (! window.wizardRegionMap) {
 
             pickPoint(lat, lng) {
                 if (this.marker) {
-                    this.marker.setLatLng([lat, lng]);
+                    this.marker.setLngLat([lng, lat]);
                 } else {
-                    this.marker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
+                    this.marker = new nmp_mapboxgl.Marker({ draggable: true })
+                        .setLngLat([lng, lat])
+                        .addTo(this.map);
                     this.marker.on('dragend', () => {
-                        const p = this.marker.getLatLng();
+                        const p = this.marker.getLngLat();
                         this.$wire.call('selectPointOnMap', p.lat, p.lng);
                     });
                 }
