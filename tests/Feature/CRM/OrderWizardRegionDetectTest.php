@@ -254,4 +254,99 @@ class OrderWizardRegionDetectTest extends TestCase
             ->assertSet('regionId', null)
             ->assertSet('regionDetectStatus', 'fail');
     }
+
+    public function test_a_geocoding_key_misconfiguration_gets_a_specific_admin_hint(): void
+    {
+        // 485 = سرویس geocoding روی کلید فعال نیست — پیام باید بگوید چه
+        // چیزی را در پنل نشان فعال کند، نه «آدرس پیدا نشد».
+        config([
+            'services.neshan.service_key' => 'test-key',
+            'services.neshan.base_url' => 'https://api.neshan.org',
+        ]);
+        Http::fake([
+            'api.neshan.org/v6/geocoding*' => Http::response(['code' => 485], 485),
+        ]);
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+
+        $wizard = $this->wizard()
+            ->set('address', 'بلوار سجاد، پلاک ۲')
+            ->call('detectRegionFromAddress')
+            ->assertSet('regionId', null)
+            ->assertSet('regionDetectStatus', 'fail');
+
+        $this->assertStringContainsString('تبدیل آدرس به مختصات', $wizard->get('regionDetectMessage'));
+    }
+
+    // ─── انتخاب نقطه روی نقشهٔ داخل ویزارد ───────────────────────
+
+    public function test_picking_a_point_on_the_map_selects_the_region_and_fills_an_empty_address(): void
+    {
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+        $this->fakeNeshan([
+            'formatted_address' => 'مشهد، احمدآباد، خیابان قائم',
+            'state' => 'خراسان رضوی',
+            'city' => 'مشهد',
+            'municipality_zone' => '3',
+            'neighbourhood' => 'احمدآباد',
+        ]);
+
+        $this->wizard()
+            ->call('selectPointOnMap', 36.2972, 59.6067)
+            ->assertSet('regionId', $this->d3->id)
+            ->assertSet('regionDetectStatus', 'ok')
+            ->assertSet('address', 'مشهد، احمدآباد، خیابان قائم');
+
+        // فقط reverse — مسیرِ نقشه به سرویسِ geocoding نیازی ندارد.
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'v6/geocoding'));
+    }
+
+    public function test_picking_a_point_does_not_overwrite_a_typed_address(): void
+    {
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+        $this->fakeNeshan([
+            'formatted_address' => 'مشهد، احمدآباد',
+            'city' => 'مشهد',
+            'municipality_zone' => '5',
+            'neighbourhood' => 'احمدآباد',
+        ]);
+
+        $this->wizard()
+            ->set('address', 'آدرسی که اپراتور تایپ کرده')
+            ->call('selectPointOnMap', 36.2972, 59.6067)
+            ->assertSet('regionId', $this->d5->id)
+            ->assertSet('address', 'آدرسی که اپراتور تایپ کرده');
+    }
+
+    public function test_a_map_point_in_another_city_is_rejected(): void
+    {
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+        $this->fakeNeshan([
+            'formatted_address' => 'تهران، آزادی',
+            'city' => 'تهران',
+            'municipality_zone' => '9',
+            'neighbourhood' => 'آزادی',
+        ]);
+
+        $this->wizard()
+            ->call('selectPointOnMap', 35.6892, 51.3890)
+            ->assertSet('regionId', null)
+            ->assertSet('regionDetectStatus', 'warn');
+    }
+
+    public function test_an_uncovered_region_from_a_map_point_warns_instead_of_selecting(): void
+    {
+        // پوشش فقط منطقهٔ ۵؛ نقطه در منطقهٔ ۹ → ست نمی‌شود، هشدار.
+        $this->technician([$this->mashhad->id], [$this->washer->id], [$this->d5->id]);
+        $this->fakeNeshan([
+            'formatted_address' => 'مشهد، الهیه',
+            'city' => 'مشهد',
+            'municipality_zone' => '9',
+            'neighbourhood' => 'الهیه',
+        ]);
+
+        $this->wizard()
+            ->call('selectPointOnMap', 36.35, 59.53)
+            ->assertSet('regionId', null)
+            ->assertSet('regionDetectStatus', 'warn');
+    }
 }
