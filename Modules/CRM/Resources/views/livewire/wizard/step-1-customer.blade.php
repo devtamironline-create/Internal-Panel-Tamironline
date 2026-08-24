@@ -114,14 +114,20 @@
                 منطقه {{ $this->selectedCity ? '— ' . $this->selectedCity->name : '' }}
                 <span class="text-rose-600">*</span>
             </label>
+            {{-- منطقه‌ای که برای دستگاهِ انتخابی تکنسین ندارد، قابلِ انتخاب
+                 برای «سفارش» نیست (disabled + برچسب) — لید محدودیتی ندارد. --}}
+            @php $regionCov = $this->regionCoverage; @endphp
             <select wire:model="regionId" data-searchable
                     class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
                 <option value="">— انتخاب کنید —</option>
                 @foreach($this->regions as $r)
-                    <option value="{{ $r->id }}">{{ $r->name }}</option>
+                    @php $covered = $regionCov === null || ($regionCov[$r->id] ?? false); @endphp
+                    <option value="{{ $r->id }}" @disabled(! $covered)>
+                        {{ $r->name }}{{ $covered ? '' : ' — بدون تکنسین (فقط لید)' }}
+                    </option>
                 @endforeach
             </select>
-            <p class="text-xs text-gray-500 mt-1">برای این شهر انتخاب منطقه الزامی است.</p>
+            <p class="text-xs text-gray-500 mt-1">برای این شهر انتخاب منطقه الزامی است. منطقه‌های بدون تکنسینِ فعال فقط برای ثبت لید ممکن‌اند.</p>
             @error('regionId')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
         </div>
     @endif
