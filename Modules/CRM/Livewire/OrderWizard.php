@@ -586,7 +586,9 @@ class OrderWizard extends Component
         $this->regionDetectMessage = null;
         $this->regionDetectStatus = '';
 
-        if (! $this->cityId || $this->regions->isEmpty()) {
+        // نقشه برای همهٔ شهرها فعال است — شهرِ بدونِ منطقه‌بندی فقط
+        // آدرس/موقعیت می‌گیرد و انتخابِ منطقه ندارد.
+        if (! $this->cityId) {
             $this->setRegionDetectResult('warn', 'اول استان و شهر را انتخاب کنید.');
 
             return;
@@ -626,6 +628,15 @@ class OrderWizard extends Component
             && \Modules\CRM\Services\IranCoverageMap::normalizeName($revCity)
                !== \Modules\CRM\Services\IranCoverageMap::normalizeName($cityName)) {
             $this->setRegionDetectResult('warn', 'نقطهٔ انتخابی در «'.$revCity.'» است نه «'.$cityName.'» — نقطه را داخلِ محدودهٔ شهر بزنید یا منطقه را دستی انتخاب کنید.');
+
+            return;
+        }
+
+        // شهرِ بدونِ منطقه‌بندی: کارِ نقطه همین‌جا تمام است.
+        if ($this->regions->isEmpty()) {
+            $this->setRegionDetectResult('ok', $formatted !== '' && trim($this->address) === $formatted
+                ? 'موقعیت ثبت و آدرس از نقشه تکمیل شد — این شهر منطقه‌بندی ندارد.'
+                : 'موقعیت روی نقشه ثبت شد — این شهر منطقه‌بندی ندارد و انتخابِ منطقه لازم نیست.');
 
             return;
         }
@@ -1026,6 +1037,8 @@ class OrderWizard extends Component
         $this->regionId = null;
         $this->regionDetectMessage = null;
         $this->regionDetectStatus = '';
+        $this->mapSearchTerm = '';
+        $this->mapSearchResults = [];
 
         // پوششِ شهرِ جدید ممکن است دستگاهِ انتخاب‌شدهٔ قبلی را در بر
         // نگیرد — انتخابِ کهنه پاک می‌شود تا اپراتور از لیستِ مجازِ شهرِ

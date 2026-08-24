@@ -157,10 +157,10 @@
             @endif
             @error('address')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
 
-            {{-- تشخیص خودکار منطقه از آدرس — فقط برای شهرهای منطقه‌دار.
-                 اول متنِ آدرس (رایگان)، بعد نقشهٔ نشان. نتیجه پیشنهاد است
+            {{-- ابزارهای نقشه/تشخیص — برای همهٔ شهرها؛ دکمهٔ «تشخیص از متن»
+                 فقط برای شهرهای منطقه‌دار معنا دارد. نتیجه پیشنهاد است
                  و اپراتور می‌تواند در dropdown منطقه عوضش کند. --}}
-            @if($this->regions->count())
+            @if($cityId)
                 {{-- wire:key با cityId: با عوض‌شدن شهر، نقشه از نو با مرکزِ
                      شهرِ جدید ساخته می‌شود. نقشه Leaflet لوکال + OSM است و
                      به کلیدِ Web نشان نیازی ندارد (تشخیصِ منطقه سمتِ سرور
@@ -169,6 +169,7 @@
                      x-data="window.wizardRegionMap(null, @js($this->mapCenter))"
                      @map-goto.window="gotoPoint($event.detail.lat, $event.detail.lng, $event.detail.zoom)">
                     <div class="mt-2 flex items-center gap-3 flex-wrap">
+                        @if($this->regions->count())
                         <button type="button"
                                 wire:click="detectRegionFromAddress"
                                 wire:loading.attr="disabled"
@@ -176,6 +177,7 @@
                                 class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-brand-300 text-brand-700 hover:bg-brand-50 dark:border-brand-600 dark:text-brand-300 dark:hover:bg-brand-900/30 disabled:opacity-50">
                             📍 تشخیص خودکار منطقه از آدرس
                         </button>
+                        @endif
                         <button type="button" @click="toggleMap()"
                                 class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
                             🗺 <span x-text="open ? 'بستن نقشه' : 'انتخاب روی نقشه'">انتخاب روی نقشه</span>
@@ -198,7 +200,11 @@
 
                     <div x-show="open" x-collapse x-cloak class="mt-2">
                         <p class="text-xs text-gray-500 mb-1.5">
-                            روی محلِ آدرس مشتری کلیک کنید — منطقه به‌صورت خودکار انتخاب می‌شود و اگر فیلد آدرس خالی باشد، آدرسِ نقطه هم داخلش می‌نشیند. marker را می‌توانید جابه‌جا کنید.
+                            @if($this->regions->count())
+                                روی محلِ آدرس مشتری کلیک کنید — منطقه به‌صورت خودکار انتخاب می‌شود و اگر فیلد آدرس خالی باشد، آدرسِ نقطه هم داخلش می‌نشیند. marker را می‌توانید جابه‌جا کنید.
+                            @else
+                                روی محلِ آدرس مشتری کلیک کنید — اگر فیلد آدرس خالی باشد، آدرسِ نقطه داخلش می‌نشیند. (این شهر منطقه‌بندی ندارد.)
+                            @endif
                         </p>
 
                         {{-- سرچ خیابان/محله — برای پیداکردنِ سریعِ محل وسطِ تماس. --}}
