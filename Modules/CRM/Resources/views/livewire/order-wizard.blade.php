@@ -132,9 +132,10 @@
 {{-- کارخانهٔ Alpine برای نقشهٔ «انتخاب منطقه روی نقشه» در مرحلهٔ مشتری.
      اینجا تعریف می‌شود (نه داخل partial مرحله) چون مرحلهٔ ۲ با morph
      می‌آید و <script> داخل HTMLِ morph شده اجرا نمی‌شود.
-     SDK: همان Web SDK رسمیِ نشان (mapbox-gl) که اپِ مشتری هم استفاده
-     می‌کند — docs/FRONTEND_LOCATIONS_NESHAN.md — و فقط بارِ اول که نقشه
-     باز می‌شود لود می‌شود. ⚠ mapbox مختصات را [lng, lat] می‌گیرد. --}}
+     نقشه: Leaflet لوکال (public/vendor/leaflet — از دامنهٔ خودِ پنل، بدونِ
+     وابستگی به CDNِ خارجی که دوبار «بارگذاری نشد» داد) + کاشی‌های OSM.
+     نقشه فقط برای «انتخابِ نقطه» است؛ تشخیصِ منطقه سمتِ سرور با REST
+     نشان (reverse) انجام می‌شود و به کلیدِ Web هیچ نیازی نیست. --}}
 if (! window.wizardRegionMap) {
     window.wizardRegionMap = function (key, center) {
         return {
@@ -147,21 +148,21 @@ if (! window.wizardRegionMap) {
             toggleMap() {
                 this.open = ! this.open;
                 if (this.open && ! this.map && ! this.loadingMap) this.bootMap();
-                // بعد از نمایشِ دوباره، mapbox باید اندازهٔ ظرف را از نو بخواند.
-                if (this.open && this.map) this.$nextTick(() => this.map.resize());
+                // بعد از نمایشِ دوباره، Leaflet باید اندازهٔ ظرف را از نو بخواند.
+                if (this.open && this.map) this.$nextTick(() => this.map.invalidateSize());
             },
 
             bootMap() {
                 this.loadingMap = true;
                 this.failedMap = false;
                 const ready = () => this.initMap();
-                if (window.nmp_mapboxgl) return ready();
+                if (window.L && window.L.map) return ready();
                 const css = document.createElement('link');
                 css.rel = 'stylesheet';
-                css.href = 'https://static.neshan.org/sdk/mapboxgl/v1.13.2/neshan-sdk/v1.1.5/index.css';
+                css.href = '/vendor/leaflet/leaflet.css';
                 document.head.appendChild(css);
                 const s = document.createElement('script');
-                s.src = 'https://static.neshan.org/sdk/mapboxgl/v1.13.2/neshan-sdk/v1.1.5/index.js';
+                s.src = '/vendor/leaflet/leaflet.js';
                 s.onload = ready;
                 s.onerror = () => { this.loadingMap = false; this.failedMap = true; };
                 document.head.appendChild(s);
@@ -173,17 +174,16 @@ if (! window.wizardRegionMap) {
                 setTimeout(() => {
                     this.loadingMap = false;
                     try {
-                        this.map = new nmp_mapboxgl.Map({
-                            mapType: nmp_mapboxgl.Map.mapTypes.neshanVector,
-                            container: this.$refs.mapBox,
-                            mapKey: key,
-                            poi: true,
-                            traffic: false,
-                            center: center ? [center.lng, center.lat] : [53.7, 32.5],
-                            zoom: center ? (center.zoom || 12) : 4.5,
+                        this.map = L.map(this.$refs.mapBox, {
+                            center: center ? [center.lat, center.lng] : [32.5, 53.7],
+                            zoom: center ? (center.zoom || 12) : 5,
                         });
-                        this.map.on('click', (e) => this.pickPoint(e.lngLat.lat, e.lngLat.lng));
-                        this.$nextTick(() => this.map.resize());
+                        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            maxZoom: 19,
+                            attribution: '&copy; OpenStreetMap',
+                        }).addTo(this.map);
+                        this.map.on('click', (e) => this.pickPoint(e.latlng.lat, e.latlng.lng));
+                        this.$nextTick(() => this.map.invalidateSize());
                     } catch (err) {
                         this.failedMap = true;
                     }
@@ -192,13 +192,20 @@ if (! window.wizardRegionMap) {
 
             pickPoint(lat, lng) {
                 if (this.marker) {
-                    this.marker.setLngLat([lng, lat]);
+                    this.marker.setLatLng([lat, lng]);
                 } else {
-                    this.marker = new nmp_mapboxgl.Marker({ draggable: true })
-                        .setLngLat([lng, lat])
-                        .addTo(this.map);
+                    // divIcon تا به فایل‌های تصویریِ پیش‌فرضِ Leaflet نیازی نباشد.
+                    this.marker = L.marker([lat, lng], {
+                        draggable: true,
+                        icon: L.divIcon({
+                            className: '',
+                            html: '<div style="font-size:30px; line-height:30px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.4));">📍</div>',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 30],
+                        }),
+                    }).addTo(this.map);
                     this.marker.on('dragend', () => {
-                        const p = this.marker.getLngLat();
+                        const p = this.marker.getLatLng();
                         this.$wire.call('selectPointOnMap', p.lat, p.lng);
                     });
                 }
