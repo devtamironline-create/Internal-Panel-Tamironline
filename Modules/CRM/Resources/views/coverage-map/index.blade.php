@@ -1,19 +1,98 @@
 @extends('layouts.admin')
 
-@section('page-title', 'نقشه پوشش تهران')
+@section('page-title', 'نقشه پوشش سرویس‌دهی')
 
 @section('main')
 <div class="p-6 space-y-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-            <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">نقشه پوشش تهران</h1>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100">نقشه پوشش سرویس‌دهی</h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                پراکندگی تکنسین‌های فعال در ۲۲ منطقه شهرداری — با فیلتر چند‌دستگاهی، نقاط پراکندگی، جستجوی تکنسین و تحلیل شکاف پوشش.
+                کل ایران (۳۱ استان — شامل مشهد و هر شهر دارای تکنسین) + جزئیات ۲۲ منطقه تهران.
             </p>
         </div>
-        <a href="{{ route('crm.technicians.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm whitespace-nowrap">لیست تکنسین‌ها</a>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('crm.technicians.coverage-manage') }}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm whitespace-nowrap">⚙ مدیریت پوشش</a>
+            <a href="{{ route('crm.technicians.index') }}" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 text-sm whitespace-nowrap">لیست تکنسین‌ها</a>
+        </div>
     </div>
 
+    {{-- ── سوییچ نما: ایران / مناطق تهران ── --}}
+    <div class="inline-flex rounded-xl overflow-hidden border border-gray-300 dark:border-gray-600 text-sm">
+        <button type="button" id="tab-iran" class="px-5 py-2.5 bg-brand-600 text-white font-bold">🇮🇷 نقشه ایران</button>
+        <button type="button" id="tab-tehran" class="px-5 py-2.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold">مناطق تهران</button>
+    </div>
+
+    {{-- ═══════════════ نمای ایران ═══════════════ --}}
+    <div id="view-iran" class="space-y-6">
+        @if(! $iranGeojson)
+            <div class="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm">فایل مرز استان‌ها (iran-provinces.geojson) پیدا نشد — دیپلوی ناقص است.</div>
+        @else
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+                <div class="text-xs text-gray-500 dark:text-gray-400">استان‌های تحت پوشش</div>
+                <div class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1"><span id="ir-sum-prov">{{ $iranData['covered_province_count'] }}</span> <span class="text-sm font-normal text-gray-400">از ۳۱</span></div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+                <div class="text-xs text-gray-500 dark:text-gray-400">شهرهای تحت پوشش</div>
+                <div class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1" id="ir-sum-cities">{{ $iranData['covered_city_count'] }}</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+                <div class="text-xs text-gray-500 dark:text-gray-400">تکنسین‌های فعال</div>
+                <div class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{{ $iranData['total_techs'] }}</div>
+            </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4" title="این تکنسین‌ها روی نقشه نیستند چون تگ شهر ندارند">
+                <div class="text-xs text-gray-500 dark:text-gray-400">تکنسین بدون تگ شهر</div>
+                <div class="text-2xl font-bold {{ $iranData['untagged_tech_count'] > 0 ? 'text-amber-600' : 'text-emerald-600' }} mt-1">{{ $iranData['untagged_tech_count'] }}</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+            <div class="xl:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-2">
+                        <label class="text-sm text-gray-600 dark:text-gray-300">پوشش برای:</label>
+                        <select id="ir-device-filter" class="px-3 py-1.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+                            <option value="">همه دستگاه‌ها</option>
+                            @foreach($iranData['devices'] as $d)
+                                <option value="{{ $d['id'] }}">{{ $d['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-3 text-[11px] text-gray-600 dark:text-gray-300">
+                        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:#e2e8f0"></span> بدون پوشش</span>
+                        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:#fcd34d"></span> ۱–۲ تکنسین</span>
+                        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:#6ee7b7"></span> ۳–۹</span>
+                        <span class="inline-flex items-center gap-1"><span class="w-3 h-3 rounded-sm inline-block" style="background:#059669"></span> ۱۰+</span>
+                    </div>
+                </div>
+                <div class="relative">
+                    <svg id="ir-svg" viewBox="0 0 1000 900" class="w-full h-auto select-none" role="img" aria-label="نقشه پوشش استان‌های ایران"></svg>
+                    <div id="ir-tooltip" class="hidden absolute z-10 px-2.5 py-1.5 bg-gray-900/90 text-white text-xs rounded-lg pointer-events-none whitespace-nowrap"></div>
+                </div>
+                <p class="text-[11px] text-gray-400 mt-2">روی هر استان کلیک کنید تا شهرها و تکنسین‌هایش نمایش داده شود. استان بدون تکنسین = فقط ثبت لید. مرزها: OpenStreetMap.</p>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 min-h-[300px]">
+                <div id="ir-panel-empty" class="h-full flex flex-col items-center justify-center text-center text-gray-400 py-16">
+                    <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                    <div class="text-sm">یک استان را روی نقشه انتخاب کنید</div>
+                </div>
+                <div id="ir-panel-body" class="hidden">
+                    <div class="flex items-center justify-between mb-1">
+                        <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100" id="ir-panel-title"></h2>
+                        <span class="px-2.5 py-1 text-xs font-medium rounded-full" id="ir-panel-badge"></span>
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400 mb-3" id="ir-panel-sub"></div>
+                    <div id="ir-panel-cities" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+        @endif
+    </div>
+
+    {{-- ═══════════════ نمای مناطق تهران ═══════════════ --}}
+    <div id="view-tehran" class="space-y-6 hidden">
     @if(! $mapData || ! $geojson)
         <div class="p-4 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-sm leading-6">
             @if(! $geojson)
@@ -517,5 +596,192 @@
     })();
     </script>
     @endif
+    </div> {{-- /view-tehran --}}
+
+    {{-- ── سوییچ تب + نقشه ایران ── --}}
+    <script>
+    (function () {
+        // ── تب‌ها ──
+        const tabIran = document.getElementById('tab-iran');
+        const tabTehran = document.getElementById('tab-tehran');
+        const viewIran = document.getElementById('view-iran');
+        const viewTehran = document.getElementById('view-tehran');
+        const on = 'px-5 py-2.5 bg-brand-600 text-white font-bold';
+        const off = 'px-5 py-2.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold';
+        const show = which => {
+            viewIran.classList.toggle('hidden', which !== 'iran');
+            viewTehran.classList.toggle('hidden', which !== 'tehran');
+            tabIran.className = which === 'iran' ? on : off;
+            tabTehran.className = which === 'tehran' ? on : off;
+        };
+        tabIran.addEventListener('click', () => show('iran'));
+        tabTehran.addEventListener('click', () => show('tehran'));
+
+        // ── نقشه ایران ──
+        const GEO = @json($iranGeojson);
+        const DATA = @json($iranData['provinces'] ?? []);
+        const TECH_URL = @json(route('crm.technicians.show', 0));
+        if (!GEO) return;
+        const FA = n => String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        // همان نرمال‌سازیِ سرور: حذف فاصله/نیم‌فاصله + ی/ک عربی
+        const norm = s => String(s ?? '').replace(/[\s‌‏]/g, '').replace(/[يﻱ]/g, 'ی').replace(/[كﻙ]/g, 'ک');
+
+        const provOf = geoName => DATA[norm(geoName)] || null;
+
+        let selectedDevice = null, selectedProv = null;
+        const devSel = document.getElementById('ir-device-filter');
+
+        // تکنسین‌های یکتای استان با فیلترِ دستگاه
+        const provTechs = p => {
+            if (!p) return [];
+            const seen = {};
+            p.cities.forEach(c => c.technicians.forEach(t => {
+                if (selectedDevice && t.device_ids.length > 0 && !t.device_ids.includes(selectedDevice)) return;
+                seen[t.id] = t;
+            }));
+            return Object.values(seen);
+        };
+        const cityTechs = c => c.technicians.filter(t =>
+            !selectedDevice || t.device_ids.length === 0 || t.device_ids.includes(selectedDevice));
+
+        const colorFor = c => c <= 0 ? '#e2e8f0' : (c <= 2 ? '#fcd34d' : (c <= 9 ? '#6ee7b7' : '#059669'));
+
+        // ── projection ──
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        const midLat = 32.5 * Math.PI / 180, KX = Math.cos(midLat);
+        const eachPoint = (geom, cb) => {
+            const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+            polys.forEach(poly => poly.forEach(ring => ring.forEach(cb)));
+        };
+        GEO.features.forEach(f => eachPoint(f.geometry, ([lon, lat]) => {
+            const x = lon * KX, y = lat;
+            if (x < minX) minX = x; if (x > maxX) maxX = x;
+            if (y < minY) minY = y; if (y > maxY) maxY = y;
+        }));
+        const PAD = 14, W = 1000, H = 900;
+        const scale = Math.min((W - 2 * PAD) / (maxX - minX), (H - 2 * PAD) / (maxY - minY));
+        const px = lon => PAD + (lon * KX - minX) * scale + (W - 2 * PAD - (maxX - minX) * scale) / 2;
+        const py = lat => H - PAD - (lat - minY) * scale - (H - 2 * PAD - (maxY - minY) * scale) / 2;
+        const pathOf = geom => {
+            const polys = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+            return polys.map(poly => poly.map(ring =>
+                'M' + ring.map(([lon, lat]) => px(lon).toFixed(1) + ' ' + py(lat).toFixed(1)).join('L') + 'Z'
+            ).join('')).join('');
+        };
+
+        const svg = document.getElementById('ir-svg');
+        const tooltip = document.getElementById('ir-tooltip');
+        const NS = 'http://www.w3.org/2000/svg';
+        const shapes = {}, labelLayer = document.createElementNS(NS, 'g');
+
+        GEO.features.forEach(f => {
+            const name = f.properties.name;
+            const path = document.createElementNS(NS, 'path');
+            path.setAttribute('d', pathOf(f.geometry));
+            path.setAttribute('stroke', '#ffffff');
+            path.setAttribute('stroke-width', '1.5');
+            path.setAttribute('class', 'cursor-pointer');
+            path.addEventListener('mousemove', ev => {
+                const p = provOf(name);
+                const c = provTechs(p).length;
+                const box = svg.parentElement.getBoundingClientRect();
+                tooltip.textContent = name + ' — ' + (c > 0 ? FA(c) + ' تکنسین' : 'بدون تکنسین (فقط لید)');
+                tooltip.style.left = (ev.clientX - box.left + 12) + 'px';
+                tooltip.style.top = (ev.clientY - box.top - 30) + 'px';
+                tooltip.classList.remove('hidden');
+                path.setAttribute('opacity', '0.85');
+            });
+            path.addEventListener('mouseleave', () => { tooltip.classList.add('hidden'); path.setAttribute('opacity', '1'); });
+            path.addEventListener('click', () => select(name));
+            svg.appendChild(path);
+            shapes[name] = path;
+
+            // برچسبِ تعدادِ تکنسین در مرکزِ استان‌های تحتِ پوشش
+            const p = provOf(name);
+            if (p) {
+                let sx = 0, sy = 0, cnt = 0;
+                eachPoint(f.geometry, ([lon, lat]) => { sx += px(lon); sy += py(lat); cnt++; });
+                const label = document.createElementNS(NS, 'text');
+                label.setAttribute('x', (sx / cnt).toFixed(1));
+                label.setAttribute('y', (sy / cnt + 5).toFixed(1));
+                label.setAttribute('text-anchor', 'middle');
+                label.setAttribute('font-size', '16');
+                label.setAttribute('font-weight', '700');
+                label.setAttribute('fill', '#1f2937');
+                label.setAttribute('pointer-events', 'none');
+                label.dataset.prov = name;
+                labelLayer.appendChild(label);
+            }
+        });
+        svg.appendChild(labelLayer);
+
+        function paint() {
+            Object.entries(shapes).forEach(([name, path]) => {
+                const c = provTechs(provOf(name)).length;
+                path.setAttribute('fill', colorFor(c));
+                path.setAttribute('stroke', selectedProv === name ? '#1d4ed8' : '#ffffff');
+                path.setAttribute('stroke-width', selectedProv === name ? '3' : '1.5');
+            });
+            labelLayer.querySelectorAll('text').forEach(t => {
+                const c = provTechs(provOf(t.dataset.prov)).length;
+                t.textContent = c > 0 ? FA(c) : '';
+            });
+            if (selectedProv) renderPanel(selectedProv);
+        }
+
+        function select(name) {
+            selectedProv = name;
+            document.getElementById('ir-panel-empty').classList.add('hidden');
+            document.getElementById('ir-panel-body').classList.remove('hidden');
+            paint();
+        }
+
+        function renderPanel(name) {
+            const p = provOf(name);
+            const techs = provTechs(p);
+            document.getElementById('ir-panel-title').textContent = 'استان ' + name;
+            const badge = document.getElementById('ir-panel-badge');
+            badge.textContent = techs.length > 0 ? FA(techs.length) + ' تکنسین' : 'بدون تکنسین';
+            badge.className = 'px-2.5 py-1 text-xs font-medium rounded-full ' + (techs.length > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800');
+            document.getElementById('ir-panel-sub').textContent = techs.length > 0
+                ? 'شهرهای تحت پوشش این استان — کلیک روی هر شهر، تکنسین‌ها را باز می‌کند'
+                : 'در این استان تکنسین فعالی نداریم؛ ثبت سفارش بسته است و فقط لید ممکن است.';
+
+            const box = document.getElementById('ir-panel-cities');
+            if (!p) { box.innerHTML = ''; return; }
+            box.innerHTML = p.cities.map((c, i) => {
+                const ct = cityTechs(c);
+                if (selectedDevice && ct.length === 0) return '';
+                const techsHtml = ct.map(t => {
+                    const chips = t.devices.length === 0
+                        ? '<span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[10px]">همه‌کاره</span>'
+                        : t.devices.map(n => '<span class="px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 text-[10px]">' + esc(n) + '</span>').join(' ');
+                    return '<a href="' + TECH_URL.replace(/0$/, String(t.id)) + '" class="block p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-brand-400 transition">'
+                        + '<div class="font-bold text-[13px] text-gray-900 dark:text-gray-100">' + esc(t.name) + '</div>'
+                        + '<div class="text-[11px] text-gray-500" dir="ltr">' + esc(t.mobile ?? '') + '</div>'
+                        + '<div class="flex flex-wrap gap-1 mt-1.5">' + chips + '</div></a>';
+                }).join('');
+                return '<div class="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">'
+                    + '<button type="button" class="ir-city-toggle w-full flex items-center justify-between px-3 py-2.5 text-sm font-bold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-700/40" data-i="' + i + '">'
+                    + '<span>' + esc(c.name) + (c.active_in_panel ? '' : ' <span class="text-[10px] text-gray-400">(غیرفعال در اپ)</span>') + '</span>'
+                    + '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px]">' + FA(ct.length) + ' تکنسین</span>'
+                    + '</button>'
+                    + '<div class="ir-city-body hidden p-2.5 space-y-2">' + techsHtml + '</div></div>';
+            }).join('') || '<div class="text-sm text-gray-400 text-center py-8">با فیلتر فعلی شهری تحت پوشش نیست.</div>';
+
+            box.querySelectorAll('.ir-city-toggle').forEach(b => b.addEventListener('click', () => {
+                b.nextElementSibling.classList.toggle('hidden');
+            }));
+        }
+
+        devSel.addEventListener('change', () => {
+            selectedDevice = devSel.value ? parseInt(devSel.value, 10) : null;
+            paint();
+        });
+
+        paint();
+    })();
+    </script>
 </div>
 @endsection
