@@ -9,12 +9,15 @@ use Illuminate\Support\Facades\Log;
 /**
  * کلاینت سرویس REST نشان (neshan.org).
  *
- * فعلاً فقط reverse geocode («تبدیل نقطه به آدرس») — کلید service سمت سرور
- * می‌ماند و از طریق proxy endpoint به اپ سرویس داده می‌شود تا کلید لو نرود
- * و سهمیه‌ی API قابل کنترل (throttle + cache) باشد.
+ * دو سرویس: reverse geocode («تبدیل نقطه به آدرس») و geocode («تبدیل آدرس
+ * به مختصات») — کلید service سمت سرور می‌ماند و از طریق proxy endpoint به
+ * اپ سرویس داده می‌شود تا کلید لو نرود و سهمیه‌ی API قابل کنترل
+ * (throttle + cache) باشد.
  *
  * مرجع: https://platform.neshan.org/api/reverse-geocoding
  *   GET https://api.neshan.org/v5/reverse?lat=..&lng=..
+ * مرجع: https://platform.neshan.org/api/geocoding
+ *   GET https://api.neshan.org/v6/geocoding?address=..
  *   Header: Api-Key: <SERVICE_KEY>
  *
  * ⚠️ نوع کلید مهم است: کلید باید از نوع «وب‌سرویس» با دسترسی
@@ -136,6 +139,88 @@ class NeshanService
                 'error' => $e->getMessage(),
                 'lat' => $lat,
                 'lng' => $lng,
+            ]);
+            Cache::put($cacheKey, ['ok' => false, 'status' => null], self::FAILURE_COOLDOWN);
+
+            return null;
+        }
+    }
+
+    /**
+     * تبدیل آدرس متنی به مختصات (geocoding v6).
+     *
+     * ⚠️ روی همان کلید وب‌سرویس، سرویس «تبدیل آدرس به مختصات» هم باید در
+     * پنل نشان فعال باشد — وگرنه 485 برمی‌گردد.
+     *
+     * پاسخ نشان: {"status":"OK","location":{"x":<lng>,"y":<lat>}}
+     *
+     * @return array{lat: float, lng: float}|null
+     */
+    public function geocode(string $address): ?array
+    {
+        if (! $this->isConfigured()) {
+            return null;
+        }
+
+        $address = trim((string) preg_replace('/\s+/u', ' ', $address));
+        if ($address === '') {
+            return null;
+        }
+        $cacheKey = 'neshan:geocode:'.md5($address);
+
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            if ($cached['ok'] ?? false) {
+                return $cached['data'];
+            }
+            $this->lastStatus = $cached['status'] ?? null;
+
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(8)
+                ->withHeaders(['Api-Key' => (string) config('services.neshan.service_key')])
+                ->get(rtrim((string) config('services.neshan.base_url'), '/').'/v6/geocoding', [
+                    'address' => $address,
+                ]);
+
+            if (! $response->successful()) {
+                $this->lastStatus = $response->status();
+                Log::warning('neshan.geocode_failed', [
+                    'status' => $response->status(),
+                    'reason' => self::ERROR_CODES[$response->status()] ?? 'unknown',
+                    'body' => mb_substr($response->body(), 0, 500),
+                    'address' => $address,
+                ]);
+                Cache::put($cacheKey, ['ok' => false, 'status' => $response->status()], self::FAILURE_COOLDOWN);
+
+                return null;
+            }
+
+            $json = $response->json();
+            $lng = $json['location']['x'] ?? null;
+            $lat = $json['location']['y'] ?? null;
+
+            if (! is_numeric($lat) || ! is_numeric($lng)) {
+                // آدرس پیدا نشد (status=NOT_FOUND یا بدنهٔ نامنتظره) — شکستِ
+                // کوتاه cache می‌شود تا کلیکِ مکررِ اپراتور سهمیه نسوزاند.
+                Cache::put($cacheKey, ['ok' => false, 'status' => null], self::FAILURE_COOLDOWN);
+                $this->lastStatus = null;
+
+                return null;
+            }
+
+            $data = ['lat' => (float) $lat, 'lng' => (float) $lng];
+            Cache::put($cacheKey, ['ok' => true, 'data' => $data], self::CACHE_TTL);
+            $this->lastStatus = null;
+
+            return $data;
+        } catch (\Throwable $e) {
+            $this->lastStatus = null;
+            Log::warning('neshan.geocode_exception', [
+                'error' => $e->getMessage(),
+                'address' => $address,
             ]);
             Cache::put($cacheKey, ['ok' => false, 'status' => null], self::FAILURE_COOLDOWN);
 

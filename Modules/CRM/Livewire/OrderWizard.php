@@ -60,6 +60,12 @@ class OrderWizard extends Component
 
     public string $address = '';
 
+    // ─── تشخیص خودکار منطقه از آدرس (۱۴۰۵/۰۶/۰۲) ────────────────
+    // نتیجهٔ آخرین کلیکِ دکمهٔ «تشخیص منطقه از آدرس» برای نمایش در فرم.
+    public ?string $regionDetectMessage = null;
+
+    public string $regionDetectStatus = ''; // ok | warn | fail
+
     // ─── Step 1: Device & Problem (دستگاه اصلی) ──────────────────
     public string $orderType = 'repair';
 
@@ -362,6 +368,161 @@ class OrderWizard extends Component
         return $map === null || ($map[$districtId] ?? false);
     }
 
+    // ─── تشخیص خودکار منطقه از آدرس ──────────────────────────────
+
+    /**
+     * دکمهٔ «تشخیص منطقه از آدرس» — دو مرحله:
+     *   ۱) رایگان و فوری: اگر خودِ متنِ آدرس «منطقه N» دارد، همان.
+     *   ۲) نشان: آدرس → مختصات (geocoding) → منطقهٔ شهرداری (reverse) →
+     *      تطبیق با ردیف‌های منطقهٔ شهر.
+     *
+     * نتیجه همیشه «پیشنهاد» است: انتخابِ dropdown را پر می‌کند و اپراتور
+     * می‌تواند عوض کند. اگر منطقهٔ تشخیصی تکنسینِ فعال نداشته باشد، ست
+     * نمی‌شود و فقط هشدار می‌دهد (همان قانونِ «بدونِ تکنسین = فقط لید»).
+     */
+    public function detectRegionFromAddress(): void
+    {
+        $this->regionDetectMessage = null;
+        $this->regionDetectStatus = '';
+
+        if (! $this->cityId || $this->regions->isEmpty()) {
+            return; // دکمه فقط برای شهرهای منطقه‌دار نمایش داده می‌شود
+        }
+
+        $address = trim($this->address);
+        if (mb_strlen($address) < 5) {
+            $this->setRegionDetectResult('warn', 'اول آدرس را کامل بنویسید، بعد دکمهٔ تشخیص را بزنید.');
+
+            return;
+        }
+
+        // ۱) خودِ آدرس شمارهٔ منطقه را دارد؟ (بدونِ مصرفِ سهمیهٔ نشان)
+        $zone = $this->zoneNumberFromText($address);
+        if ($zone !== null) {
+            $district = $this->districtByNumber($zone);
+            if ($district) {
+                $this->selectDetectedDistrict($district, 'از متنِ آدرس');
+            } else {
+                $this->setRegionDetectResult('warn', 'در آدرس «منطقه '.$zone.'» آمده ولی چنین منطقه‌ای برای این شهر تعریف نشده — منطقه را دستی انتخاب کنید.');
+            }
+
+            return;
+        }
+
+        // ۲) نشان: آدرس → مختصات → منطقهٔ شهرداری.
+        $neshan = app(\Modules\CustomerApp\Services\NeshanService::class);
+        if (! $neshan->isConfigured()) {
+            $this->setRegionDetectResult('fail', 'سرویس نقشه (نشان) هنوز پیکربندی نشده است — منطقه را دستی انتخاب کنید.');
+
+            return;
+        }
+
+        $cityName = (string) $this->selectedCity?->name;
+        $point = $neshan->geocode($cityName.'، '.$address);
+        $rev = $point ? $neshan->reverseGeocode($point['lat'], $point['lng']) : null;
+        if ($rev === null) {
+            $this->setRegionDetectResult('fail', 'این آدرس روی نقشه پیدا نشد — آدرس را دقیق‌تر بنویسید یا منطقه را دستی انتخاب کنید.');
+
+            return;
+        }
+
+        // ایمنی: نقطهٔ پیداشده باید در همان شهرِ انتخابی باشد؛ وگرنه
+        // منطقهٔ شهرداریِ برگشتی بی‌معناست (آدرسِ مبهم → شهرِ دیگر).
+        $revCity = (string) ($rev['city'] ?? '');
+        if ($revCity !== '' && $cityName !== ''
+            && \Modules\CRM\Services\IranCoverageMap::normalizeName($revCity)
+               !== \Modules\CRM\Services\IranCoverageMap::normalizeName($cityName)) {
+            $this->setRegionDetectResult('warn', 'این آدرس روی نقشه در «'.$revCity.'» پیدا شد نه «'.$cityName.'» — آدرس را دقیق‌تر بنویسید یا منطقه را دستی انتخاب کنید.');
+
+            return;
+        }
+
+        $zone = $rev['municipality_zone'] ?? null;
+        if (is_numeric($zone)) {
+            $district = $this->districtByNumber((int) $zone);
+            if ($district) {
+                $this->selectDetectedDistrict($district, 'از روی نقشه');
+
+                return;
+            }
+        }
+
+        // بدونِ zone (یا zone بدونِ ردیف): تطبیقِ نامِ محله با نامِ منطقه —
+        // برای شهرهایی که منطقه‌هایشان به‌جای شماره، نام دارند.
+        $district = $this->districtByName((string) ($rev['neighbourhood'] ?? ''));
+        if ($district) {
+            $this->selectDetectedDistrict($district, 'از روی نقشه');
+
+            return;
+        }
+
+        $this->setRegionDetectResult('warn', 'منطقه از این آدرس قابل تشخیص نبود — منطقه را دستی انتخاب کنید.');
+    }
+
+    /** «منطقه ۱۲» یا «منطقه 12» داخلِ متن — عددِ ۱ تا ۲۲. */
+    protected function zoneNumberFromText(string $text): ?int
+    {
+        $latin = strtr($text, [
+            '۰' => '0', '۱' => '1', '۲' => '2', '۳' => '3', '۴' => '4',
+            '۵' => '5', '۶' => '6', '۷' => '7', '۸' => '8', '۹' => '9',
+        ]);
+        if (preg_match('/منطقه\s*(\d{1,2})/u', $latin, $m)) {
+            return (int) $m[1];
+        }
+
+        return null;
+    }
+
+    /** ردیفِ منطقهٔ شهرِ فعلی که نامش همین شماره را دارد («منطقه ۵» ↔ 5). */
+    protected function districtByNumber(int $n): ?City
+    {
+        foreach ($this->regions as $r) {
+            if ($this->zoneNumberFromText((string) $r->name) === $n) {
+                return $r;
+            }
+        }
+
+        return null;
+    }
+
+    /** ردیفِ منطقه‌ای که نامش با نامِ محلهٔ برگشتی از نشان هم‌پوشان است. */
+    protected function districtByName(string $name): ?City
+    {
+        $needle = \Modules\CRM\Services\IranCoverageMap::normalizeName($name);
+        if ($needle === '') {
+            return null;
+        }
+        foreach ($this->regions as $r) {
+            $rName = \Modules\CRM\Services\IranCoverageMap::normalizeName((string) $r->name);
+            if ($rName !== '' && (str_contains($needle, $rName) || str_contains($rName, $needle))) {
+                return $r;
+            }
+        }
+
+        return null;
+    }
+
+    /** اعمالِ منطقهٔ تشخیصی — با احترام به قانونِ پوشش (بدونِ تکنسین = فقط لید). */
+    protected function selectDetectedDistrict(City $district, string $source): void
+    {
+        if ($this->isOrderable && ! $this->regionCovered((int) $district->id)) {
+            $this->setRegionDetectResult('warn', 'آدرس در «'.$district->name.'» است ('.$source.') ولی در این منطقه برای دستگاهِ انتخابی تکنسینِ فعالی نداریم — سفارش ممکن نیست، فقط لید.');
+
+            return;
+        }
+
+        $this->regionId = (int) $district->id;
+        $this->setRegionDetectResult('ok', 'منطقه «'.$district->name.'» '.$source.' تشخیص داده و انتخاب شد — در صورت نیاز عوضش کنید.');
+        // به JS خبر بده تا dropdown قابل‌سرچ هم برچسبِ انتخاب را به‌روز کند.
+        $this->dispatch('region-detected', id: (int) $district->id);
+    }
+
+    protected function setRegionDetectResult(string $status, string $message): void
+    {
+        $this->regionDetectStatus = $status;
+        $this->regionDetectMessage = $message;
+    }
+
     #[Computed]
     public function selectedBrand(): ?Brand
     {
@@ -644,6 +805,8 @@ class OrderWizard extends Component
         // تا dropdown منطقه از نو بارگذاری شود (یا اگر شهر جدید منطقه
         // ندارد، مخفی بماند).
         $this->regionId = null;
+        $this->regionDetectMessage = null;
+        $this->regionDetectStatus = '';
 
         // پوششِ شهرِ جدید ممکن است دستگاهِ انتخاب‌شدهٔ قبلی را در بر
         // نگیرد — انتخابِ کهنه پاک می‌شود تا اپراتور از لیستِ مجازِ شهرِ
@@ -659,6 +822,13 @@ class OrderWizard extends Component
                 $this->extraDevices[$i]['device_id'] = null;
             }
         }
+    }
+
+    public function updatedAddress(): void
+    {
+        // آدرس عوض شد → نتیجهٔ تشخیصِ قبلی دیگر معتبر نیست.
+        $this->regionDetectMessage = null;
+        $this->regionDetectStatus = '';
     }
 
     public function updatedIsOrderable(): void
