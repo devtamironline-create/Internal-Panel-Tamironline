@@ -349,4 +349,102 @@ class OrderWizardRegionDetectTest extends TestCase
             ->assertSet('regionId', null)
             ->assertSet('regionDetectStatus', 'warn');
     }
+
+    // ─── سرچ خیابان/محله روی نقشه ────────────────────────────────
+
+    public function test_map_search_returns_neshan_results(): void
+    {
+        config([
+            'services.neshan.service_key' => 'test-key',
+            'services.neshan.base_url' => 'https://api.neshan.org',
+        ]);
+        Http::fake([
+            'api.neshan.org/v1/search*' => Http::response([
+                'count' => 1,
+                'items' => [[
+                    'title' => 'خیابان قائم',
+                    'address' => 'مشهد، احمدآباد، خیابان قائم',
+                    'location' => ['x' => 59.61, 'y' => 36.30],
+                ]],
+            ]),
+        ]);
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+
+        $wizard = $this->wizard()->set('mapSearchTerm', 'خیابان قائم');
+
+        $results = $wizard->get('mapSearchResults');
+        $this->assertCount(1, $results);
+        $this->assertSame('خیابان قائم', $results[0]['title']);
+        $this->assertSame(36.30, $results[0]['lat']);
+    }
+
+    public function test_map_search_falls_back_to_nominatim_when_neshan_is_unavailable(): void
+    {
+        config([
+            'services.neshan.service_key' => 'test-key',
+            'services.neshan.base_url' => 'https://api.neshan.org',
+        ]);
+        Http::fake([
+            // 485 = سرویس جستجو روی کلید فعال نیست → fallback رایگان OSM.
+            'api.neshan.org/v1/search*' => Http::response(['code' => 485], 485),
+            'nominatim.openstreetmap.org/*' => Http::response([[
+                'name' => 'خیابان قائم',
+                'display_name' => 'خیابان قائم، احمدآباد، مشهد، ایران',
+                'lat' => '36.301',
+                'lon' => '59.612',
+            ]]),
+        ]);
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+
+        $wizard = $this->wizard()->set('mapSearchTerm', 'خیابان قائم');
+
+        $results = $wizard->get('mapSearchResults');
+        $this->assertCount(1, $results);
+        $this->assertSame('خیابان قائم', $results[0]['title']);
+        $this->assertSame(36.301, $results[0]['lat']);
+    }
+
+    public function test_choosing_a_search_result_runs_the_point_detection(): void
+    {
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+        config([
+            'services.neshan.service_key' => 'test-key',
+            'services.neshan.base_url' => 'https://api.neshan.org',
+        ]);
+        Http::fake([
+            'api.neshan.org/v1/search*' => Http::response([
+                'count' => 1,
+                'items' => [[
+                    'title' => 'خیابان قائم',
+                    'address' => 'مشهد، احمدآباد',
+                    'location' => ['x' => 59.61, 'y' => 36.30],
+                ]],
+            ]),
+            'api.neshan.org/v5/reverse*' => Http::response([
+                'formatted_address' => 'مشهد، احمدآباد، خیابان قائم',
+                'city' => 'مشهد',
+                'municipality_zone' => '3',
+                'neighbourhood' => 'احمدآباد',
+            ]),
+        ]);
+
+        $this->wizard()
+            ->set('mapSearchTerm', 'خیابان قائم')
+            ->call('chooseSearchResult', 0)
+            ->assertSet('regionId', $this->d3->id)
+            ->assertSet('regionDetectStatus', 'ok')
+            ->assertSet('mapSearchResults', [])
+            ->assertSet('mapSearchTerm', '')
+            ->assertDispatched('map-goto');
+    }
+
+    public function test_a_short_search_term_clears_the_results(): void
+    {
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+
+        $this->wizard()
+            ->set('mapSearchResults', [['title' => 'x', 'address' => '', 'lat' => 1.0, 'lng' => 1.0]])
+            ->set('mapSearchTerm', 'قا')
+            ->assertSet('mapSearchResults', []);
+    }
 }

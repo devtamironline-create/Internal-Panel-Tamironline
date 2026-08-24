@@ -187,7 +187,7 @@ class NeshanService
 
             if (! $response->successful()) {
                 $this->lastStatus = $response->status();
-                Log::warning('neshan.geocode_failed', [
+                Log::error('neshan.geocode_failed', [
                     'status' => $response->status(),
                     'reason' => self::ERROR_CODES[$response->status()] ?? 'unknown',
                     'body' => mb_substr($response->body(), 0, 500),
@@ -218,10 +218,90 @@ class NeshanService
             return $data;
         } catch (\Throwable $e) {
             $this->lastStatus = null;
-            Log::warning('neshan.geocode_exception', [
+            Log::error('neshan.geocode_exception', [
                 'error' => $e->getMessage(),
                 'address' => $address,
             ]);
+            Cache::put($cacheKey, ['ok' => false, 'status' => null], self::FAILURE_COOLDOWN);
+
+            return null;
+        }
+    }
+
+    /**
+     * جستجوی مکان (search v1) — برای سرچِ خیابان/محله روی نقشهٔ ویزارد.
+     *
+     * lat/lng مرکزِ bias جستجوست (نتایجِ نزدیک‌تر بالاتر می‌آیند).
+     * ⚠️ سرویس «جستجو» هم باید روی کلید فعال باشد؛ اگر نبود (485) null
+     * برمی‌گردد و caller سراغ fallback می‌رود.
+     *
+     * @return array<int, array{title: string, address: string, lat: float, lng: float}>|null
+     */
+    public function searchPlaces(string $term, float $lat, float $lng): ?array
+    {
+        if (! $this->isConfigured()) {
+            return null;
+        }
+
+        $term = trim((string) preg_replace('/\s+/u', ' ', $term));
+        if ($term === '') {
+            return null;
+        }
+        $cacheKey = sprintf('neshan:search:%s:%.2f,%.2f', md5($term), $lat, $lng);
+
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            if ($cached['ok'] ?? false) {
+                return $cached['data'];
+            }
+            $this->lastStatus = $cached['status'] ?? null;
+
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(8)
+                ->withHeaders(['Api-Key' => (string) config('services.neshan.service_key')])
+                ->get(rtrim((string) config('services.neshan.base_url'), '/').'/v1/search', [
+                    'term' => $term,
+                    'lat' => $lat,
+                    'lng' => $lng,
+                ]);
+
+            if (! $response->successful()) {
+                $this->lastStatus = $response->status();
+                Log::error('neshan.search_failed', [
+                    'status' => $response->status(),
+                    'reason' => self::ERROR_CODES[$response->status()] ?? 'unknown',
+                    'term' => $term,
+                ]);
+                Cache::put($cacheKey, ['ok' => false, 'status' => $response->status()], self::FAILURE_COOLDOWN);
+
+                return null;
+            }
+
+            $data = [];
+            foreach ((array) ($response->json()['items'] ?? []) as $item) {
+                $x = $item['location']['x'] ?? null;
+                $y = $item['location']['y'] ?? null;
+                if (! is_numeric($x) || ! is_numeric($y)) {
+                    continue;
+                }
+                $data[] = [
+                    'title' => (string) ($item['title'] ?? ''),
+                    'address' => (string) ($item['address'] ?? ''),
+                    'lat' => (float) $y,
+                    'lng' => (float) $x,
+                ];
+            }
+
+            Cache::put($cacheKey, ['ok' => true, 'data' => $data], 21600); // 6h
+            $this->lastStatus = null;
+
+            return $data;
+        } catch (\Throwable $e) {
+            $this->lastStatus = null;
+            Log::error('neshan.search_exception', ['error' => $e->getMessage(), 'term' => $term]);
             Cache::put($cacheKey, ['ok' => false, 'status' => null], self::FAILURE_COOLDOWN);
 
             return null;
