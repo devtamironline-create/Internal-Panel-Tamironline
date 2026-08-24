@@ -98,6 +98,12 @@ class OrderWizardCityCoverageTest extends TestCase
             $t->integer('priority')->nullable();
         });
 
+        Schema::create('crm_technician_districts', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('technician_id');
+            $t->unsignedBigInteger('district_id');
+        });
+
         // ساخت شهر، نسخهٔ کشِ اپ را bump می‌کند (AppCacheVersion → settings).
         Schema::create('settings', function ($t) {
             $t->id();
@@ -237,6 +243,59 @@ class OrderWizardCityCoverageTest extends TestCase
             ->set('deviceId', $this->fridge->id)
             ->call('next')
             ->assertHasErrors(['deviceId']);
+    }
+
+    /**
+     * پوششِ سطحِ منطقه (۱۴۰۵/۰۶/۰۲): منطقه‌ای که برای دستگاهِ انتخابی
+     * تکنسینِ فعال ندارد قابلِ ثبتِ «سفارش» نیست — لید آزاد است.
+     */
+    public function test_an_uncovered_district_blocks_the_order_but_a_covered_one_passes(): void
+    {
+        $district5 = City::create(['province_id' => $this->province->id, 'parent_city_id' => $this->mashhad->id, 'name' => 'منطقه ۵', 'slug' => 'r5']);
+        $district9 = City::create(['province_id' => $this->province->id, 'parent_city_id' => $this->mashhad->id, 'name' => 'منطقه ۹', 'slug' => 'r9']);
+
+        // تکنسینِ لباسشویی فقط منطقهٔ ۵ مشهد را تگ کرده.
+        $t = $this->technician([$this->mashhad->id], [$this->washer->id]);
+        $t->regions()->sync([$district5->id]);
+
+        $base = fn () => $this->wizard($this->mashhad->id)
+            ->set('deviceId', $this->washer->id)
+            ->set('currentStep', 2)
+            ->set('showNewCustomerForm', true)
+            ->set('newName', 'مشتری تست')
+            ->set('newMobile', '09123456789')
+            ->set('introduction', 'گوگل')
+            ->set('address', 'خیابان تست، پلاک ۱');
+
+        // منطقهٔ بدونِ تکنسین → خطا روی regionId.
+        $base()->set('regionId', $district9->id)
+            ->call('next')
+            ->assertHasErrors(['regionId']);
+
+        // منطقهٔ تحتِ پوشش → عبور.
+        $base()->set('regionId', $district5->id)
+            ->call('next')
+            ->assertHasNoErrors(['regionId']);
+    }
+
+    public function test_a_whole_city_technician_covers_every_district(): void
+    {
+        $district = City::create(['province_id' => $this->province->id, 'parent_city_id' => $this->mashhad->id, 'name' => 'منطقه ۳', 'slug' => 'r3']);
+
+        // بدونِ تگِ منطقه = کلِ شهر (همان معنای سیستمِ تخصیص).
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+
+        $this->wizard($this->mashhad->id)
+            ->set('deviceId', $this->washer->id)
+            ->set('currentStep', 2)
+            ->set('showNewCustomerForm', true)
+            ->set('newName', 'مشتری تست')
+            ->set('newMobile', '09123456780')
+            ->set('introduction', 'گوگل')
+            ->set('address', 'خیابان تست، پلاک ۲')
+            ->set('regionId', $district->id)
+            ->call('next')
+            ->assertHasNoErrors(['regionId']);
     }
 
     public function test_changing_the_city_clears_an_uncovered_selection(): void

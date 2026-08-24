@@ -299,6 +299,69 @@ class OrderWizard extends Component
         return $covered === null || $covered->contains($deviceId);
     }
 
+    /**
+     * پوششِ منطقه‌های شهرِ انتخاب‌شده برای دستگاهِ انتخابی — «بدونِ
+     * تکنسین در منطقه = فقط لید» (خواستهٔ ۱۴۰۵/۰۶/۰۲).
+     *
+     * تکنسینی منطقه را پوشش می‌دهد که تگِ صریحِ شهر را دارد و برای آن
+     * شهر یا تگِ منطقه ندارد (= کلِ شهر) یا همان منطقه را تگ کرده —
+     * همان معنای سیستمِ تخصیص. تطبیقِ دستگاه هم مثلِ بقیهٔ لایه‌ها.
+     *
+     * خروجی: null = بدونِ محدودیت (fallback ایمنیِ بدونِ داده)؛ وگرنه
+     * map از district_id => bool.
+     */
+    #[Computed]
+    public function regionCoverage(): ?array
+    {
+        if (! $this->cityId) {
+            return null;
+        }
+        // fallback ایمنی مشترک با پوششِ شهر: فیچرِ بدونِ داده محدود نمی‌کند.
+        if ($this->coverageState()['unavailable']) {
+            return null;
+        }
+
+        $districts = City::where('parent_city_id', $this->cityId)->pluck('id');
+        if ($districts->isEmpty()) {
+            return null;
+        }
+
+        $covering = Technician::query()
+            ->where('status', 'active')
+            ->with(['cities:id,is_active', 'regions:id,parent_city_id', 'devices:id'])
+            ->get()
+            ->filter(function (Technician $t) {
+                if (! $t->cities->where('is_active', true)->pluck('id')->contains($this->cityId)) {
+                    return false;
+                }
+                if ($this->deviceId && $t->devices->isNotEmpty()
+                    && ! $t->devices->pluck('id')->contains((int) $this->deviceId)) {
+                    return false;
+                }
+
+                return true;
+            });
+
+        $map = [];
+        foreach ($districts as $districtId) {
+            $map[$districtId] = $covering->contains(function (Technician $t) use ($districtId) {
+                $regionIds = $t->regions->where('parent_city_id', $this->cityId)->pluck('id');
+
+                return $regionIds->isEmpty() || $regionIds->contains($districtId);
+            });
+        }
+
+        return $map;
+    }
+
+    /** آیا این منطقه برای دستگاهِ انتخابی تکنسینِ فعال دارد؟ */
+    protected function regionCovered(int $districtId): bool
+    {
+        $map = $this->regionCoverage;
+
+        return $map === null || ($map[$districtId] ?? false);
+    }
+
     #[Computed]
     public function selectedBrand(): ?Brand
     {
@@ -585,7 +648,7 @@ class OrderWizard extends Component
         // پوششِ شهرِ جدید ممکن است دستگاهِ انتخاب‌شدهٔ قبلی را در بر
         // نگیرد — انتخابِ کهنه پاک می‌شود تا اپراتور از لیستِ مجازِ شهرِ
         // جدید انتخاب کند. فقط برای ردیف‌های «قابل سفارش»؛ لید آزاد است.
-        unset($this->coveredDeviceIds, $this->orderableDevices, $this->cityCoverageUnavailable);
+        unset($this->coveredDeviceIds, $this->orderableDevices, $this->cityCoverageUnavailable, $this->regionCoverage);
 
         if ($this->isOrderable && $this->deviceId && ! $this->deviceCoveredInCity((int) $this->deviceId)) {
             $this->deviceId = null;
@@ -774,6 +837,17 @@ class OrderWizard extends Component
             'newMobile.required' => 'شماره تماس الزامی است.',
             'newMobile.regex' => MobileNumber::PHONE_MESSAGE,
         ]);
+
+        // ─── پوششِ منطقه (فقط سفارش، نه لید) ────────────────────────
+        // منطقه‌ای که برای دستگاهِ انتخابی تکنسینِ فعال ندارد قابلِ ثبتِ
+        // سفارش نیست — دفاعِ سمتِ سرور در کنارِ علامتِ dropdown.
+        if ($this->isOrderable && $this->regionId
+            && ! $this->regionCovered((int) $this->regionId)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'regionId' => 'در این منطقه برای دستگاه انتخاب‌شده تکنسین فعالی نداریم — '
+                    .'منطقهٔ دیگری انتخاب کنید یا تماس را به‌صورت لید ثبت کنید.',
+            ]);
+        }
     }
 
     /**
