@@ -418,7 +418,8 @@ class OrderWizard extends Component
         }
 
         $cityName = (string) $this->selectedCity?->name;
-        $point = $neshan->geocode($cityName.'، '.$address);
+        // اول با پیشوندِ شهر (رفعِ ابهامِ خیابان‌های هم‌نام)، اگر نشد خودِ آدرس.
+        $point = $neshan->geocode($cityName.'، '.$address) ?? $neshan->geocode($address);
         $rev = $point ? $neshan->reverseGeocode($point['lat'], $point['lng']) : null;
         if ($rev === null) {
             // خطای پیکربندی کلید (485 و…) را از «آدرس پیدا نشد» جدا کن تا

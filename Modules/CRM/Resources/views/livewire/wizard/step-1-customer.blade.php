@@ -161,13 +161,12 @@
                  اول متنِ آدرس (رایگان)، بعد نقشهٔ نشان. نتیجه پیشنهاد است
                  و اپراتور می‌تواند در dropdown منطقه عوضش کند. --}}
             @if($this->regions->count())
-                @php $neshanWebKey = (string) config('services.neshan.web_key'); @endphp
                 {{-- wire:key با cityId: با عوض‌شدن شهر، نقشه از نو با مرکزِ
-                     شهرِ جدید ساخته می‌شود. --}}
+                     شهرِ جدید ساخته می‌شود. نقشه Leaflet لوکال + OSM است و
+                     به کلیدِ Web نشان نیازی ندارد (تشخیصِ منطقه سمتِ سرور
+                     با REST نشان انجام می‌شود). --}}
                 <div wire:key="region-detect-tools-{{ $cityId }}"
-                     @if($neshanWebKey !== '')
-                         x-data="window.wizardRegionMap(@js($neshanWebKey), @js($this->mapCenter))"
-                     @endif>
+                     x-data="window.wizardRegionMap(null, @js($this->mapCenter))">
                     <div class="mt-2 flex items-center gap-3 flex-wrap">
                         <button type="button"
                                 wire:click="detectRegionFromAddress"
@@ -176,12 +175,10 @@
                                 class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-brand-300 text-brand-700 hover:bg-brand-50 dark:border-brand-600 dark:text-brand-300 dark:hover:bg-brand-900/30 disabled:opacity-50">
                             📍 تشخیص خودکار منطقه از آدرس
                         </button>
-                        @if($neshanWebKey !== '')
-                            <button type="button" @click="toggleMap()"
-                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
-                                🗺 <span x-text="open ? 'بستن نقشه' : 'انتخاب روی نقشه'">انتخاب روی نقشه</span>
-                            </button>
-                        @endif
+                        <button type="button" @click="toggleMap()"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700">
+                            🗺 <span x-text="open ? 'بستن نقشه' : 'انتخاب روی نقشه'">انتخاب روی نقشه</span>
+                        </button>
                         <span wire:loading wire:target="detectRegionFromAddress" class="text-xs text-gray-500">
                             در حال بررسی آدرس روی نقشه…
                         </span>
@@ -198,19 +195,17 @@
                         } }}">{{ $regionDetectMessage }}</p>
                     @endif
 
-                    @if($neshanWebKey !== '')
-                        <div x-show="open" x-collapse x-cloak class="mt-2">
-                            <p class="text-xs text-gray-500 mb-1.5">
-                                روی محلِ آدرس مشتری کلیک کنید — منطقه به‌صورت خودکار انتخاب می‌شود و اگر فیلد آدرس خالی باشد، آدرسِ نقطه هم داخلش می‌نشیند. marker را می‌توانید جابه‌جا کنید.
-                            </p>
-                            <p x-show="loadingMap" class="text-xs text-gray-500 mb-1.5">در حال بارگذاری نقشهٔ نشان…</p>
-                            <p x-show="failedMap" class="text-xs text-rose-600 mb-1.5">نقشهٔ نشان بارگذاری نشد (اینترنت/فیلترینگ؟) — منطقه را دستی انتخاب کنید.</p>
-                            {{-- wire:ignore: DOMِ داخلیِ Leaflet نباید توسط Livewire morph شود. --}}
-                            <div wire:ignore x-ref="mapBox"
-                                 class="w-full rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden"
-                                 style="height: 320px; direction: ltr;"></div>
-                        </div>
-                    @endif
+                    <div x-show="open" x-collapse x-cloak class="mt-2">
+                        <p class="text-xs text-gray-500 mb-1.5">
+                            روی محلِ آدرس مشتری کلیک کنید — منطقه به‌صورت خودکار انتخاب می‌شود و اگر فیلد آدرس خالی باشد، آدرسِ نقطه هم داخلش می‌نشیند. marker را می‌توانید جابه‌جا کنید.
+                        </p>
+                        <p x-show="loadingMap" class="text-xs text-gray-500 mb-1.5">در حال بارگذاری نقشه…</p>
+                        <p x-show="failedMap" class="text-xs text-rose-600 mb-1.5">نقشه بارگذاری نشد — صفحه را رفرش کنید یا منطقه را دستی انتخاب کنید.</p>
+                        {{-- wire:ignore: DOMِ داخلیِ Leaflet نباید توسط Livewire morph شود. --}}
+                        <div wire:ignore x-ref="mapBox"
+                             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden"
+                             style="height: 320px; direction: ltr; z-index: 0;"></div>
+                    </div>
                 </div>
             @endif
         </div>
