@@ -117,7 +117,15 @@
             {{-- منطقه‌ای که برای دستگاهِ انتخابی تکنسین ندارد، قابلِ انتخاب
                  برای «سفارش» نیست (disabled + برچسب) — لید محدودیتی ندارد. --}}
             @php $regionCov = $this->regionCoverage; @endphp
+            {{-- @region-detected: تشخیصِ خودکارِ منطقه از آدرس، مقدار را سمتِ
+                 سرور ست می‌کند؛ اینجا value و یک attribute را هم دستی به‌روز
+                 می‌کنیم تا dropdown قابل‌سرچ (MutationObserver روی attributes)
+                 برچسبِ انتخاب را نشان بدهد. --}}
             <select wire:model="regionId" data-searchable
+                    x-data
+                    @region-detected.window="$el.value = String($event.detail.id);
+                        $el.dispatchEvent(new Event('change', { bubbles: true }));
+                        $el.setAttribute('data-detected', $event.detail.id)"
                     class="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
                 <option value="">— انتخاب کنید —</option>
                 @foreach($this->regions as $r)
@@ -148,6 +156,31 @@
                 <p class="text-xs text-emerald-600 mt-1">✓ آدرس آخرین سفارش این مشتری به‌صورت خودکار پر شد — در صورت نیاز ویرایش کنید.</p>
             @endif
             @error('address')<p class="text-xs text-rose-600 mt-1">{{ $message }}</p>@enderror
+
+            {{-- تشخیص خودکار منطقه از آدرس — فقط برای شهرهای منطقه‌دار.
+                 اول متنِ آدرس (رایگان)، بعد نقشهٔ نشان. نتیجه پیشنهاد است
+                 و اپراتور می‌تواند در dropdown منطقه عوضش کند. --}}
+            @if($this->regions->count())
+                <div class="mt-2 flex items-center gap-3 flex-wrap">
+                    <button type="button"
+                            wire:click="detectRegionFromAddress"
+                            wire:loading.attr="disabled"
+                            wire:target="detectRegionFromAddress"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-brand-300 text-brand-700 hover:bg-brand-50 dark:border-brand-600 dark:text-brand-300 dark:hover:bg-brand-900/30 disabled:opacity-50">
+                        📍 تشخیص خودکار منطقه از آدرس
+                    </button>
+                    <span wire:loading wire:target="detectRegionFromAddress" class="text-xs text-gray-500">
+                        در حال بررسی آدرس روی نقشه…
+                    </span>
+                </div>
+                @if($regionDetectMessage)
+                    <p class="text-xs mt-1.5 {{ match($regionDetectStatus) {
+                        'ok' => 'text-emerald-600 dark:text-emerald-400',
+                        'warn' => 'text-amber-600 dark:text-amber-400',
+                        default => 'text-rose-600 dark:text-rose-400',
+                    } }}">{{ $regionDetectMessage }}</p>
+                @endif
+            @endif
         </div>
     @endif
 
