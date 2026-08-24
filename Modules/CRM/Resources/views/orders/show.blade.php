@@ -447,6 +447,14 @@
                         <div class="pt-2 mt-2 border-t border-gray-100 dark:border-gray-700">
                             <div class="text-xs text-gray-400 mb-1">نشانی کامل:</div>
                             <div class="text-gray-700 dark:text-gray-200 whitespace-pre-wrap leading-7">{{ $order->address }}</div>
+                            @php $orderAddr = $order->customerAddress; @endphp
+                            @if($orderAddr?->hasCoordinates())
+                                <a href="https://www.google.com/maps?q={{ $orderAddr->latitude }},{{ $orderAddr->longitude }}"
+                                   target="_blank" rel="noopener"
+                                   class="inline-flex items-center gap-1 mt-1.5 text-xs text-brand-600 hover:text-brand-700 dark:text-brand-300">
+                                    📍 مشاهده موقعیت ثبت‌شده روی نقشه
+                                </a>
+                            @endif
                         </div>
                         @endif
                     </div>

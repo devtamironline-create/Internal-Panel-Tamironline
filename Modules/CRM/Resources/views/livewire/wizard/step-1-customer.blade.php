@@ -188,6 +188,12 @@
                         <span wire:loading wire:target="selectPointOnMap" class="text-xs text-gray-500">
                             در حال تشخیص منطقهٔ نقطهٔ انتخابی…
                         </span>
+                        @if($pickedLat !== null)
+                            <span wire:loading.remove wire:target="selectPointOnMap"
+                                  class="text-xs text-emerald-600 dark:text-emerald-400">
+                                📌 موقعیت روی نقشه ثبت شد — با ثبت سفارش، در آدرس مشتری ذخیره می‌شود.
+                            </span>
+                        @endif
                     </div>
 
                     @if($regionDetectMessage)

@@ -294,7 +294,10 @@ class OrderWizardRegionDetectTest extends TestCase
             ->call('selectPointOnMap', 36.2972, 59.6067)
             ->assertSet('regionId', $this->d3->id)
             ->assertSet('regionDetectStatus', 'ok')
-            ->assertSet('address', 'مشهد، احمدآباد، خیابان قائم');
+            ->assertSet('address', 'مشهد، احمدآباد، خیابان قائم')
+            // مختصاتِ نقطه برای ذخیره روی آدرسِ مشتری نگه داشته می‌شود.
+            ->assertSet('pickedLat', 36.2972)
+            ->assertSet('pickedLng', 59.6067);
 
         // فقط reverse — مسیرِ نقشه به سرویسِ geocoding نیازی ندارد.
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'v6/geocoding'));
@@ -330,7 +333,9 @@ class OrderWizardRegionDetectTest extends TestCase
         $this->wizard()
             ->call('selectPointOnMap', 35.6892, 51.3890)
             ->assertSet('regionId', null)
-            ->assertSet('regionDetectStatus', 'warn');
+            ->assertSet('regionDetectStatus', 'warn')
+            // نقطهٔ خارج از شهر ذخیره هم نمی‌شود.
+            ->assertSet('pickedLat', null);
     }
 
     public function test_an_uncovered_region_from_a_map_point_warns_instead_of_selecting(): void
