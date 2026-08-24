@@ -437,15 +437,27 @@ class OrderWizard extends Component
         }
 
         $cityName = (string) $this->selectedCity?->name;
-        // اول با پیشوندِ شهر (رفعِ ابهامِ خیابان‌های هم‌نام)، اگر نشد خودِ آدرس.
-        $point = $neshan->geocode($cityName.'، '.$address) ?? $neshan->geocode($address);
-        $rev = $point ? $neshan->reverseGeocode($point['lat'], $point['lng']) : null;
+        $ps = app(\Modules\CRM\Services\PlaceSearch::class);
+        $center = $this->mapCenter;
+
+        // اول نشان (با پیشوندِ شهر برای رفعِ ابهام، بعد خودِ آدرس)؛ اگر
+        // سهمیه تمام بود یا سرویس نداشت، مسیرِ رایگانِ OSM جایگزین می‌شود.
+        $point = $neshan->geocode($cityName.'، '.$address)
+            ?? $neshan->geocode($address)
+            ?? $ps->geocodeFree($cityName.'، '.$address, $center['lat'] ?? null, $center['lng'] ?? null);
+
+        // نقطه → آدرس: نشان، وگرنه OSM.
+        $rev = $point
+            ? ($neshan->reverseGeocode($point['lat'], $point['lng']) ?? $ps->reverseFree($point['lat'], $point['lng']))
+            : null;
+
         if ($rev === null) {
-            // خطای پیکربندی کلید (485 و…) را از «آدرس پیدا نشد» جدا کن تا
-            // ادمین بفهمد باید سرویس geocoding را روی کلید نشان فعال کند.
-            $this->setRegionDetectResult('fail', $neshan->lastFailureWasKeyMisconfiguration()
-                ? 'سرویس «تبدیل آدرس به مختصات» روی کلید نشان فعال نیست — در پنل platform.neshan.org فعالش کنید. تا آن موقع از «انتخاب روی نقشه» استفاده کنید.'
-                : 'این آدرس روی نقشه پیدا نشد — آدرس را دقیق‌تر بنویسید، نقطه را با «انتخاب روی نقشه» بزنید، یا منطقه را دستی انتخاب کنید.');
+            // دلیلِ دقیق برای ادمین: سهمیه، پیکربندی کلید، یا واقعاً پیدا نشد.
+            $this->setRegionDetectResult('fail', match (true) {
+                $neshan->lastFailureWasQuota() => 'سهمیهٔ کلید نشان تمام شده و مسیر رایگان هم این آدرس را پیدا نکرد — نقطه را با «انتخاب روی نقشه» بزنید یا منطقه را دستی انتخاب کنید.',
+                $neshan->lastFailureWasKeyMisconfiguration() => 'سرویس «تبدیل آدرس به مختصات» روی کلید نشان فعال نیست — در پنل platform.neshan.org فعالش کنید. تا آن موقع از «انتخاب روی نقشه» استفاده کنید.',
+                default => 'این آدرس روی نقشه پیدا نشد — آدرس را دقیق‌تر بنویسید، نقطه را با «انتخاب روی نقشه» بزنید، یا منطقه را دستی انتخاب کنید.',
+            });
 
             return;
         }
@@ -590,7 +602,9 @@ class OrderWizard extends Component
             return;
         }
 
-        $rev = $neshan->reverseGeocode($lat, $lng);
+        // نشان؛ اگر سهمیه تمام بود یا خطا داد، مسیرِ رایگانِ OSM.
+        $rev = $neshan->reverseGeocode($lat, $lng)
+            ?? app(\Modules\CRM\Services\PlaceSearch::class)->reverseFree($lat, $lng);
         if ($rev === null) {
             $this->setRegionDetectResult('fail', $neshan->lastFailureWasKeyMisconfiguration()
                 ? 'پیکربندی کلید نشان اشتباه است (نوع کلید/سرویس‌های فعال را در پنل نشان بررسی کنید — جزئیات در لاگ سرور).'

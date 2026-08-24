@@ -58,6 +58,12 @@ class NeshanService
         return in_array($this->lastStatus, [480, 483, 484, 485], true);
     }
 
+    /** آیا آخرین شکست، اتمام/سقفِ سهمیهٔ کلید بود؟ (481/482) */
+    public function lastFailureWasQuota(): bool
+    {
+        return in_array($this->lastStatus, [481, 482], true);
+    }
+
     /**
      * تبدیل مختصات به آدرس فارسی.
      *
