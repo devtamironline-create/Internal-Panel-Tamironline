@@ -128,5 +128,79 @@
         allowLeave = true;
     });
 })();
+
+{{-- کارخانهٔ Alpine برای نقشهٔ «انتخاب منطقه روی نقشه» در مرحلهٔ مشتری.
+     اینجا تعریف می‌شود (نه داخل partial مرحله) چون مرحلهٔ ۲ با morph
+     می‌آید و <script> داخل HTMLِ morph شده اجرا نمی‌شود. SDK لیفلتِ نشان
+     فقط بارِ اول که نقشه باز می‌شود لود می‌شود. --}}
+if (! window.wizardRegionMap) {
+    window.wizardRegionMap = function (key, center) {
+        return {
+            open: false,
+            map: null,
+            marker: null,
+            loadingMap: false,
+            failedMap: false,
+
+            toggleMap() {
+                this.open = ! this.open;
+                if (this.open && ! this.map && ! this.loadingMap) this.bootMap();
+                // بعد از نمایشِ دوباره، Leaflet باید اندازهٔ ظرف را از نو بخواند.
+                if (this.open && this.map) this.$nextTick(() => this.map.invalidateSize());
+            },
+
+            bootMap() {
+                this.loadingMap = true;
+                this.failedMap = false;
+                const ready = () => this.initMap();
+                if (window.L && window.L.Map) return ready();
+                const css = document.createElement('link');
+                css.rel = 'stylesheet';
+                css.href = 'https://static.neshan.org/sdk/leaflet/1.4.0/leaflet.css';
+                document.head.appendChild(css);
+                const s = document.createElement('script');
+                s.src = 'https://static.neshan.org/sdk/leaflet/1.4.0/leaflet.js';
+                s.onload = ready;
+                s.onerror = () => { this.loadingMap = false; this.failedMap = true; };
+                document.head.appendChild(s);
+            },
+
+            initMap() {
+                // کمی صبر تا x-show ظرف را نمایان کرده باشد؛ وگرنه نقشه با
+                // ارتفاع صفر ساخته می‌شود.
+                setTimeout(() => {
+                    this.loadingMap = false;
+                    try {
+                        this.map = new L.Map(this.$refs.mapBox, {
+                            key: key,
+                            maptype: 'neshan',
+                            poi: true,
+                            traffic: false,
+                            center: center ? [center.lat, center.lng] : [32.5, 53.7],
+                            zoom: center ? (center.zoom || 12) : 5,
+                        });
+                        this.map.on('click', (e) => this.pickPoint(e.latlng.lat, e.latlng.lng));
+                        this.$nextTick(() => this.map.invalidateSize());
+                    } catch (err) {
+                        this.failedMap = true;
+                    }
+                }, 80);
+            },
+
+            pickPoint(lat, lng) {
+                if (this.marker) {
+                    this.marker.setLatLng([lat, lng]);
+                } else {
+                    this.marker = L.marker([lat, lng], { draggable: true }).addTo(this.map);
+                    this.marker.on('dragend', () => {
+                        const p = this.marker.getLatLng();
+                        this.$wire.call('selectPointOnMap', p.lat, p.lng);
+                    });
+                }
+                this.$wire.call('selectPointOnMap', lat, lng);
+            },
+        };
+    };
+}
 </script>
 @endscript

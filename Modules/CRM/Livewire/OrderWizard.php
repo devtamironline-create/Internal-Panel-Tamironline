@@ -421,7 +421,11 @@ class OrderWizard extends Component
         $point = $neshan->geocode($cityName.'، '.$address);
         $rev = $point ? $neshan->reverseGeocode($point['lat'], $point['lng']) : null;
         if ($rev === null) {
-            $this->setRegionDetectResult('fail', 'این آدرس روی نقشه پیدا نشد — آدرس را دقیق‌تر بنویسید یا منطقه را دستی انتخاب کنید.');
+            // خطای پیکربندی کلید (485 و…) را از «آدرس پیدا نشد» جدا کن تا
+            // ادمین بفهمد باید سرویس geocoding را روی کلید نشان فعال کند.
+            $this->setRegionDetectResult('fail', $neshan->lastFailureWasKeyMisconfiguration()
+                ? 'سرویس «تبدیل آدرس به مختصات» روی کلید نشان فعال نیست — در پنل platform.neshan.org فعالش کنید. تا آن موقع از «انتخاب روی نقشه» استفاده کنید.'
+                : 'این آدرس روی نقشه پیدا نشد — آدرس را دقیق‌تر بنویسید، نقطه را با «انتخاب روی نقشه» بزنید، یا منطقه را دستی انتخاب کنید.');
 
             return;
         }
@@ -521,6 +525,136 @@ class OrderWizard extends Component
     {
         $this->regionDetectStatus = $status;
         $this->regionDetectMessage = $message;
+    }
+
+    /**
+     * انتخابِ نقطه روی نقشهٔ داخلِ ویزارد (کلیک/درگِ marker در JS).
+     *
+     * فقط از reverse (تبدیل نقطه به آدرس) استفاده می‌کند که همین حالا در
+     * production فعال و اثبات‌شده است — برخلافِ مسیرِ متنی که به سرویسِ
+     * geocoding هم نیاز دارد. اگر آدرس هنوز خالی باشد، آدرسِ برگشتی از
+     * نقشه هم داخلِ textarea می‌نشیند.
+     */
+    public function selectPointOnMap(float $lat, float $lng): void
+    {
+        $this->regionDetectMessage = null;
+        $this->regionDetectStatus = '';
+
+        if (! $this->cityId || $this->regions->isEmpty()) {
+            return;
+        }
+        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+            return;
+        }
+
+        $neshan = app(\Modules\CustomerApp\Services\NeshanService::class);
+        if (! $neshan->isConfigured()) {
+            $this->setRegionDetectResult('fail', 'سرویس نقشه (نشان) هنوز پیکربندی نشده است — منطقه را دستی انتخاب کنید.');
+
+            return;
+        }
+
+        $rev = $neshan->reverseGeocode($lat, $lng);
+        if ($rev === null) {
+            $this->setRegionDetectResult('fail', $neshan->lastFailureWasKeyMisconfiguration()
+                ? 'پیکربندی کلید نشان اشتباه است (نوع کلید/سرویس‌های فعال را در پنل نشان بررسی کنید — جزئیات در لاگ سرور).'
+                : 'تبدیل نقطه به آدرس ناموفق بود — چند لحظه بعد دوباره روی نقشه کلیک کنید.');
+
+            return;
+        }
+
+        // آدرسِ خالی را با آدرسِ برگشتی از نقشه پر کن — اپراتور ویرایش می‌کند.
+        $formatted = trim((string) ($rev['formatted_address'] ?? ''));
+        if ($formatted !== '' && trim($this->address) === '') {
+            $this->address = $formatted;
+            $this->dispatch('customer-prefilled', address: $formatted);
+        }
+
+        $cityName = (string) $this->selectedCity?->name;
+        $revCity = (string) ($rev['city'] ?? '');
+        if ($revCity !== '' && $cityName !== ''
+            && \Modules\CRM\Services\IranCoverageMap::normalizeName($revCity)
+               !== \Modules\CRM\Services\IranCoverageMap::normalizeName($cityName)) {
+            $this->setRegionDetectResult('warn', 'نقطهٔ انتخابی در «'.$revCity.'» است نه «'.$cityName.'» — نقطه را داخلِ محدودهٔ شهر بزنید یا منطقه را دستی انتخاب کنید.');
+
+            return;
+        }
+
+        $zone = $rev['municipality_zone'] ?? null;
+        if (is_numeric($zone)) {
+            $district = $this->districtByNumber((int) $zone);
+            if ($district) {
+                $this->selectDetectedDistrict($district, 'از نقطهٔ انتخابی روی نقشه');
+
+                return;
+            }
+        }
+
+        $district = $this->districtByName((string) ($rev['neighbourhood'] ?? ''));
+        if ($district) {
+            $this->selectDetectedDistrict($district, 'از نقطهٔ انتخابی روی نقشه');
+
+            return;
+        }
+
+        $this->setRegionDetectResult('warn', 'برای این نقطه منطقهٔ شهرداری مشخص نشد — منطقه را دستی انتخاب کنید.');
+    }
+
+    /**
+     * مختصاتِ تقریبیِ مراکزِ استان‌ها برای بازشدنِ نقشه روی شهرِ درست.
+     * شهری که اینجا نیست، نقشه را روی کلِ ایران باز می‌کند و اپراتور
+     * خودش zoom می‌کند. [lat, lng, zoom]
+     */
+    private const CITY_CENTERS = [
+        'تهران' => [35.6892, 51.3890, 11],
+        'مشهد' => [36.2972, 59.6067, 12],
+        'اصفهان' => [32.6539, 51.6660, 12],
+        'کرج' => [35.8400, 50.9391, 12],
+        'شیراز' => [29.5918, 52.5837, 12],
+        'تبریز' => [38.0800, 46.2919, 12],
+        'قم' => [34.6399, 50.8759, 12],
+        'اهواز' => [31.3183, 48.6706, 12],
+        'کرمانشاه' => [34.3142, 47.0650, 12],
+        'ارومیه' => [37.5527, 45.0760, 12],
+        'رشت' => [37.2808, 49.5832, 12],
+        'زاهدان' => [29.4963, 60.8629, 12],
+        'همدان' => [34.7989, 48.5146, 12],
+        'کرمان' => [30.2839, 57.0834, 12],
+        'یزد' => [31.8974, 54.3569, 12],
+        'اردبیل' => [38.2498, 48.2933, 12],
+        'بندرعباس' => [27.1832, 56.2666, 12],
+        'اراک' => [34.0954, 49.7013, 12],
+        'زنجان' => [36.6736, 48.4787, 12],
+        'سنندج' => [35.3219, 46.9862, 12],
+        'قزوین' => [36.2688, 50.0041, 12],
+        'خرم‌آباد' => [33.4878, 48.3558, 12],
+        'گرگان' => [36.8456, 54.4393, 12],
+        'ساری' => [36.5633, 53.0601, 12],
+        'بجنورد' => [37.4747, 57.3290, 12],
+        'بیرجند' => [32.8649, 59.2262, 12],
+        'ایلام' => [33.6374, 46.4227, 12],
+        'بوشهر' => [28.9234, 50.8203, 12],
+        'شهرکرد' => [32.3256, 50.8644, 12],
+        'یاسوج' => [30.6682, 51.5876, 12],
+        'سمنان' => [35.5729, 53.3971, 12],
+    ];
+
+    /** مرکزِ نقشه برای شهرِ انتخابی — null یعنی نمای کلِ ایران. */
+    #[Computed]
+    public function mapCenter(): ?array
+    {
+        $name = (string) $this->selectedCity?->name;
+        if ($name === '') {
+            return null;
+        }
+        $key = \Modules\CRM\Services\IranCoverageMap::normalizeName($name);
+        foreach (self::CITY_CENTERS as $city => $c) {
+            if (\Modules\CRM\Services\IranCoverageMap::normalizeName($city) === $key) {
+                return ['lat' => $c[0], 'lng' => $c[1], 'zoom' => $c[2]];
+            }
+        }
+
+        return null;
     }
 
     #[Computed]
