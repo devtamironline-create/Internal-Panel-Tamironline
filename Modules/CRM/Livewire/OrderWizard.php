@@ -66,6 +66,12 @@ class OrderWizard extends Component
 
     public string $regionDetectStatus = ''; // ok | warn | fail
 
+    // مختصاتِ نقطهٔ انتخاب‌شده روی نقشه — موقعِ ثبت، روی آدرسِ مشتری
+    // (crm_customer_addresses) ذخیره می‌شود و سفارش به آن لینک می‌خورد.
+    public ?float $pickedLat = null;
+
+    public ?float $pickedLng = null;
+
     // جستجوی خیابان/محله روی نقشهٔ ویزارد.
     public string $mapSearchTerm = '';
 
@@ -597,6 +603,11 @@ class OrderWizard extends Component
             return;
         }
 
+        // نقطه، انتخابِ عمدیِ اپراتور است — همین‌جا ثبت می‌شود تا موقعِ
+        // submit روی آدرسِ مشتری ذخیره شود (حتی اگر reverse شکست بخورد).
+        $this->pickedLat = round($lat, 7);
+        $this->pickedLng = round($lng, 7);
+
         $neshan = app(\Modules\CustomerApp\Services\NeshanService::class);
         if (! $neshan->isConfigured()) {
             $this->setRegionDetectResult('fail', 'سرویس نقشه (نشان) هنوز پیکربندی نشده است — منطقه را دستی انتخاب کنید.');
@@ -627,6 +638,9 @@ class OrderWizard extends Component
         if ($revCity !== '' && $cityName !== ''
             && \Modules\CRM\Services\IranCoverageMap::normalizeName($revCity)
                !== \Modules\CRM\Services\IranCoverageMap::normalizeName($cityName)) {
+            // نقطهٔ خارج از شهر معتبر نیست — مختصاتِ ثبت‌شده هم پاک می‌شود.
+            $this->pickedLat = null;
+            $this->pickedLng = null;
             $this->setRegionDetectResult('warn', 'نقطهٔ انتخابی در «'.$revCity.'» است نه «'.$cityName.'» — نقطه را داخلِ محدودهٔ شهر بزنید یا منطقه را دستی انتخاب کنید.');
 
             return;
@@ -1039,6 +1053,9 @@ class OrderWizard extends Component
         $this->regionDetectStatus = '';
         $this->mapSearchTerm = '';
         $this->mapSearchResults = [];
+        // نقطهٔ شهرِ قبلی برای شهرِ جدید بی‌معناست.
+        $this->pickedLat = null;
+        $this->pickedLng = null;
 
         // پوششِ شهرِ جدید ممکن است دستگاهِ انتخاب‌شدهٔ قبلی را در بر
         // نگیرد — انتخابِ کهنه پاک می‌شود تا اپراتور از لیستِ مجازِ شهرِ
@@ -1397,6 +1414,13 @@ class OrderWizard extends Component
                     $customer = Customer::findOrFail($this->customerId);
                 }
 
+                // آدرسِ واردشده در ویزارد، دفترچهٔ آدرسِ خودِ مشتری را هم
+                // به‌روز می‌کند (خواستهٔ ۱۴۰۵/۰۶/۰۲): متنِ آدرس + استان/شهر/
+                // منطقه + مختصاتِ نقطهٔ انتخابی روی نقشه در
+                // crm_customer_addresses ذخیره و سفارش به آن لینک می‌شود —
+                // همان ساختاری که سفارش‌های اپِ مشتری دارند.
+                $addressId = $this->saveCustomerAddress($customer);
+
                 // لیست همهٔ دستگاه‌ها — هر کدام با تَوگل قابل سفارش.
                 // قابل سفارش=true → یک Order واقعی ساخته می‌شود.
                 // قابل سفارش=false → یک رکورد لید (is_lead=true) با
@@ -1445,6 +1469,7 @@ class OrderWizard extends Component
                         'customer_name' => $customer->display_name,
                         'customer_mobile' => $customer->mobile,
                         'customer_phone' => $customer->phone,
+                        'address_id' => $addressId,
                         'province_id' => $this->provinceId,
                         'city_id' => $this->cityId,
                         'district_id' => $this->regionId,
@@ -1525,6 +1550,62 @@ class OrderWizard extends Component
             ]);
             $this->addError('submit', 'خطا در ثبت سفارش: '.$e->getMessage());
         }
+    }
+
+    /**
+     * ذخیره/به‌روزرسانیِ آدرسِ ویزارد در دفترچهٔ آدرسِ مشتری.
+     *
+     * - متنِ آدرسِ تکراری (همان full_address) → همان رکورد به‌روز می‌شود
+     *   (استان/شهر/منطقه و در صورت وجود، مختصاتِ جدید) — رکوردِ تکراری
+     *   ساخته نمی‌شود.
+     * - آدرسِ جدید → رکوردِ ماندگار (is_transient=false) که در اپِ مشتری
+     *   هم در دفترچهٔ آدرس دیده می‌شود؛ اگر مشتری هیچ آدرسِ پیش‌فرضی
+     *   ندارد، همین پیش‌فرض می‌شود.
+     *
+     * @return int|null idِ آدرس برای لینک‌شدن به سفارش
+     */
+    protected function saveCustomerAddress(Customer $customer): ?int
+    {
+        $fullAddress = trim($this->address);
+        if ($fullAddress === '' || ! $this->cityId) {
+            return null;
+        }
+
+        $existing = \Modules\CRM\Models\CustomerAddress::forCustomer($customer->id)
+            ->where('full_address', $fullAddress)
+            ->first();
+
+        if ($existing) {
+            $updates = [
+                'province_id' => $this->provinceId,
+                'city_id' => $this->cityId,
+                'district_id' => $this->regionId,
+            ];
+            if ($this->pickedLat !== null && $this->pickedLng !== null) {
+                $updates['latitude'] = $this->pickedLat;
+                $updates['longitude'] = $this->pickedLng;
+            }
+            $existing->update($updates);
+
+            return (int) $existing->id;
+        }
+
+        $address = \Modules\CRM\Models\CustomerAddress::create([
+            'customer_id' => $customer->id,
+            'label' => 'ثبت‌شده از پنل',
+            'province_id' => $this->provinceId,
+            'city_id' => $this->cityId,
+            'district_id' => $this->regionId,
+            'full_address' => $fullAddress,
+            'latitude' => $this->pickedLat,
+            'longitude' => $this->pickedLng,
+            'phone' => $customer->phone,
+            'is_default' => ! \Modules\CRM\Models\CustomerAddress::forCustomer($customer->id)
+                ->where('is_transient', false)->exists(),
+            'is_transient' => false,
+        ]);
+
+        return (int) $address->id;
     }
 
     public function render()
