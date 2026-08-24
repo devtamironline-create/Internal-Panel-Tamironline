@@ -66,6 +66,12 @@ class OrderWizard extends Component
 
     public string $regionDetectStatus = ''; // ok | warn | fail
 
+    // جستجوی خیابان/محله روی نقشهٔ ویزارد.
+    public string $mapSearchTerm = '';
+
+    /** @var array<int, array{title: string, address: string, lat: float, lng: float}> */
+    public array $mapSearchResults = [];
+
     // ─── Step 1: Device & Problem (دستگاه اصلی) ──────────────────
     public string $orderType = 'repair';
 
@@ -382,6 +388,19 @@ class OrderWizard extends Component
      */
     public function detectRegionFromAddress(): void
     {
+        try {
+            $this->doDetectRegionFromAddress();
+        } catch (\Throwable $e) {
+            Log::error('wizard.region_detect_failed', [
+                'city_id' => $this->cityId, 'error' => $e->getMessage(),
+                'file' => $e->getFile().':'.$e->getLine(),
+            ]);
+            $this->setRegionDetectResult('fail', 'خطای غیرمنتظره در تشخیص منطقه — جزئیات در لاگ سرور ثبت شد.');
+        }
+    }
+
+    protected function doDetectRegionFromAddress(): void
+    {
         $this->regionDetectMessage = null;
         $this->regionDetectStatus = '';
 
@@ -538,10 +557,26 @@ class OrderWizard extends Component
      */
     public function selectPointOnMap(float $lat, float $lng): void
     {
+        try {
+            $this->doSelectPointOnMap($lat, $lng);
+        } catch (\Throwable $e) {
+            // هیچ شکستی نباید بی‌صدا بماند — اپراتور پیام می‌بیند، ادمین لاگ.
+            Log::error('wizard.map_point_failed', [
+                'lat' => $lat, 'lng' => $lng, 'city_id' => $this->cityId,
+                'error' => $e->getMessage(), 'file' => $e->getFile().':'.$e->getLine(),
+            ]);
+            $this->setRegionDetectResult('fail', 'خطای غیرمنتظره در تشخیص منطقهٔ نقطه — جزئیات در لاگ سرور ثبت شد.');
+        }
+    }
+
+    protected function doSelectPointOnMap(float $lat, float $lng): void
+    {
         $this->regionDetectMessage = null;
         $this->regionDetectStatus = '';
 
         if (! $this->cityId || $this->regions->isEmpty()) {
+            $this->setRegionDetectResult('warn', 'اول استان و شهر را انتخاب کنید.');
+
             return;
         }
         if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
@@ -639,6 +674,41 @@ class OrderWizard extends Component
         'یاسوج' => [30.6682, 51.5876, 12],
         'سمنان' => [35.5729, 53.3971, 12],
     ];
+
+    /** جستجوی خیابان/محله — نتیجه‌ها زیرِ باکسِ سرچِ نقشه رندر می‌شوند. */
+    public function updatedMapSearchTerm(): void
+    {
+        $term = trim($this->mapSearchTerm);
+        if (mb_strlen($term) < 3) {
+            $this->mapSearchResults = [];
+
+            return;
+        }
+
+        try {
+            $center = $this->mapCenter;
+            $this->mapSearchResults = app(\Modules\CRM\Services\PlaceSearch::class)
+                ->search($term, $center['lat'] ?? null, $center['lng'] ?? null);
+        } catch (\Throwable $e) {
+            Log::error('wizard.map_search_failed', ['term' => $term, 'error' => $e->getMessage()]);
+            $this->mapSearchResults = [];
+        }
+    }
+
+    /** کلیک روی یک نتیجهٔ جستجو → پرش نقشه + همان مسیرِ تشخیصِ نقطه. */
+    public function chooseSearchResult(int $index): void
+    {
+        $r = $this->mapSearchResults[$index] ?? null;
+        if (! $r) {
+            return;
+        }
+        $this->mapSearchResults = [];
+        $this->mapSearchTerm = '';
+
+        // پرشِ نقشه و گذاشتنِ marker سمتِ JS؛ تشخیصِ منطقه سمتِ سرور.
+        $this->dispatch('map-goto', lat: (float) $r['lat'], lng: (float) $r['lng'], zoom: 16);
+        $this->selectPointOnMap((float) $r['lat'], (float) $r['lng']);
+    }
 
     /** مرکزِ نقشه برای شهرِ انتخابی — null یعنی نمای کلِ ایران. */
     #[Computed]

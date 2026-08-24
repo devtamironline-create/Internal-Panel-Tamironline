@@ -166,7 +166,8 @@
                      به کلیدِ Web نشان نیازی ندارد (تشخیصِ منطقه سمتِ سرور
                      با REST نشان انجام می‌شود). --}}
                 <div wire:key="region-detect-tools-{{ $cityId }}"
-                     x-data="window.wizardRegionMap(null, @js($this->mapCenter))">
+                     x-data="window.wizardRegionMap(null, @js($this->mapCenter))"
+                     @map-goto.window="gotoPoint($event.detail.lat, $event.detail.lng, $event.detail.zoom)">
                     <div class="mt-2 flex items-center gap-3 flex-wrap">
                         <button type="button"
                                 wire:click="detectRegionFromAddress"
@@ -199,6 +200,32 @@
                         <p class="text-xs text-gray-500 mb-1.5">
                             روی محلِ آدرس مشتری کلیک کنید — منطقه به‌صورت خودکار انتخاب می‌شود و اگر فیلد آدرس خالی باشد، آدرسِ نقطه هم داخلش می‌نشیند. marker را می‌توانید جابه‌جا کنید.
                         </p>
+
+                        {{-- سرچ خیابان/محله — برای پیداکردنِ سریعِ محل وسطِ تماس. --}}
+                        <div class="relative mb-1.5">
+                            <input type="text"
+                                   wire:model.live.debounce.600ms="mapSearchTerm"
+                                   placeholder="جستجوی خیابان/محله… (مثلاً: ستارخان، نبش کوثر)"
+                                   class="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+                            <span wire:loading wire:target="mapSearchTerm"
+                                  class="absolute left-3 top-2.5 text-xs text-gray-400">در حال جستجو…</span>
+                            @if(count($mapSearchResults))
+                                <div class="absolute z-[600] left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg divide-y divide-gray-100 dark:divide-gray-700 max-h-56 overflow-y-auto">
+                                    @foreach($mapSearchResults as $i => $r)
+                                        <button type="button"
+                                                wire:key="map-sr-{{ $i }}"
+                                                wire:click="chooseSearchResult({{ $i }})"
+                                                class="w-full text-right px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                                            <div class="text-sm font-medium text-gray-900 dark:text-gray-100">📍 {{ $r['title'] }}</div>
+                                            @if($r['address'] !== '' && $r['address'] !== $r['title'])
+                                                <div class="text-xs text-gray-500 truncate">{{ $r['address'] }}</div>
+                                            @endif
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+
                         <p x-show="loadingMap" class="text-xs text-gray-500 mb-1.5">در حال بارگذاری نقشه…</p>
                         <p x-show="failedMap" class="text-xs text-rose-600 mb-1.5">نقشه بارگذاری نشد — صفحه را رفرش کنید یا منطقه را دستی انتخاب کنید.</p>
                         {{-- wire:ignore: DOMِ داخلیِ Leaflet نباید توسط Livewire morph شود. --}}

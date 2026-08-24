@@ -190,7 +190,7 @@ if (! window.wizardRegionMap) {
                 }, 80);
             },
 
-            pickPoint(lat, lng) {
+            pickPoint(lat, lng, send = true) {
                 if (this.marker) {
                     this.marker.setLatLng([lat, lng]);
                 } else {
@@ -209,7 +209,19 @@ if (! window.wizardRegionMap) {
                         this.$wire.call('selectPointOnMap', p.lat, p.lng);
                     });
                 }
-                this.$wire.call('selectPointOnMap', lat, lng);
+                if (send) this.$wire.call('selectPointOnMap', lat, lng);
+            },
+
+            // پرش از نتیجهٔ جستجو (event: map-goto از سرور) — تشخیصِ منطقه
+            // را خودِ سرور انجام داده؛ اینجا فقط نقشه و marker جابه‌جا می‌شوند.
+            gotoPoint(lat, lng, zoom) {
+                if (! this.open) this.toggleMap();
+                const place = () => {
+                    if (! this.map) { setTimeout(place, 150); return; }
+                    this.map.setView([lat, lng], zoom || 16);
+                    this.pickPoint(lat, lng, false);
+                };
+                place();
             },
         };
     };
