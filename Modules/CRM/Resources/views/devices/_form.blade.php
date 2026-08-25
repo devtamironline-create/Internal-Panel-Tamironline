@@ -168,7 +168,18 @@
             <div>
                 <label class="block text-sm font-medium mb-1">کپشن (متن کوتاه)</label>
                 <input type="text" name="caption" value="{{ old('caption', $device->caption ?? '') }}" maxlength="500"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
+                       placeholder="خدمات @{{device}} @{{brand}} در @{{cities}}"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm" dir="auto">
+                {{-- توکن‌های داینامیک — سمتِ سرور با پوششِ واقعی resolve می‌شوند
+                     (Site\Support\CaptionTokens). @{{...}} تا Blade آن‌ها را echo نگیرد. --}}
+                <p class="text-[11px] text-gray-400 mt-1 leading-5">
+                    ✨ داینامیک: <code dir="ltr">@{{device}}</code> نام دستگاه ·
+                    <code dir="ltr">@{{brand}}</code> نام برند (فقط صفحات ترکیبی؛ در صفحهٔ دستگاه حذف می‌شود) ·
+                    <code dir="ltr">@{{cities}}</code> شهرهای تحت پوشش («تهران، مشهد و کرج» — خودکار از پوشش خدمات) ·
+                    <code dir="ltr">@{{provinces}}</code> استان‌ها ·
+                    <code dir="ltr">@{{city_count}}</code> تعداد شهرها.
+                    مثال: «خدمات @{{device}} @{{brand}} در @{{cities}}»
+                </p>
             </div>
             <div class="sm:col-span-2">
                 <label class="block text-sm font-medium mb-1">زیرتیتر (subtitle)</label>
