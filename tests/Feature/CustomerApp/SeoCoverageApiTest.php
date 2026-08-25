@@ -213,6 +213,40 @@ class SeoCoverageApiTest extends TestCase
         $this->assertSame(2, collect($json2['services'])->firstWhere('slug', 'washing-machine')['city_count']);
     }
 
+    /**
+     * الگوی عناوینِ «مناطق تحت پوشش» (طرحِ ۱۴۰۵/۰۶/۰۳): ردیف‌های ادمین
+     * در services[].titles می‌آیند؛ بدونِ ردیف، پیش‌فرضِ «تعمیر … در …».
+     */
+    public function test_admin_title_templates_are_served_per_service(): void
+    {
+        $province = Province::create(['name' => 'تهران']);
+        $tehran = City::create(['province_id' => $province->id, 'name' => 'تهران', 'slug' => 'tehran']);
+        $washer = Device::create(['name' => 'لباسشویی', 'slug' => 'washing-machine']);
+        $bosch = \Modules\CRM\Models\Brand::create(['name' => 'بوش', 'slug' => 'bosch']);
+        $this->tech([$tehran->id], [$washer->id]);
+
+        // بدونِ تنظیم: ردیفِ پیش‌فرض.
+        $json = $this->getJson('/v1/customer/seo/coverage')->assertOk()->json('data');
+        $this->assertSame(
+            [['prefix' => 'تعمیر', 'brand' => null, 'brand_name' => null, 'preposition' => 'در']],
+            collect($json['services'])->firstWhere('slug', 'washing-machine')['titles']
+        );
+
+        // ادمین دو ردیف می‌سازد (ردیفِ بی‌پیشوند حذف، برندِ نامعتبر null).
+        \Modules\CRM\Support\CoverageTitles::save($washer->id, [
+            ['prefix' => 'تعمیر', 'brand_id' => $bosch->id, 'preposition' => 'در'],
+            ['prefix' => 'خدمات', 'brand_id' => 999999, 'preposition' => 'برای'],
+            ['prefix' => '   ', 'brand_id' => null, 'preposition' => 'در'],
+        ]);
+
+        $json2 = $this->getJson('/v1/customer/seo/coverage')->assertOk()->json('data');
+        $titles = collect($json2['services'])->firstWhere('slug', 'washing-machine')['titles'];
+        $this->assertSame([
+            ['prefix' => 'تعمیر', 'brand' => 'bosch', 'brand_name' => 'بوش', 'preposition' => 'در'],
+            ['prefix' => 'خدمات', 'brand' => null, 'brand_name' => null, 'preposition' => 'برای'],
+        ], $titles);
+    }
+
     public function test_hiding_a_whole_service_removes_it_from_the_site_api(): void
     {
         $province = Province::create(['name' => 'تهران']);

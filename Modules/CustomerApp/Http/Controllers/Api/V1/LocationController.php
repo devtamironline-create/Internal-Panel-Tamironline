@@ -66,6 +66,9 @@ class LocationController extends Controller
         $rows = $query->withCount(['districts as districts_count' => fn ($q) => $q->where('is_active', true)])
             ->get(['id', 'province_id', 'name', 'slug']);
 
+        // مرکزِ استان اولِ لیست (۱۴۰۵/۰۶/۰۳) — بقیه با ترتیبِ قبلی.
+        $rows = \Modules\CRM\Support\IranCapitals::capitalsFirst($rows);
+
         // serviceable در سطحِ «استان» (خواستهٔ ۱۴۰۵/۰۶/۰۳ — نه شهر): شهری
         // قابلِ سرویس است که استانش حداقل یک خدمتِ قابلِ ارائه داشته باشد
         // (مثال: پوششِ مشهد ⇒ همهٔ شهرهای خراسان رضوی serviceable).
