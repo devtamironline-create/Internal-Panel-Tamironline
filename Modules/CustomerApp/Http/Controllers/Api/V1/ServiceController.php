@@ -75,16 +75,30 @@ class ServiceController extends Controller
      * در DB ما این‌ها crm_devices هستند. این endpoint alias می‌دهد تا فرانت
      * مجبور به دانستن تفاوت داخلی نباشد.
      */
-    public function categories(): JsonResponse
+    public function categories(Request $request): JsonResponse
     {
         // نمایش در اپ با فلگِ مستقلِ is_active_app کنترل می‌شود (جدا از is_active
         // که مخصوص نمایش در سایت است).
-        $rows = Device::query()
+        $query = Device::query()
             ->where('is_active_app', true)
             ->orderByDesc('is_featured')
             ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'description', 'sort_order', 'is_featured']);
+            ->orderBy('name');
+
+        // کاتالوگِ شهرمحور (نامهٔ تیمِ اپ ۱۴۰۵/۰۶/۰۲): با city_id فقط
+        // دستگاه‌های تحتِ پوششِ همان شهر (تگِ تکنسین‌ها + کنترلِ نمایشِ
+        // ادمین در «پوشش خدمات»). بدونِ city_id مثلِ قبل (سازگاریِ عقب‌رو).
+        // شهرِ نامعتبر/بدونِ پوشش → آرایهٔ خالی. تا کامل‌شدنِ دادهٔ پوشش
+        // (coverage_data_complete=false) محدودیتی اعمال نمی‌شود.
+        $cityId = $request->integer('city_id');
+        if ($cityId > 0) {
+            $allowed = app(\Modules\CRM\Services\ServiceCoverage::class)->appDeviceIdsForCity($cityId);
+            if ($allowed !== null) {
+                $query->whereIn('id', $allowed);
+            }
+        }
+
+        $rows = $query->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'description', 'sort_order', 'is_featured']);
 
         $data = $rows->map(fn (Device $d) => [
             'id' => (int) $d->id,
@@ -138,6 +152,18 @@ class ServiceController extends Controller
                 $query->whereIn('id', $brandIds);
             } else {
                 $query->whereHas('devices', fn ($q) => $q->where('crm_devices.id', $deviceId));
+            }
+        }
+
+        // شهرمحور: اگر city_id آمده و برای این دستگاه در آن شهر فقط
+        // برندهای خاصی تکنسین دارند (تگِ برندِ تکنسین‌ها)، لیست به همان‌ها
+        // محدود می‌شود. 'all' یا دادهٔ ناقص → بدونِ محدودیت (نادیده).
+        $cityId = $request->integer('city_id');
+        if ($cityId > 0 && $deviceId > 0) {
+            $covered = app(\Modules\CRM\Services\ServiceCoverage::class)
+                ->appBrandSlugsForCityDevice($cityId, $deviceId);
+            if (is_array($covered)) {
+                $query->whereIn('slug', $covered);
             }
         }
 

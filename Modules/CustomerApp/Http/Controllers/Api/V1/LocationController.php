@@ -61,6 +61,27 @@ class LocationController extends Controller
         $rows = $query->withCount(['districts as districts_count' => fn ($q) => $q->where('is_active', true)])
             ->get(['id', 'province_id', 'name', 'slug']);
 
+        // serviceable = شهر حداقل یک خدمتِ قابلِ ارائه دارد (پوششِ تکنسین +
+        // کنترلِ نمایشِ ادمین) — اپ شهرهای بدونِ سرویس را نشان ندهد
+        // (نامهٔ تیمِ اپ ۱۴۰۵/۰۶/۰۲). تا کامل‌شدنِ دادهٔ پوشش، همه true.
+        $coverage = app(\Modules\CRM\Services\ServiceCoverage::class)->table();
+        $serviceableIds = null;
+        if ($coverage['coverage_data_complete']) {
+            $serviceableIds = [];
+            foreach ($coverage['services'] as $service) {
+                if (! $service['site_visible']) {
+                    continue;
+                }
+                foreach ($service['provinces'] as $province) {
+                    foreach ($province['cities'] as $city) {
+                        if ($city['site_visible']) {
+                            $serviceableIds[(int) $city['city_id']] = true;
+                        }
+                    }
+                }
+            }
+        }
+
         return response()->json([
             'data' => $rows->map(fn (City $c) => [
                 'id' => (int) $c->id,
@@ -68,6 +89,7 @@ class LocationController extends Controller
                 'name' => $c->name,
                 'slug' => $c->slug,
                 'has_districts' => ((int) $c->districts_count) > 0,
+                'serviceable' => $serviceableIds === null || isset($serviceableIds[(int) $c->id]),
             ])->values(),
         ])->header('Cache-Control', 'public, max-age=3600');
     }
@@ -181,5 +203,4 @@ class LocationController extends Controller
             'data' => $result,
         ])->header('Cache-Control', 'private, max-age=86400');
     }
-
 }

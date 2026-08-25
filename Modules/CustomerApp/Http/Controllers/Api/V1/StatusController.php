@@ -70,9 +70,47 @@ class StatusController extends Controller
                 // نسخهٔ کشِ اپ — اگر عوض شود، اپ کشِ کاتالوگ/برند/بنر/استان‌وشهر
                 // را باطل و داده‌ی تازه می‌گیرد (Cache Purge از سمتِ پنل).
                 'cache_version' => \Modules\CustomerApp\Support\AppCacheVersion::current(),
+                // شهرِ پیش‌فرض برای پیش‌انتخاب (نامهٔ تیمِ اپ ۱۴۰۵/۰۶/۰۲) —
+                // فقط با توکنِ معتبر: شهرِ آدرسِ پیش‌فرض/آخرینِ مشتری؛ وگرنه null.
+                'default_city' => $this->defaultCity($request),
                 'db' => $dbOk ? 'ok' : 'down',
             ],
         ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
+     * شهرِ آدرسِ پیش‌فرض (یا آخرین آدرسِ ماندگار) مشتریِ لاگین‌شده.
+     * status بدونِ auth هم صدا زده می‌شود — بدونِ توکنِ معتبر: null.
+     *
+     * @return array{id: int, name: string}|null
+     */
+    private function defaultCity(Request $request): ?array
+    {
+        try {
+            $user = $request->user('sanctum');
+            if (! $user instanceof \Modules\CRM\Models\Customer) {
+                return null;
+            }
+
+            $address = \Modules\CRM\Models\CustomerAddress::forCustomer($user->id)
+                ->where('is_transient', false)
+                ->whereNotNull('city_id')
+                ->orderByDesc('is_default')
+                ->orderByDesc('id')
+                ->first(['city_id']);
+            if (! $address) {
+                return null;
+            }
+
+            $city = \Modules\CRM\Models\City::query()
+                ->whereKey($address->city_id)
+                ->where('is_active', true)
+                ->first(['id', 'name']);
+
+            return $city ? ['id' => (int) $city->id, 'name' => $city->name] : null;
+        } catch (\Throwable) {
+            return null; // status نباید به‌خاطرِ این فیلدِ کمکی بشکند
+        }
     }
 
     private function checkDb(): bool

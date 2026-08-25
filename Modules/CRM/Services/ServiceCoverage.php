@@ -67,6 +67,8 @@ class ServiceCoverage
 
         \Modules\CRM\Models\CrmSetting::setJson(self::HIDDEN_SETTING_KEY, $hidden);
         self::forget();
+        // کاتالوگِ اپ به این تنظیم وابسته است — کشِ کلاینت باطل شود.
+        \Modules\CustomerApp\Support\AppCacheVersion::bump();
 
         return $visible;
     }
@@ -136,6 +138,73 @@ class ServiceCoverage
         foreach ($this->table()['services'] as $service) {
             if ((int) ($service['id'] ?? 0) === $deviceId) {
                 return $service;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * دستگاه‌های قابلِ ارائه به مشتری در یک شهر (کاتالوگِ شهرمحورِ اپ):
+     * پوششِ تکنسین + کنترلِ «نمایشِ» ادمین.
+     *
+     * null = بدونِ محدودیت (دادهٔ پوشش هنوز کامل نیست — fallback ایمن)؛
+     * [] = این شهر هیچ خدمتِ قابلِ ارائه‌ای ندارد.
+     *
+     * @return array<int, int>|null
+     */
+    public function appDeviceIdsForCity(int $cityId): ?array
+    {
+        $data = $this->table();
+        if (! $data['coverage_data_complete']) {
+            return null;
+        }
+
+        $ids = [];
+        foreach ($data['services'] as $service) {
+            if (! $service['site_visible']) {
+                continue;
+            }
+            foreach ($service['provinces'] as $province) {
+                foreach ($province['cities'] as $city) {
+                    if ((int) $city['city_id'] === $cityId && $city['site_visible']) {
+                        $ids[] = (int) $service['id'];
+
+                        continue 3;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * برندهای قابلِ ارائه برای یک دستگاه در یک شهر.
+     *
+     * null = بدونِ محدودیت (دادهٔ پوشش ناقص یا شهر/دستگاه بدونِ ورودی —
+     * محدودسازیِ برند فقط وقتی معنا دارد که خودِ ترکیبِ شهر+دستگاه پوشش
+     * داشته باشد)؛ 'all' = همهٔ برندها؛ آرایهٔ slug = فقط همان‌ها.
+     *
+     * @return 'all'|array<int, string>|null
+     */
+    public function appBrandSlugsForCityDevice(int $cityId, int $deviceId): string|array|null
+    {
+        $data = $this->table();
+        if (! $data['coverage_data_complete']) {
+            return null;
+        }
+
+        foreach ($data['services'] as $service) {
+            if ((int) $service['id'] !== $deviceId) {
+                continue;
+            }
+            foreach ($service['provinces'] as $province) {
+                foreach ($province['cities'] as $city) {
+                    if ((int) $city['city_id'] === $cityId) {
+                        return $city['brands'] === 'all' ? 'all' : (array) $city['brands'];
+                    }
+                }
             }
         }
 
