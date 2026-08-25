@@ -54,6 +54,54 @@
         </div>
     </div>
 
+    {{-- ── پوشش این خدمت — از تگ‌های تکنسین‌های فعال (فقط نمایش) ── --}}
+    <div class="p-4 lg:px-6 lg:pt-6 lg:pb-0" x-data="{ covOpen: false }">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+            <div class="flex items-center gap-3 p-4 cursor-pointer" @click="covOpen = ! covOpen">
+                <span class="text-gray-400 text-xs" x-text="covOpen ? '▾' : '◂'"></span>
+                <span class="text-base">📍</span>
+                <div class="font-bold text-gray-900 dark:text-gray-100 text-sm">پوشش این خدمت</div>
+                @if($serviceCoverage)
+                    <span class="px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 text-[11px] font-bold">{{ $serviceCoverage['province_count'] }} استان</span>
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">{{ $serviceCoverage['city_count'] }} شهر</span>
+                @else
+                    <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold">بدون پوشش — فقط لید</span>
+                @endif
+                <a href="{{ route('crm.technicians.service-coverage') }}" class="ms-auto text-xs text-brand-600 hover:text-brand-700" @click.stop>همهٔ خدمات ←</a>
+            </div>
+            <div x-show="covOpen" x-collapse x-cloak>
+                <div class="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 pt-3">
+                    @if($serviceCoverage)
+                        <div class="space-y-2.5">
+                            @foreach($serviceCoverage['provinces'] as $p)
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <span class="text-xs font-bold text-gray-500 dark:text-gray-400 ml-1">{{ $p['name'] }}:</span>
+                                    @foreach($p['cities'] as $c)
+                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 text-xs text-gray-800 dark:text-gray-100">
+                                            {{ $c['name'] }}
+                                            <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">{{ $c['technician_count'] }}</span>
+                                            @if($c['brands'] !== 'all')
+                                                <span class="text-[10px] text-violet-600 dark:text-violet-400">{{ count($c['brands']) }} برند</span>
+                                            @endif
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endforeach
+                        </div>
+                        <p class="text-[11px] text-gray-400 mt-2.5">
+                            خودکار از تگ‌های شهر/دستگاه/برندِ تکنسین‌های فعال — سایت هم همین را از API می‌خواند.
+                            برای تغییر، تگ‌های پروفایل تکنسین‌ها را ویرایش کنید.
+                        </p>
+                    @else
+                        <p class="text-xs text-rose-600">
+                            هیچ تکنسین فعالی با تگ این دستگاه (یا همه‌کاره) در هیچ شهری نیست — این خدمت در فرم سفارش و سایت قابل ارائه نیست و تماس‌هایش فقط لید می‌شوند.
+                        </p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="p-4 lg:p-6">
         <div class="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-6">
             <aside class="hidden lg:block">

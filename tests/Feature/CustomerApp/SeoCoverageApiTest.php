@@ -50,18 +50,27 @@ class SeoCoverageApiTest extends TestCase
             $x->id(), $x->unsignedBigInteger('technician_id'), $x->unsignedBigInteger('device_id'),
             $x->integer('priority')->nullable(),
         ]));
+        Schema::create('crm_brands', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->string('name'), $x->string('slug')->nullable(),
+            $x->boolean('is_active')->default(true),
+            $x->unsignedInteger('sort_order')->default(0), $x->timestamps(),
+        ]));
+        Schema::create('crm_technician_brands', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->unsignedBigInteger('technician_id'), $x->unsignedBigInteger('brand_id'),
+        ]));
         Schema::create('settings', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->string('key')->unique(), $x->text('value')->nullable(),
         ]));
     }
 
-    private function tech(array $cityIds, array $deviceIds = []): Technician
+    private function tech(array $cityIds, array $deviceIds = [], array $brandIds = []): Technician
     {
         $t = Technician::forceCreate([
             'first_name' => 'تکنسین', 'mobile' => '0912'.random_int(1000000, 9999999), 'status' => 'active',
         ]);
         $t->cities()->sync($cityIds);
         $t->devices()->sync($deviceIds);
+        $t->brands()->sync($brandIds);
 
         return $t;
     }
@@ -115,5 +124,47 @@ class SeoCoverageApiTest extends TestCase
         $json2 = $this->getJson('/v1/customer/seo/coverage')->assertOk()->json('data');
         $this->assertFalse($json2['coverage_data_complete']);
         $this->assertSame([], $json2['cities']);
+    }
+
+    /**
+     * نمای خدمت‌محور (۱۴۰۵/۰۶/۰۲): خدمت → استان → شهرها + برندها — برای
+     * صفحهٔ هر خدمت و صفحاتِ ترکیبی («لباسشویی سامسونگ در مشهد»).
+     */
+    public function test_the_service_view_groups_cities_by_province_with_brand_restrictions(): void
+    {
+        $tehranProv = Province::create(['name' => 'تهران']);
+        $khorasan = Province::create(['name' => 'خراسان رضوی']);
+        $tehran = City::create(['province_id' => $tehranProv->id, 'name' => 'تهران', 'slug' => 'tehran']);
+        $mashhad = City::create(['province_id' => $khorasan->id, 'name' => 'مشهد', 'slug' => 'mashhad']);
+        $washer = Device::create(['name' => 'لباسشویی', 'slug' => 'washing-machine']);
+        $fridge = Device::create(['name' => 'یخچال', 'slug' => 'refrigerator']);
+        $samsung = \Modules\CRM\Models\Brand::create(['name' => 'سامسونگ', 'slug' => 'samsung']);
+        \Modules\CRM\Models\Brand::create(['name' => 'ال‌جی', 'slug' => 'lg']);
+
+        // تهران: تکنسینِ لباسشویی بدونِ تگِ برند → همهٔ برندها.
+        $this->tech([$tehran->id], [$washer->id]);
+        // مشهد: تکنسینِ لباسشویی فقط با تگِ سامسونگ → صفحهٔ ترکیبیِ فقط سامسونگ.
+        $this->tech([$mashhad->id], [$washer->id], [$samsung->id]);
+
+        $json = $this->getJson('/v1/customer/seo/coverage')->assertOk()->json('data');
+
+        $services = collect($json['services']);
+        $this->assertCount(1, $services); // یخچال هیچ‌جا پوشش ندارد → نمی‌آید
+        $washerRow = $services->firstWhere('slug', 'washing-machine');
+        $this->assertSame(2, $washerRow['province_count']);
+        $this->assertSame(2, $washerRow['city_count']);
+
+        $byProvince = collect($washerRow['provinces'])->keyBy('name');
+        $this->assertSame('all', $byProvince['تهران']['cities'][0]['brands']);
+        $this->assertSame(['samsung'], $byProvince['خراسان رضوی']['cities'][0]['brands']);
+        $this->assertSame(1, $byProvince['خراسان رضوی']['cities'][0]['technician_count']);
+
+        // لیستِ برندها برای نگاشتِ slug → نام در مصرف‌کننده.
+        $this->assertEqualsCanonicalizing(['سامسونگ', 'ال‌جی'], collect($json['brands'])->pluck('name')->all());
+
+        // forDevice — کارتِ «پوشش این خدمت» در ویرایشِ دستگاه.
+        $coverage = app(\Modules\CRM\Services\ServiceCoverage::class);
+        $this->assertSame($washerRow['city_count'], $coverage->forDevice($washer->id)['city_count']);
+        $this->assertNull($coverage->forDevice($fridge->id));
     }
 }

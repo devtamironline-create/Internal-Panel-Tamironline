@@ -86,7 +86,11 @@ class DeviceController extends Controller
 
     public function edit(Device $device)
     {
-        return view('crm::devices.edit', array_merge(['device' => $device], $this->formData($device)));
+        return view('crm::devices.edit', array_merge([
+            'device' => $device,
+            // کارتِ «پوشش این خدمت» — استان/شهرهای دارای تکنسینِ فعال (کش ۱۵ دقیقه).
+            'serviceCoverage' => app(\Modules\CRM\Services\ServiceCoverage::class)->forDevice((int) $device->id),
+        ], $this->formData($device)));
     }
 
     public function update(Request $request, Device $device)
