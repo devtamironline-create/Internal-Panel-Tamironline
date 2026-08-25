@@ -145,15 +145,93 @@ class ServiceCoverage
     }
 
     /**
-     * دستگاه‌های قابلِ ارائه به مشتری در یک شهر (کاتالوگِ شهرمحورِ اپ):
-     * پوششِ تکنسین + کنترلِ «نمایشِ» ادمین.
+     * دستگاه‌های قابلِ ارائه به مشتری در یک استان (کاتالوگِ استان‌محورِ
+     * اپ — خواستهٔ ۱۴۰۵/۰۶/۰۳): پوشش در «هر شهری از استان» یعنی کلِ
+     * استان آن خدمت را می‌گیرد (مثال: لباسشویی در مشهد ⇒ کلِ خراسان
+     * رضوی). پوششِ تکنسین + کنترلِ «نمایشِ» ادمین.
      *
      * null = بدونِ محدودیت (دادهٔ پوشش هنوز کامل نیست — fallback ایمن)؛
-     * [] = این شهر هیچ خدمتِ قابلِ ارائه‌ای ندارد.
+     * [] = این استان هیچ خدمتِ قابلِ ارائه‌ای ندارد.
      *
      * @return array<int, int>|null
      */
-    public function appDeviceIdsForCity(int $cityId): ?array
+    public function appDeviceIdsForProvince(int $provinceId): ?array
+    {
+        $data = $this->table();
+        if (! $data['coverage_data_complete']) {
+            return null;
+        }
+
+        $ids = [];
+        foreach ($data['services'] as $service) {
+            if (! $service['site_visible']) {
+                continue;
+            }
+            foreach ($service['provinces'] as $province) {
+                if ((int) ($province['province_id'] ?? 0) !== $provinceId) {
+                    continue;
+                }
+                foreach ($province['cities'] as $city) {
+                    if ($city['site_visible']) {
+                        $ids[] = (int) $service['id'];
+
+                        continue 3;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * برندهای قابلِ ارائه برای یک دستگاه در یک استان — اجتماعِ برندهای
+     * همهٔ شهرهای تحتِ پوششِ آن استان.
+     *
+     * null = بدونِ محدودیت (دادهٔ ناقص یا استان/دستگاه بدونِ ورودی)؛
+     * 'all' = همهٔ برندها (حداقل یک شهرِ استان تکنسینِ بدونِ تگِ برند
+     * دارد)؛ آرایهٔ slug = فقط همان‌ها.
+     *
+     * @return 'all'|array<int, string>|null
+     */
+    public function appBrandSlugsForProvinceDevice(int $provinceId, int $deviceId): string|array|null
+    {
+        $data = $this->table();
+        if (! $data['coverage_data_complete']) {
+            return null;
+        }
+
+        $slugs = null;
+        foreach ($data['services'] as $service) {
+            if ((int) $service['id'] !== $deviceId) {
+                continue;
+            }
+            foreach ($service['provinces'] as $province) {
+                if ((int) ($province['province_id'] ?? 0) !== $provinceId) {
+                    continue;
+                }
+                foreach ($province['cities'] as $city) {
+                    if (! $city['site_visible']) {
+                        continue;
+                    }
+                    if ($city['brands'] === 'all') {
+                        return 'all';
+                    }
+                    $slugs = array_merge($slugs ?? [], (array) $city['brands']);
+                }
+            }
+        }
+
+        return $slugs === null ? null : array_values(array_unique($slugs));
+    }
+
+    /**
+     * استان‌های دارای حداقل یک خدمتِ قابلِ ارائه — برای فلگِ serviceable
+     * در لیستِ استان/شهرِ اپ. null = دادهٔ ناقص (همه قابلِ سرویس فرض شوند).
+     *
+     * @return array<int, bool>|null map از province_id => true
+     */
+    public function serviceableProvinceIds(): ?array
     {
         $data = $this->table();
         if (! $data['coverage_data_complete']) {
@@ -167,48 +245,14 @@ class ServiceCoverage
             }
             foreach ($service['provinces'] as $province) {
                 foreach ($province['cities'] as $city) {
-                    if ((int) $city['city_id'] === $cityId && $city['site_visible']) {
-                        $ids[] = (int) $service['id'];
-
-                        continue 3;
+                    if ($city['site_visible']) {
+                        $ids[(int) ($province['province_id'] ?? 0)] = true;
                     }
                 }
             }
         }
 
-        return array_values(array_unique($ids));
-    }
-
-    /**
-     * برندهای قابلِ ارائه برای یک دستگاه در یک شهر.
-     *
-     * null = بدونِ محدودیت (دادهٔ پوشش ناقص یا شهر/دستگاه بدونِ ورودی —
-     * محدودسازیِ برند فقط وقتی معنا دارد که خودِ ترکیبِ شهر+دستگاه پوشش
-     * داشته باشد)؛ 'all' = همهٔ برندها؛ آرایهٔ slug = فقط همان‌ها.
-     *
-     * @return 'all'|array<int, string>|null
-     */
-    public function appBrandSlugsForCityDevice(int $cityId, int $deviceId): string|array|null
-    {
-        $data = $this->table();
-        if (! $data['coverage_data_complete']) {
-            return null;
-        }
-
-        foreach ($data['services'] as $service) {
-            if ((int) $service['id'] !== $deviceId) {
-                continue;
-            }
-            foreach ($service['provinces'] as $province) {
-                foreach ($province['cities'] as $city) {
-                    if ((int) $city['city_id'] === $cityId) {
-                        return $city['brands'] === 'all' ? 'all' : (array) $city['brands'];
-                    }
-                }
-            }
-        }
-
-        return null;
+        return $ids;
     }
 
     /** @return array<string, mixed> */
@@ -294,7 +338,11 @@ class ServiceCoverage
                     : $covering->flatMap(fn (Technician $t) => $t->brands->pluck('id'))->unique();
 
                 $provinceName = (string) $city->province?->name;
-                $provinces[$provinceName] ??= ['name' => $provinceName, 'cities' => []];
+                $provinces[$provinceName] ??= [
+                    'province_id' => (int) $city->province_id,
+                    'name' => $provinceName,
+                    'cities' => [],
+                ];
                 $provinces[$provinceName]['cities'][] = [
                     'city_id' => (int) $city->id,
                     'name' => $city->name,

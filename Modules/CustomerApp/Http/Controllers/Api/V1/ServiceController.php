@@ -85,14 +85,17 @@ class ServiceController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name');
 
-        // کاتالوگِ شهرمحور (نامهٔ تیمِ اپ ۱۴۰۵/۰۶/۰۲): با city_id فقط
-        // دستگاه‌های تحتِ پوششِ همان شهر (تگِ تکنسین‌ها + کنترلِ نمایشِ
-        // ادمین در «پوشش خدمات»). بدونِ city_id مثلِ قبل (سازگاریِ عقب‌رو).
-        // شهرِ نامعتبر/بدونِ پوشش → آرایهٔ خالی. تا کامل‌شدنِ دادهٔ پوشش
-        // (coverage_data_complete=false) محدودیتی اعمال نمی‌شود.
-        $cityId = $request->integer('city_id');
-        if ($cityId > 0) {
-            $allowed = app(\Modules\CRM\Services\ServiceCoverage::class)->appDeviceIdsForCity($cityId);
+        // کاتالوگِ استان‌محور (خواستهٔ ۱۴۰۵/۰۶/۰۳ — «بر اساسِ استان، نه
+        // شهر»): پوشش در هر شهری از استان یعنی کلِ استان آن خدمت را دارد.
+        // اپ همان city_id را می‌فرستد و ما استانش را مبنا می‌گیریم؛
+        // state_id مستقیم هم پذیرفته است. بدونِ هر دو مثلِ قبل (سازگاری).
+        // شهر/استانِ نامعتبر یا بدونِ پوشش → آرایهٔ خالی، نه خطا. تا
+        // کامل‌شدنِ دادهٔ پوشش (coverage_data_complete=false) بدونِ محدودیت.
+        $provinceId = $this->resolveProvinceId($request);
+        if ($provinceId !== null) {
+            $allowed = $provinceId > 0
+                ? app(\Modules\CRM\Services\ServiceCoverage::class)->appDeviceIdsForProvince($provinceId)
+                : []; // شهرِ نامعتبر
             if ($allowed !== null) {
                 $query->whereIn('id', $allowed);
             }
@@ -155,13 +158,13 @@ class ServiceController extends Controller
             }
         }
 
-        // شهرمحور: اگر city_id آمده و برای این دستگاه در آن شهر فقط
-        // برندهای خاصی تکنسین دارند (تگِ برندِ تکنسین‌ها)، لیست به همان‌ها
-        // محدود می‌شود. 'all' یا دادهٔ ناقص → بدونِ محدودیت (نادیده).
-        $cityId = $request->integer('city_id');
-        if ($cityId > 0 && $deviceId > 0) {
+        // استان‌محور: اگر برای این دستگاه در استانِ کاربر فقط برندهای
+        // خاصی تکنسین دارند (اجتماعِ شهرهای استان)، لیست به همان‌ها محدود
+        // می‌شود. 'all' یا دادهٔ ناقص → بدونِ محدودیت (city_id بی‌اثر).
+        $provinceId = $this->resolveProvinceId($request);
+        if ($provinceId !== null && $provinceId > 0 && $deviceId > 0) {
             $covered = app(\Modules\CRM\Services\ServiceCoverage::class)
-                ->appBrandSlugsForCityDevice($cityId, $deviceId);
+                ->appBrandSlugsForProvinceDevice($provinceId, $deviceId);
             if (is_array($covered)) {
                 $query->whereIn('slug', $covered);
             }
@@ -206,6 +209,25 @@ class ServiceController extends Controller
                 'total' => $data->count(),
             ],
         ])->header('Cache-Control', 'public, max-age=1800');
+    }
+
+    /**
+     * استانِ مبنا برای فیلترِ کاتالوگ: state_id مستقیم، وگرنه استانِ
+     * city_id. null = پارامتری نیامده (بدونِ فیلتر)؛ 0 = شهرِ نامعتبر.
+     */
+    private function resolveProvinceId(Request $request): ?int
+    {
+        $stateId = $request->integer('state_id');
+        if ($stateId > 0) {
+            return $stateId;
+        }
+
+        $cityId = $request->integer('city_id');
+        if ($cityId > 0) {
+            return (int) \Modules\CRM\Models\City::query()->whereKey($cityId)->value('province_id');
+        }
+
+        return null;
     }
 
     /**
