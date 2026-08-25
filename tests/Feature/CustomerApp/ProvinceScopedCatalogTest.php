@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\CustomerApp;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\City;
@@ -11,23 +12,28 @@ use Modules\CRM\Models\Technician;
 use Tests\TestCase;
 
 /**
- * کاتالوگِ شهرمحورِ اپ مشتری (نامهٔ تیمِ اپ ۱۴۰۵/۰۶/۰۲):
+ * کاتالوگِ استان‌محورِ اپ مشتری (خواستهٔ ۱۴۰۵/۰۶/۰۳ — «بر اساسِ استان،
+ * نه شهر»):
  *
- *   - categories?city_id=N → فقط دستگاه‌های تحتِ پوششِ آن شهر
- *     (تگِ تکنسین + کنترلِ نمایشِ ادمین). بدونِ city_id مثلِ قبل.
- *     شهرِ بدونِ پوشش/نامعتبر → آرایهٔ خالی، نه خطا.
- *   - brands?device_id=D&city_id=N → محدود به برندهای دارای تکنسین در
- *     آن شهر (تگِ برندِ خالی = همهٔ برندها → بدونِ محدودیت).
- *   - locations/cities → فیلدِ serviceable.
- *   - تا کامل‌نبودنِ دادهٔ پوشش، هیچ محدودیتی اعمال نمی‌شود.
+ *   - پوشش در هر شهری از استان ⇒ کلِ استان آن خدمت را می‌گیرد
+ *     (لباسشویی در مشهد ⇒ نیشابور هم لباسشویی می‌بیند).
+ *   - categories?city_id=N (استانِ شهر مبنا) یا ?state_id=P مستقیم.
+ *   - brands: اجتماعِ برندهای تحتِ پوششِ استان برای آن دستگاه.
+ *   - serviceable در استان‌ها و شهرها در سطحِ استان.
+ *   - مخفی‌سازیِ ادمین («پوشش خدمات») اعمال می‌شود؛ تا کامل‌نبودنِ
+ *     دادهٔ پوشش هیچ محدودیتی نیست.
  */
-class CityScopedCatalogTest extends TestCase
+class ProvinceScopedCatalogTest extends TestCase
 {
-    private Province $province;
+    private Province $khorasan;
 
-    private City $tehran;
+    private Province $tehranProv;
 
     private City $mashhad;
+
+    private City $neyshabur;
+
+    private City $tehran;
 
     private Device $washer;
 
@@ -38,7 +44,8 @@ class CityScopedCatalogTest extends TestCase
         parent::setUp();
 
         Schema::create('crm_provinces', fn ($t) => tap($t, fn ($x) => [
-            $x->id(), $x->string('name'), $x->boolean('is_active')->default(true),
+            $x->id(), $x->string('name'), $x->string('slug')->nullable(),
+            $x->boolean('is_active')->default(true),
             $x->unsignedInteger('sort_order')->default(0), $x->timestamps(),
         ]));
         Schema::create('crm_cities', fn ($t) => tap($t, fn ($x) => [
@@ -78,7 +85,6 @@ class CityScopedCatalogTest extends TestCase
         Schema::create('crm_technician_brands', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->unsignedBigInteger('technician_id'), $x->unsignedBigInteger('brand_id'),
         ]));
-        // brands endpoint به این دو هم سر می‌زند.
         Schema::create('crm_device_brand_pages', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->unsignedBigInteger('device_id'), $x->unsignedBigInteger('brand_id'),
             $x->boolean('is_active')->default(true), $x->timestamps(),
@@ -97,9 +103,11 @@ class CityScopedCatalogTest extends TestCase
             $x->id(), $x->string('key')->unique(), $x->text('value')->nullable(), $x->timestamps(),
         ]));
 
-        $this->province = Province::create(['name' => 'تهران']);
-        $this->tehran = City::create(['province_id' => $this->province->id, 'name' => 'تهران', 'slug' => 'tehran']);
-        $this->mashhad = City::create(['province_id' => $this->province->id, 'name' => 'مشهد', 'slug' => 'mashhad']);
+        $this->khorasan = Province::create(['name' => 'خراسان رضوی']);
+        $this->tehranProv = Province::create(['name' => 'تهران']);
+        $this->mashhad = City::create(['province_id' => $this->khorasan->id, 'name' => 'مشهد', 'slug' => 'mashhad']);
+        $this->neyshabur = City::create(['province_id' => $this->khorasan->id, 'name' => 'نیشابور', 'slug' => 'neyshabur']);
+        $this->tehran = City::create(['province_id' => $this->tehranProv->id, 'name' => 'تهران', 'slug' => 'tehran']);
         $this->washer = Device::create(['name' => 'لباسشویی', 'slug' => 'washer']);
         $this->fridge = Device::create(['name' => 'یخچال', 'slug' => 'fridge']);
     }
@@ -116,94 +124,104 @@ class CityScopedCatalogTest extends TestCase
         return $t;
     }
 
-    public function test_categories_are_filtered_by_city_coverage(): void
+    public function test_coverage_in_one_city_opens_the_whole_province(): void
     {
-        // مشهد فقط لباسشویی دارد؛ تهران همه‌کاره.
+        // فقط مشهد تکنسینِ لباسشویی دارد؛ تهران همه‌کاره.
         $this->tech([$this->mashhad->id], [$this->washer->id]);
         $this->tech([$this->tehran->id], []);
 
-        $mashhad = $this->getJson('/v1/customer/services/categories?city_id='.$this->mashhad->id)
+        // نیشابور (بدونِ تکنسین، همان استانِ مشهد) → لباسشویی را می‌بیند.
+        $neyshabur = $this->getJson('/v1/customer/services/categories?city_id='.$this->neyshabur->id)
             ->assertOk()->json('data');
-        $this->assertSame(['washer'], collect($mashhad)->pluck('slug')->all());
+        $this->assertSame(['washer'], collect($neyshabur)->pluck('slug')->all());
 
+        // state_id مستقیم هم همان است.
+        $byState = $this->getJson('/v1/customer/services/categories?state_id='.$this->khorasan->id)
+            ->assertOk()->json('data');
+        $this->assertSame(['washer'], collect($byState)->pluck('slug')->all());
+
+        // استانِ تهران: همه‌کاره → هر دو دستگاه.
         $tehran = $this->getJson('/v1/customer/services/categories?city_id='.$this->tehran->id)
             ->assertOk()->json('data');
         $this->assertCount(2, $tehran);
 
-        // بدونِ city_id: رفتارِ قبلی (همه).
-        $all = $this->getJson('/v1/customer/services/categories')->assertOk()->json('data');
-        $this->assertCount(2, $all);
+        // بدونِ پارامتر: رفتارِ قبلی (همه).
+        $this->assertCount(2, $this->getJson('/v1/customer/services/categories')->assertOk()->json('data'));
 
-        // شهرِ بدونِ پوشش/نامعتبر → خالی، نه خطا.
-        $empty = City::create(['province_id' => $this->province->id, 'name' => 'اردبیل', 'slug' => 'ardabil']);
-        $this->assertSame([], $this->getJson('/v1/customer/services/categories?city_id='.$empty->id)->assertOk()->json('data'));
+        // استانِ بدونِ پوشش یا شهرِ نامعتبر → خالی، نه خطا.
+        $alborz = Province::create(['name' => 'البرز']);
+        $karaj = City::create(['province_id' => $alborz->id, 'name' => 'کرج', 'slug' => 'karaj']);
+        $this->assertSame([], $this->getJson('/v1/customer/services/categories?city_id='.$karaj->id)->assertOk()->json('data'));
         $this->assertSame([], $this->getJson('/v1/customer/services/categories?city_id=999999')->assertOk()->json('data'));
     }
 
-    public function test_categories_are_unfiltered_until_coverage_data_is_complete(): void
+    public function test_no_filtering_until_coverage_data_is_complete(): void
     {
         // هیچ تکنسینی تگِ شهر ندارد → فیچر بدونِ داده → بدونِ محدودیت.
         $this->tech([], [$this->washer->id]);
 
-        $rows = $this->getJson('/v1/customer/services/categories?city_id='.$this->mashhad->id)
+        $rows = $this->getJson('/v1/customer/services/categories?city_id='.$this->neyshabur->id)
             ->assertOk()->json('data');
         $this->assertCount(2, $rows);
     }
 
-    public function test_an_admin_hidden_service_disappears_from_that_city_catalog(): void
+    public function test_an_admin_hidden_service_disappears_from_the_whole_province(): void
     {
         $this->tech([$this->mashhad->id], [$this->washer->id]);
         $this->tech([$this->tehran->id], []);
 
+        // مخفی‌کردنِ لباسشویی در مشهد = تنها شهرِ پوشش‌دهندهٔ استان → کلِ استان خالی.
         \Modules\CRM\Services\ServiceCoverage::toggleSiteVisibility($this->washer->id, $this->mashhad->id);
 
-        $this->assertSame([], $this->getJson('/v1/customer/services/categories?city_id='.$this->mashhad->id)->assertOk()->json('data'));
-        // تهران دست‌نخورده.
+        $this->assertSame([], $this->getJson('/v1/customer/services/categories?city_id='.$this->neyshabur->id)->assertOk()->json('data'));
+        // استانِ تهران دست‌نخورده.
         $this->assertCount(2, $this->getJson('/v1/customer/services/categories?city_id='.$this->tehran->id)->assertOk()->json('data'));
     }
 
-    public function test_brands_are_limited_to_the_citys_covered_brands(): void
+    public function test_brands_are_the_union_of_the_provinces_covered_brands(): void
     {
         $samsung = Brand::create(['name' => 'سامسونگ', 'slug' => 'samsung']);
         $lg = Brand::create(['name' => 'ال‌جی', 'slug' => 'lg']);
-        // هر دو برند برای لباسشویی صفحهٔ ترکیبیِ فعال دارند.
-        \Illuminate\Support\Facades\DB::table('crm_device_brand_pages')->insert([
+        DB::table('crm_device_brand_pages')->insert([
             ['device_id' => $this->washer->id, 'brand_id' => $samsung->id, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
             ['device_id' => $this->washer->id, 'brand_id' => $lg->id, 'is_active' => true, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
-        // مشهد: فقط تکنسینِ سامسونگ‌کار؛ تهران: تکنسینِ بدونِ تگِ برند.
+        // خراسان: فقط تکنسینِ سامسونگ‌کار (در مشهد)؛ تهران: بدونِ تگِ برند.
         $this->tech([$this->mashhad->id], [$this->washer->id], [$samsung->id]);
         $this->tech([$this->tehran->id], [$this->washer->id]);
 
-        $mashhad = $this->getJson('/v1/customer/services/brands?device_id='.$this->washer->id.'&city_id='.$this->mashhad->id)
+        // نیشابور همان محدودیتِ استانش را می‌گیرد.
+        $khorasan = $this->getJson('/v1/customer/services/brands?device_id='.$this->washer->id.'&city_id='.$this->neyshabur->id)
             ->assertOk()->json('data');
-        $this->assertSame(['samsung'], collect($mashhad)->pluck('slug')->all());
+        $this->assertSame(['samsung'], collect($khorasan)->pluck('slug')->all());
 
+        // تهران: تکنسینِ بدونِ تگِ برند = بدونِ محدودیت.
         $tehran = $this->getJson('/v1/customer/services/brands?device_id='.$this->washer->id.'&city_id='.$this->tehran->id)
             ->assertOk()->json('data');
         $this->assertCount(2, $tehran);
 
-        // بدونِ city_id: رفتارِ قبلی.
-        $all = $this->getJson('/v1/customer/services/brands?device_id='.$this->washer->id)
-            ->assertOk()->json('data');
-        $this->assertCount(2, $all);
+        // بدونِ city/state: رفتارِ قبلی.
+        $this->assertCount(2, $this->getJson('/v1/customer/services/brands?device_id='.$this->washer->id)->assertOk()->json('data'));
     }
 
-    public function test_cities_report_a_serviceable_flag(): void
+    public function test_states_and_cities_report_province_level_serviceable(): void
     {
         $this->tech([$this->mashhad->id], [$this->washer->id]);
 
-        $rows = collect($this->getJson('/v1/customer/locations/cities')->assertOk()->json('data'))
-            ->keyBy('slug');
-        $this->assertTrue($rows['mashhad']['serviceable']);
-        $this->assertFalse($rows['tehran']['serviceable']);
+        $states = collect($this->getJson('/v1/customer/locations/states')->assertOk()->json('data'))->keyBy('name');
+        $this->assertTrue($states['خراسان رضوی']['serviceable']);
+        $this->assertFalse($states['تهران']['serviceable']);
+
+        $cities = collect($this->getJson('/v1/customer/locations/cities')->assertOk()->json('data'))->keyBy('slug');
+        $this->assertTrue($cities['mashhad']['serviceable']);
+        // نیشابور تکنسین ندارد ولی استانش پوشش دارد → serviceable (استان‌محور).
+        $this->assertTrue($cities['neyshabur']['serviceable']);
+        $this->assertFalse($cities['tehran']['serviceable']);
     }
 
     public function test_toggling_visibility_bumps_the_app_cache_version(): void
     {
-        // bump با timestamp ثانیه‌ای است — مقدارِ ثابت می‌گذاریم تا هم‌ثانیه‌بودن
-        // با bumpهای setUp (ساختِ شهر) تست را نشکند.
         \App\Models\Setting::set(\Modules\CustomerApp\Support\AppCacheVersion::KEY, 'fixed-for-test');
         \Modules\CRM\Services\ServiceCoverage::toggleSiteVisibility($this->washer->id);
         $this->assertNotSame('fixed-for-test', \Modules\CustomerApp\Support\AppCacheVersion::current());

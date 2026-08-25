@@ -31,11 +31,16 @@ class LocationController extends Controller
             ->ordered()
             ->get(['id', 'name', 'slug']);
 
+        // serviceable در سطحِ استان (خواستهٔ ۱۴۰۵/۰۶/۰۳): استانی که حداقل
+        // یک شهر با خدمتِ قابلِ ارائه دارد. null = دادهٔ پوشش ناقص → همه true.
+        $serviceable = app(\Modules\CRM\Services\ServiceCoverage::class)->serviceableProvinceIds();
+
         return response()->json([
             'data' => $rows->map(fn (Province $p) => [
                 'id' => (int) $p->id,
                 'name' => $p->name,
                 'slug' => $p->slug,
+                'serviceable' => $serviceable === null || isset($serviceable[(int) $p->id]),
             ])->values(),
         ])->header('Cache-Control', 'public, max-age=3600');
     }
@@ -61,26 +66,11 @@ class LocationController extends Controller
         $rows = $query->withCount(['districts as districts_count' => fn ($q) => $q->where('is_active', true)])
             ->get(['id', 'province_id', 'name', 'slug']);
 
-        // serviceable = شهر حداقل یک خدمتِ قابلِ ارائه دارد (پوششِ تکنسین +
-        // کنترلِ نمایشِ ادمین) — اپ شهرهای بدونِ سرویس را نشان ندهد
-        // (نامهٔ تیمِ اپ ۱۴۰۵/۰۶/۰۲). تا کامل‌شدنِ دادهٔ پوشش، همه true.
-        $coverage = app(\Modules\CRM\Services\ServiceCoverage::class)->table();
-        $serviceableIds = null;
-        if ($coverage['coverage_data_complete']) {
-            $serviceableIds = [];
-            foreach ($coverage['services'] as $service) {
-                if (! $service['site_visible']) {
-                    continue;
-                }
-                foreach ($service['provinces'] as $province) {
-                    foreach ($province['cities'] as $city) {
-                        if ($city['site_visible']) {
-                            $serviceableIds[(int) $city['city_id']] = true;
-                        }
-                    }
-                }
-            }
-        }
+        // serviceable در سطحِ «استان» (خواستهٔ ۱۴۰۵/۰۶/۰۳ — نه شهر): شهری
+        // قابلِ سرویس است که استانش حداقل یک خدمتِ قابلِ ارائه داشته باشد
+        // (مثال: پوششِ مشهد ⇒ همهٔ شهرهای خراسان رضوی serviceable).
+        // تا کامل‌شدنِ دادهٔ پوشش، همه true.
+        $serviceable = app(\Modules\CRM\Services\ServiceCoverage::class)->serviceableProvinceIds();
 
         return response()->json([
             'data' => $rows->map(fn (City $c) => [
@@ -89,7 +79,7 @@ class LocationController extends Controller
                 'name' => $c->name,
                 'slug' => $c->slug,
                 'has_districts' => ((int) $c->districts_count) > 0,
-                'serviceable' => $serviceableIds === null || isset($serviceableIds[(int) $c->id]),
+                'serviceable' => $serviceable === null || isset($serviceable[(int) $c->province_id]),
             ])->values(),
         ])->header('Cache-Control', 'public, max-age=3600');
     }
