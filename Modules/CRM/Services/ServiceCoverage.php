@@ -270,13 +270,16 @@ class ServiceCoverage
         $allDevices = Device::query()->active()->ordered()->get(['id', 'name', 'slug']);
         $allBrands = Brand::query()->ordered()->get(['id', 'name', 'slug']);
 
-        $cities = City::query()
-            ->mainCities()
-            ->active()
-            ->whereHas('province', fn ($q) => $q->active())
-            ->with(['province:id,name', 'districts' => fn ($q) => $q->where('is_active', true)->ordered()])
-            ->ordered()
-            ->get(['id', 'province_id', 'name', 'slug']);
+        // مرکزِ استان اولِ لیستِ شهرها (۱۴۰۵/۰۶/۰۳) — به هر دو نما و سایت می‌رسد.
+        $cities = \Modules\CRM\Support\IranCapitals::capitalsFirst(
+            City::query()
+                ->mainCities()
+                ->active()
+                ->whereHas('province', fn ($q) => $q->active())
+                ->with(['province:id,name', 'districts' => fn ($q) => $q->where('is_active', true)->ordered()])
+                ->ordered()
+                ->get(['id', 'province_id', 'name', 'slug'])
+        );
 
         // تکنسین‌های پوشش‌دهندهٔ هر شهر — یک بار محاسبه، برای هر دو نما.
         $cityCovering = [];
@@ -370,6 +373,9 @@ class ServiceCoverage
                 'province_count' => count($provinces),
                 'city_count' => collect($provinces)->sum(fn ($p) => count($p['cities'])),
                 'provinces' => array_values($provinces),
+                // الگوهای عنوانِ ادمین برای این خدمت — سایت برای هر مکانِ
+                // تحتِ پوشش می‌سازد: «{prefix} {device} {brand?} {preposition} {مکان}».
+                'titles' => \Modules\CRM\Support\CoverageTitles::forApi($device->id, $allBrands->keyBy('id')),
             ];
         }
 

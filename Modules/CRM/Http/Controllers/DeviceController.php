@@ -84,6 +84,37 @@ class DeviceController extends Controller
             ->with('success', 'دستگاه با موفقیت اضافه شد.');
     }
 
+    /**
+     * «مناطق تحت پوشش» — الگوی عناوینِ این خدمت (طرحِ ۱۴۰۵/۰۶/۰۳):
+     * ادمین ردیف‌های عنوان (پیشوند + برندِ اختیاری + حرفِ اضافه) می‌سازد و
+     * سایت برای هر استان/شهرِ تحتِ پوشش عنوان تولید می‌کند.
+     */
+    public function coverageTitles(Device $device)
+    {
+        return view('crm::devices.coverage-titles', [
+            'device' => $device,
+            'rows' => \Modules\CRM\Support\CoverageTitles::get((int) $device->id),
+            'brands' => \Modules\CRM\Models\Brand::ordered()->get(['id', 'name']),
+            'coverage' => app(\Modules\CRM\Services\ServiceCoverage::class)->forDevice((int) $device->id),
+        ]);
+    }
+
+    public function saveCoverageTitles(\Illuminate\Http\Request $request, Device $device)
+    {
+        $data = $request->validate([
+            'rows' => 'required|json',
+        ], [], ['rows' => 'ردیف‌های عنوان']);
+
+        $rows = json_decode($data['rows'], true);
+        if (! is_array($rows)) {
+            return back()->withErrors(['rows' => 'ساختار ردیف‌های عنوان نامعتبر است.']);
+        }
+
+        \Modules\CRM\Support\CoverageTitles::save((int) $device->id, $rows);
+
+        return back()->with('success', 'عناوین مناطق تحت پوشش ذخیره شد.');
+    }
+
     public function edit(Device $device)
     {
         return view('crm::devices.edit', array_merge([

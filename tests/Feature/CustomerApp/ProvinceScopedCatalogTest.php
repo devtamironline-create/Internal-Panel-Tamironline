@@ -220,6 +220,17 @@ class ProvinceScopedCatalogTest extends TestCase
         $this->assertFalse($cities['tehran']['serviceable']);
     }
 
+    public function test_the_province_capital_comes_first_in_city_lists(): void
+    {
+        // «تربت حیدریه» الفبایی قبل از «مشهد» است — ولی مرکزِ استان اول می‌آید.
+        City::create(['province_id' => $this->khorasan->id, 'name' => 'تربت حیدریه', 'slug' => 'torbat']);
+        $this->tech([$this->mashhad->id], [$this->washer->id]);
+
+        $khorasanCities = collect($this->getJson('/v1/customer/locations/cities')->assertOk()->json('data'))
+            ->where('state_id', $this->khorasan->id)->pluck('slug')->values();
+        $this->assertSame('mashhad', $khorasanCities->first());
+    }
+
     public function test_toggling_visibility_bumps_the_app_cache_version(): void
     {
         \App\Models\Setting::set(\Modules\CustomerApp\Support\AppCacheVersion::KEY, 'fixed-for-test');

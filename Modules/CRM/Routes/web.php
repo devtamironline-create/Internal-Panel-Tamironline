@@ -153,6 +153,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('devices/create', [DeviceController::class, 'create'])->name('devices.create');
         Route::post('devices', [DeviceController::class, 'store'])->name('devices.store');
         Route::get('devices/{device}/edit', [DeviceController::class, 'edit'])->name('devices.edit');
+        // الگوی عناوینِ «مناطق تحت پوشش» این خدمت (پیشوند/برند/حرف اضافه).
+        Route::get('devices/{device}/coverage-titles', [DeviceController::class, 'coverageTitles'])->name('devices.coverage-titles');
+        Route::post('devices/{device}/coverage-titles', [DeviceController::class, 'saveCoverageTitles'])->name('devices.coverage-titles.save');
         Route::put('devices/{device}', [DeviceController::class, 'update'])->name('devices.update');
         Route::put('devices/{device}/toggle/{flag}', [DeviceController::class, 'toggle'])->whereIn('flag', ['is_active', 'is_active_app', 'is_featured'])->name('devices.toggle');
         Route::delete('devices/{device}', [DeviceController::class, 'destroy'])->name('devices.destroy');

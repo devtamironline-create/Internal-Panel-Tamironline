@@ -203,7 +203,10 @@ class CustomerController extends Controller
      */
     public function citiesOfProvince(Province $province)
     {
-        $cities = $province->cities()->mainCities()->ordered()->get(['id', 'name']);
+        // مرکزِ استان اولِ لیست (۱۴۰۵/۰۶/۰۳).
+        $cities = \Modules\CRM\Support\IranCapitals::capitalsFirst(
+            $province->cities()->mainCities()->ordered()->get(['id', 'name'])
+        );
 
         // اگر برای این استان هیچ شهری در دیتابیس نیست، یک ردیف
         // پیش‌فرض با نام خود استان می‌سازیم تا اپراتور بتواند سفارش

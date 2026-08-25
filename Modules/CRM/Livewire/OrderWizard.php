@@ -178,7 +178,9 @@ class OrderWizard extends Component
         if (! $this->provinceId) {
             return collect();
         }
-        $cities = City::where('province_id', $this->provinceId)->mainCities()->ordered()->get(['id', 'name']);
+        $cities = \Modules\CRM\Support\IranCapitals::capitalsFirst(
+            City::where('province_id', $this->provinceId)->mainCities()->ordered()->get(['id', 'name'])
+        );
         // اگر استان شهر تعریف‌شده ندارد، یک شهر پیش‌فرض با نام خود استان
         // ساخته می‌شود تا اپراتور بتواند مرحله را رد کند. منطق در
         // CustomerController::citiesOfProvince هم هست (مسیر AJAX).

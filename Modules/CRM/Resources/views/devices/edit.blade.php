@@ -67,7 +67,10 @@
                 @else
                     <span class="px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-bold">بدون پوشش — فقط لید</span>
                 @endif
-                <a href="{{ route('crm.technicians.service-coverage') }}" class="ms-auto text-xs text-brand-600 hover:text-brand-700" @click.stop>همهٔ خدمات ←</a>
+                <div class="ms-auto flex items-center gap-3" @click.stop>
+                    <a href="{{ route('crm.devices.coverage-titles', $device) }}" class="text-xs text-brand-600 hover:text-brand-700">✍ عناوین مناطق تحت پوشش</a>
+                    <a href="{{ route('crm.technicians.service-coverage') }}" class="text-xs text-brand-600 hover:text-brand-700">همهٔ خدمات ←</a>
+                </div>
             </div>
             <div x-show="covOpen" x-collapse x-cloak>
                 <div class="px-4 pb-4 border-t border-gray-100 dark:border-gray-700 pt-3">

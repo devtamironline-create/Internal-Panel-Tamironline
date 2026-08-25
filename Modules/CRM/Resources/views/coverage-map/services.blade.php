@@ -86,8 +86,10 @@
                     @unless($s['site_visible'])
                         <span class="px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 text-[10px]">مخفی از سایت</span>
                     @endunless
-                    <div class="ms-auto" @click.stop>
+                    <div class="ms-auto flex items-center gap-2" @click.stop>
                         @can('manage-crm-devices')
+                        <a href="{{ route('crm.devices.coverage-titles', $s['id']) }}"
+                           class="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300">✍ عناوین</a>
                         <form method="POST" action="{{ route('crm.technicians.service-coverage.toggle') }}" class="inline">
                             @csrf
                             <input type="hidden" name="device_id" value="{{ $s['id'] }}">
