@@ -25,10 +25,15 @@
         </div>
     @endunless
 
+    @if(session('success'))
+        <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-3 text-sm mb-4">{{ session('success') }}</div>
+    @endif
+
     <div class="p-3 bg-sky-50 border border-sky-200 text-sky-800 rounded-xl text-xs leading-6 mb-4">
-        ℹ این جدول به‌صورت خودکار از تگ‌های تکنسین‌های فعال ساخته می‌شود (شهر + مهارت دستگاه + برند).
-        برای اضافه‌کردن پوشش، تگ‌های پروفایل تکنسین را کامل کنید — چیزی اینجا دستی ثبت نمی‌شود که بعداً کهنه شود.
-        شهری که تکنسین ندارد در سایت هم ادعا نمی‌شود (فقط لید).
+        ℹ پوشش به‌صورت خودکار از تگ‌های تکنسین‌های فعال ساخته می‌شود (شهر + مهارت دستگاه + برند) —
+        برای اضافه‌کردن پوشش، تگ‌های پروفایل تکنسین را کامل کنید.
+        دکمهٔ «نمایش در سایت» فقط خروجی سایت (API سئو) را کنترل می‌کند: می‌توانید خدمتی را کلاً یا فقط در یک شهر از سایت مخفی کنید —
+        فرم ثبت سفارش و تخصیص تکنسین تغییری نمی‌کنند.
     </div>
 
     <div class="flex flex-col sm:flex-row gap-3 mb-4">
@@ -69,7 +74,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm"
                  x-show="q === '' || @js($haystack).includes(q.toLowerCase())" x-transition.opacity>
                 {{-- ── ردیف خدمت ── --}}
-                <div class="flex items-center gap-3 p-4 cursor-pointer" @click="open[{{ $s['id'] }}] = ! open[{{ $s['id'] }}]">
+                <div class="flex items-center gap-3 p-4 cursor-pointer {{ $s['site_visible'] ? '' : 'opacity-70' }}" @click="open[{{ $s['id'] }}] = ! open[{{ $s['id'] }}]">
                     <span class="text-gray-400 text-xs" x-text="open[{{ $s['id'] }}] ? '▾' : '◂'"></span>
                     <div class="font-bold text-gray-900 dark:text-gray-100">{{ $s['name'] }}</div>
                     <span class="px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 text-[11px] font-bold">
@@ -78,6 +83,20 @@
                     <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
                         {{ $s['city_count'] }} شهر
                     </span>
+                    @unless($s['site_visible'])
+                        <span class="px-2 py-0.5 rounded-full bg-gray-200 text-gray-600 text-[10px]">مخفی از سایت</span>
+                    @endunless
+                    <div class="ms-auto" @click.stop>
+                        @can('manage-crm-devices')
+                        <form method="POST" action="{{ route('crm.technicians.service-coverage.toggle') }}" class="inline">
+                            @csrf
+                            <input type="hidden" name="device_id" value="{{ $s['id'] }}">
+                            <button class="px-3 py-1.5 rounded-lg text-xs font-bold {{ $s['site_visible'] ? 'bg-rose-50 text-rose-700 hover:bg-rose-100' : 'bg-emerald-600 text-white hover:bg-emerald-700' }}">
+                                {{ $s['site_visible'] ? 'مخفی از سایت' : 'نمایش در سایت' }}
+                            </button>
+                        </form>
+                        @endcan
+                    </div>
                 </div>
 
                 <div x-show="open[{{ $s['id'] }}]" x-collapse x-cloak>
@@ -87,16 +106,30 @@
                                 <div class="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5">{{ $p['name'] }}</div>
                                 <div class="flex flex-wrap gap-1.5">
                                     @foreach($p['cities'] as $c)
-                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-50 dark:bg-gray-700/60 border border-gray-200 dark:border-gray-600 text-xs text-gray-800 dark:text-gray-100"
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs
+                                                     {{ $c['site_visible']
+                                                         ? 'bg-gray-50 dark:bg-gray-700/60 border-gray-200 dark:border-gray-600 text-gray-800 dark:text-gray-100'
+                                                         : 'bg-gray-100 dark:bg-gray-700/30 border-dashed border-gray-300 dark:border-gray-600 text-gray-400 line-through' }}"
                                               @if($c['brands'] !== 'all')
                                                   title="برندها: {{ collect($coverage['brands'])->whereIn('slug', $c['brands'])->pluck('name')->implode('، ') }}"
                                               @endif>
                                             {{ $c['name'] }}
-                                            <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">{{ $c['technician_count'] }}</span>
+                                            <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold no-underline">{{ $c['technician_count'] }}</span>
                                             @if($c['brands'] !== 'all')
-                                                <span class="text-[10px] text-violet-600 dark:text-violet-400"
-                                                      >{{ count($c['brands']) }} برند</span>
+                                                <span class="text-[10px] text-violet-600 dark:text-violet-400">{{ count($c['brands']) }} برند</span>
                                             @endif
+                                            @can('manage-crm-devices')
+                                                <form method="POST" action="{{ route('crm.technicians.service-coverage.toggle') }}" class="inline leading-none">
+                                                    @csrf
+                                                    <input type="hidden" name="device_id" value="{{ $s['id'] }}">
+                                                    <input type="hidden" name="city_id" value="{{ $c['city_id'] }}">
+                                                    <button type="submit"
+                                                            title="{{ $c['site_visible'] ? 'مخفی‌کردن این شهر از سایت (فقط برای این خدمت)' : 'نمایش دوباره در سایت' }}"
+                                                            class="text-[11px] font-bold {{ $c['site_visible'] ? 'text-rose-500 hover:text-rose-700' : 'text-emerald-600 hover:text-emerald-700' }}">
+                                                        {{ $c['site_visible'] ? '✕' : '✓' }}
+                                                    </button>
+                                                </form>
+                                            @endcan
                                         </span>
                                     @endforeach
                                 </div>
@@ -104,6 +137,7 @@
                         @endforeach
                         <p class="text-[11px] text-gray-400">
                             عدد سبز = تعداد تکنسین فعال. «N برند» یعنی این شهر فقط برای همان برندها تکنسین دارد (روی چیپ نگه دارید تا لیست را ببینید)؛ بدون برچسب = همهٔ برندها.
+                            ✕ = مخفی‌کردن همان شهر از سایت برای این خدمت؛ چیپ خط‌خورده یعنی الان از سایت مخفی است (✓ برای بازگرداندن).
                         </p>
                     </div>
                 </div>

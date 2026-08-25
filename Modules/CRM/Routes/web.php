@@ -291,6 +291,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
             ->name('technicians.coverage-manage');
         Route::get('technicians/service-coverage', [\Modules\CRM\Http\Controllers\CoverageMapController::class, 'services'])
             ->name('technicians.service-coverage');
+        Route::post('technicians/service-coverage/toggle', [\Modules\CRM\Http\Controllers\CoverageMapController::class, 'toggleServiceVisibility'])
+            ->middleware('can:manage-crm-devices')
+            ->name('technicians.service-coverage.toggle');
         Route::get('technicians', [TechnicianController::class, 'index'])->name('technicians.index');
         Route::get('technicians/export/{format}', [TechnicianController::class, 'export'])
             ->where('format', 'csv|xlsx')->name('technicians.export');

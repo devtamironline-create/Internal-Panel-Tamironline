@@ -39,6 +39,93 @@ class ServiceCoverage
         Cache::forget(self::CACHE_KEY);
     }
 
+    /** کلیدِ تنظیماتِ «مخفی از سایت» — لیستی از توکن‌های dN و dNcM. */
+    public const HIDDEN_SETTING_KEY = 'coverage.site_hidden';
+
+    /** توکنِ مخفی‌سازی: کلِ خدمت (city=null) یا خدمت در یک شهر. */
+    public static function hiddenToken(int $deviceId, ?int $cityId = null): string
+    {
+        return $cityId === null ? 'd'.$deviceId : 'd'.$deviceId.'c'.$cityId;
+    }
+
+    /**
+     * تاگلِ نمایشِ سایت برای خدمت (کلی یا در یک شهر). خروجی: وضعیتِ جدید
+     * (true = در سایت نمایش داده می‌شود).
+     */
+    public static function toggleSiteVisibility(int $deviceId, ?int $cityId = null): bool
+    {
+        $token = self::hiddenToken($deviceId, $cityId);
+        $hidden = (array) \Modules\CRM\Models\CrmSetting::getJson(self::HIDDEN_SETTING_KEY, []);
+
+        if (in_array($token, $hidden, true)) {
+            $hidden = array_values(array_diff($hidden, [$token]));
+            $visible = true;
+        } else {
+            $hidden[] = $token;
+            $visible = false;
+        }
+
+        \Modules\CRM\Models\CrmSetting::setJson(self::HIDDEN_SETTING_KEY, $hidden);
+        self::forget();
+
+        return $visible;
+    }
+
+    /**
+     * نسخهٔ مخصوصِ سایت: ورودی‌های «مخفی‌شده توسط ادمین» حذف شده‌اند.
+     * پنل از table() (با فلگ site_visible) استفاده می‌کند؛ API سئو از این.
+     *
+     * @return array<string, mixed>
+     */
+    public function siteTable(): array
+    {
+        $data = $this->table();
+        $hidden = (array) \Modules\CRM\Models\CrmSetting::getJson(self::HIDDEN_SETTING_KEY, []);
+        if ($hidden === []) {
+            return $data;
+        }
+
+        // نمای خدمت‌محور: خدمت/شهرِ مخفی حذف و شمارش‌ها بازمحاسبه می‌شوند.
+        $data['services'] = collect($data['services'])
+            ->filter(fn (array $s) => $s['site_visible'])
+            ->map(function (array $s) {
+                $s['provinces'] = collect($s['provinces'])->map(function (array $p) {
+                    $p['cities'] = array_values(array_filter($p['cities'], fn (array $c) => $c['site_visible']));
+
+                    return $p;
+                })->filter(fn (array $p) => $p['cities'] !== [])->values()->all();
+                $s['province_count'] = count($s['provinces']);
+                $s['city_count'] = collect($s['provinces'])->sum(fn ($p) => count($p['cities']));
+
+                return $s;
+            })
+            ->filter(fn (array $s) => $s['provinces'] !== [])
+            ->values()->all();
+
+        // نمای شهرمحور: دستگاهِ مخفی (کلی یا برای آن شهر) از لیستِ شهر حذف؛
+        // اگر چیزی حذف شد all_devices دیگر true نیست تا سایت به لیست تکیه کند.
+        $deviceIdBySlug = collect($this->table()['services'])->pluck('id', 'slug');
+        $data['cities'] = collect($data['cities'])->map(function (array $row) use ($hidden, $deviceIdBySlug) {
+            $kept = array_values(array_filter($row['devices'], function (array $d) use ($hidden, $deviceIdBySlug, $row) {
+                $deviceId = (int) ($deviceIdBySlug[$d['slug']] ?? 0);
+                if ($deviceId === 0) {
+                    return true; // دستگاهِ بدونِ نمای خدمت‌محور — دستِ ادمین نیست
+                }
+
+                return ! in_array(self::hiddenToken($deviceId), $hidden, true)
+                    && ! in_array(self::hiddenToken($deviceId, (int) ($row['city_id'] ?? 0)), $hidden, true);
+            }));
+            if (count($kept) !== count($row['devices'])) {
+                $row['all_devices'] = false;
+            }
+            $row['devices'] = $kept;
+
+            return $row;
+        })->filter(fn (array $row) => $row['devices'] !== [])->values()->all();
+
+        return $data;
+    }
+
     /**
      * پوششِ یک خدمت (برای کارتِ «پوشش این خدمت» در صفحهٔ ویرایشِ دستگاه).
      *
@@ -100,6 +187,7 @@ class ServiceCoverage
                 : $covering->flatMap(fn (Technician $t) => $t->devices->pluck('id'))->unique();
 
             $rows[] = [
+                'city_id' => (int) $city->id,
                 'city' => $city->name,
                 'slug' => $city->slug,
                 'province' => $city->province?->name,
@@ -117,6 +205,8 @@ class ServiceCoverage
         // («تعمیر لباسشویی سامسونگ در مشهد»). قاعدهٔ برند مثلِ دستگاه:
         // تکنسینِ بدونِ تگِ برند = همهٔ برندها ('all')؛ وگرنه فقط
         // برندهای تگ‌خورده — صفحهٔ ترکیبیِ برندِ خارج از لیست ساخته نشود.
+        $hidden = (array) \Modules\CRM\Models\CrmSetting::getJson(self::HIDDEN_SETTING_KEY, []);
+
         $services = [];
         foreach ($allDevices as $device) {
             $provinces = [];
@@ -137,12 +227,17 @@ class ServiceCoverage
                 $provinceName = (string) $city->province?->name;
                 $provinces[$provinceName] ??= ['name' => $provinceName, 'cities' => []];
                 $provinces[$provinceName]['cities'][] = [
+                    'city_id' => (int) $city->id,
                     'name' => $city->name,
                     'slug' => $city->slug,
                     'technician_count' => $covering->count(),
                     'brands' => $brandIds === null
                         ? 'all'
                         : $allBrands->whereIn('id', $brandIds)->pluck('slug')->values()->all(),
+                    // کنترلِ دستیِ ادمین: false = از خروجیِ سایت مخفی است
+                    // (فرمِ سفارش/تخصیص تغییری نمی‌کند).
+                    'site_visible' => ! in_array(self::hiddenToken($device->id), $hidden, true)
+                        && ! in_array(self::hiddenToken($device->id, $city->id), $hidden, true),
                 ];
             }
 
@@ -154,6 +249,7 @@ class ServiceCoverage
                 'id' => (int) $device->id,
                 'name' => $device->name,
                 'slug' => $device->slug,
+                'site_visible' => ! in_array(self::hiddenToken($device->id), $hidden, true),
                 'province_count' => count($provinces),
                 'city_count' => collect($provinces)->sum(fn ($p) => count($p['cities'])),
                 'provinces' => array_values($provinces),
