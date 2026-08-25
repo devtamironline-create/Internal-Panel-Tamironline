@@ -261,7 +261,13 @@ class CatalogDeviceBrandController extends Controller
                 ($device->name.' '.$brand->name)
             ),
             'subtitle' => $this->merge($page?->subtitle, $dc['subtitle'] ?? null, $heroTpl['subtitle'] ?? null, $device->subtitle, $brand->subtitle),
-            'caption' => $this->merge($page?->caption, $dc['caption'] ?? null, $heroTpl['caption'] ?? null, $device->caption, $brand->caption),
+            // کپشنِ داینامیک: توکن‌ها با پوششِ واقعی و در contextِ همین برند
+            // resolve می‌شوند ({{cities}} فقط شهرهای مجازِ این برند).
+            'caption' => \Modules\Site\Support\CaptionTokens::resolve(
+                $this->merge($page?->caption, $dc['caption'] ?? null, $heroTpl['caption'] ?? null, $device->caption, $brand->caption),
+                $device,
+                $brand
+            ),
             'image' => $this->mergeHeroImage($page?->hero_image, $dc['image'] ?? null, $device->hero_image ?? null, $brand->hero_image ?? null, $heroTpl['image'] ?? null, $deviceTemplateImage),
             'cta_primary' => [
                 'label' => $this->merge($page?->cta_primary_label, $dcCtaPrimary['label'] ?? null, $device->cta_primary_label, $brand->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),

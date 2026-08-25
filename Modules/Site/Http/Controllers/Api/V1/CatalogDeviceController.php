@@ -278,7 +278,12 @@ class CatalogDeviceController extends Controller
             'badge' => CatalogMerger::pick($device->eyebrow, $heroTpl['badge'] ?? null),
             'title' => CatalogMerger::pick($device->service_name, $heroTpl['title'] ?? $device->name),
             'subtitle' => CatalogMerger::pick($device->subtitle, $heroTpl['subtitle'] ?? null),
-            'caption' => CatalogMerger::pick($device->caption, $heroTpl['caption'] ?? null),
+            // کپشنِ داینامیک: توکن‌های {{device}}/{{brand}}/{{cities}}… سمتِ
+            // پنل با پوششِ واقعی resolve می‌شوند (Site\Support\CaptionTokens).
+            'caption' => \Modules\Site\Support\CaptionTokens::resolve(
+                CatalogMerger::pick($device->caption, $heroTpl['caption'] ?? null),
+                $device
+            ),
             'image' => $this->mergeHeroImage($device->hero_image ?? null, $heroTpl['image'] ?? null),
             'cta_primary' => [
                 'label' => CatalogMerger::pick($device->cta_primary_label, $ctaPrimaryTpl['label'] ?? null),

@@ -98,7 +98,13 @@
         <div class="sm:col-span-2">
             <label class="block text-sm font-medium mb-1">کپشن</label>
             <input type="text" name="caption" value="{{ old('caption', $page?->caption ?? '') }}" maxlength="500"
-                   class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm">
+                   placeholder="خدمات @{{device}} @{{brand}} در @{{cities}}"
+                   class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm" dir="auto">
+            <p class="text-[11px] text-gray-400 mt-1">
+                ✨ داینامیک: <code dir="ltr">@{{device}}</code> · <code dir="ltr">@{{brand}}</code> ·
+                <code dir="ltr">@{{cities}}</code> (فقط شهرهایی که همین برند در آن‌ها تکنسین دارد) ·
+                <code dir="ltr">@{{provinces}}</code> · <code dir="ltr">@{{city_count}}</code>
+            </p>
         </div>
         <div class="sm:col-span-2">
             <label class="block text-sm font-medium mb-1">محتوای کامل صفحه (سکشن content)</label>
