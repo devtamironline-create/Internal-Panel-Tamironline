@@ -21,7 +21,9 @@ class SeoCoverageController extends Controller
 {
     public function __invoke(ServiceCoverage $coverage): JsonResponse
     {
-        return response()->json(['data' => $coverage->table()])
+        // نسخهٔ سایت: ورودی‌هایی که ادمین در «پوشش خدمات» از سایت مخفی
+        // کرده، اینجا حذف شده‌اند (پنل خودش همه را با فلگ می‌بیند).
+        return response()->json(['data' => $coverage->siteTable()])
             ->header('Cache-Control', 'public, max-age=3600');
     }
 }

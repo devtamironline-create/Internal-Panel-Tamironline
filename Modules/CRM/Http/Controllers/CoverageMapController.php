@@ -71,4 +71,26 @@ class CoverageMapController extends Controller
             'brandFilter' => $brand,
         ]);
     }
+
+    /**
+     * تاگلِ «نمایش در سایت» برای یک خدمت (کلی) یا خدمت-در-یک-شهر.
+     * فقط خروجیِ سایت (API سئو) را کم/زیاد می‌کند — فرمِ سفارش و تخصیصِ
+     * تکنسین به تگ‌ها وابسته‌اند و دست نمی‌خورند.
+     */
+    public function toggleServiceVisibility(\Illuminate\Http\Request $request)
+    {
+        $data = $request->validate([
+            'device_id' => 'required|integer|exists:crm_devices,id',
+            'city_id' => 'nullable|integer|exists:crm_cities,id',
+        ]);
+
+        $visible = ServiceCoverage::toggleSiteVisibility(
+            (int) $data['device_id'],
+            isset($data['city_id']) ? (int) $data['city_id'] : null
+        );
+
+        return back()->with('success', $visible
+            ? 'نمایش در سایت فعال شد.'
+            : 'از نمایش سایت مخفی شد (فرم سفارش تغییری نکرد).');
+    }
 }
