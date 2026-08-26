@@ -166,11 +166,20 @@ class OrderActionController extends Controller
         $previous = $order->status?->value ?? '';
         $order->update($updates);
 
+        // توضیحاتِ فاکتوری که تکنسین وارد می‌کند هم باید در تاریخچهٔ لاگ‌ها
+        // بماند (۱۴۰۵/۰۶/۰۳) — نه فقط روی فیلدِ سفارش که با ویرایشِ بعدی
+        // بازنویسی می‌شود.
+        $note = $description !== '' ? $description : null;
+        $invoiceDesc = trim((string) ($updates['invoice_descripotion'] ?? ''));
+        if ($invoiceDesc !== '') {
+            $note = ($note !== null ? $note."\n" : '').'توضیحات فاکتور: '.$invoiceDesc;
+        }
+
         OrderStatusLog::create([
             'order_id' => $order->id,
             'from_status' => $previous,
             'to_status' => $newStatus->value,
-            'note' => $description !== '' ? $description : null,
+            'note' => $note,
             'changed_by' => $tech->user_id,
             ...OrderStatusLog::technicianActor($tech),
             'created_at' => now(),

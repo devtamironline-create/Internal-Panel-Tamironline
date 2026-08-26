@@ -214,6 +214,37 @@ class SeoCoverageApiTest extends TestCase
     }
 
     /**
+     * دستگاهِ ترکیبی (۱۴۰۵/۰۶/۰۳): پوششِ ترکیبی = اجتماعِ پوششِ اجزایش —
+     * تکنسینِ تگ‌خوردهٔ جزء، ترکیبی را هم باز می‌کند (۵۲=۶+۵، ۵۱=۱۱+۴۹؛
+     * در تست با override تنظیمات).
+     */
+    public function test_a_composite_device_inherits_its_parts_coverage(): void
+    {
+        $province = Province::create(['name' => 'تهران']);
+        $tehran = City::create(['province_id' => $province->id, 'name' => 'تهران', 'slug' => 'tehran']);
+        $washer = Device::create(['name' => 'لباسشویی', 'slug' => 'washing-machine']);
+        $combo = Device::create(['name' => 'واشر-دراير ترکیبی', 'slug' => 'combo']);
+
+        \Modules\CRM\Models\CrmSetting::setJson(
+            \Modules\CRM\Services\ServiceCoverage::ALIAS_SETTING_KEY,
+            [(string) $combo->id => [$washer->id]]
+        );
+
+        // فقط تکنسینِ لباسشویی — ترکیبی باید همان پوشش را به ارث ببرد.
+        $this->tech([$tehran->id], [$washer->id]);
+
+        $json = $this->getJson('/v1/customer/seo/coverage')->assertOk()->json('data');
+
+        $comboRow = collect($json['services'])->firstWhere('slug', 'combo');
+        $this->assertNotNull($comboRow);
+        $this->assertSame('تهران', $comboRow['provinces'][0]['cities'][0]['name']);
+
+        // نمای شهرمحور هم ترکیبی را در لیستِ دستگاه‌های تهران دارد.
+        $tehranRow = collect($json['cities'])->firstWhere('city', 'تهران');
+        $this->assertContains('combo', collect($tehranRow['devices'])->pluck('slug')->all());
+    }
+
+    /**
      * الگوی عناوینِ «مناطق تحت پوشش» (طرحِ ۱۴۰۵/۰۶/۰۳): ردیف‌های ادمین
      * در services[].titles می‌آیند؛ بدونِ ردیف، پیش‌فرضِ «تعمیر … در …».
      */

@@ -1158,11 +1158,18 @@ class OrderController extends Controller
 
         $order->update($updates);
 
+        // توضیحاتِ فاکتور هم در تاریخچهٔ لاگ‌ها ثبت می‌شود (۱۴۰۵/۰۶/۰۳).
+        $logNote = $validated['note'] ?? null;
+        $invoiceDesc = trim((string) ($updates['invoice_descripotion'] ?? ''));
+        if ($invoiceDesc !== '') {
+            $logNote = (filled($logNote) ? $logNote."\n" : '').'توضیحات فاکتور: '.$invoiceDesc;
+        }
+
         OrderStatusLog::create([
             'order_id' => $order->id,
             'from_status' => $previousStatus,
             'to_status' => $newStatus->value,
-            'note' => $validated['note'] ?? null,
+            'note' => $logNote,
             'changed_by' => auth()->id(),
             'created_at' => now(),
         ]);
