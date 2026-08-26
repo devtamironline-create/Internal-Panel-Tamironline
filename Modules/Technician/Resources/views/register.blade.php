@@ -107,6 +107,16 @@
             font-family: 'Vazirmatn', Tahoma, sans-serif !important;
             background: #fff !important;
         }
+        /* مهم: در کتابخانه plot-area به‌صورت absolute است و ارتفاعِ container را
+           صفر می‌کند؛ در مودالِ دسکتاپ آن را in-flow می‌کنیم تا container ارتفاع
+           بگیرد و با overflow:hidden بریده/نامرئی نشود. */
+        .datepicker-container:not(.pwt-mobile-view) .datepicker-plot-area {
+            position: static !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            box-shadow: none !important;
+            border: 0 !important;
+        }
         .datepicker-plot-area .datepicker-header {
             background: #1a5276 !important;
             padding: 10px 12px !important;
