@@ -93,8 +93,11 @@ class NotifyTemplates
                 'title' => '❌ سفارش لغو شد',
                 'body' => 'سفارش {order_code} لغو شد. اگر ابهامی دارید، پشتیبانی پاسخگوی شماست.',
             ],
+            // ⛔ تصمیمِ ۱۴۰۵/۰۶/۰۳: «ردشدنِ سفارش» هرگز به مشتری نوتیف نمی‌شود
+            // (اپراتور خودش تماس می‌گیرد و تعیین تکلیف می‌کند) — در all() هم
+            // force-off است تا overrideِ ذخیره‌شدهٔ قدیمی روشنش نکند.
             'status_declined' => [
-                'enabled' => true,
+                'enabled' => false,
                 'title' => '⚠️ سفارش رد شد',
                 'body' => 'سفارش {order_code} توسط تکنسین رد شد؛ همکاران ما برای تعیین تکلیف با شما تماس می‌گیرند.',
             ],
@@ -135,6 +138,12 @@ class NotifyTemplates
                     'body' => trim((string) ($row['body'] ?? '')) !== '' ? (string) $row['body'] : $def['body'],
                 ];
             }
+        }
+
+        // قانونِ کسب‌وکار (۱۴۰۵/۰۶/۰۳): نوتیفِ «رد شد» به مشتری نمی‌رود —
+        // حتی اگر در تنظیماتِ قدیمی روشن ذخیره شده باشد.
+        if (isset($defaults['status_declined'])) {
+            $defaults['status_declined']['enabled'] = false;
         }
 
         return self::$cache = $defaults;

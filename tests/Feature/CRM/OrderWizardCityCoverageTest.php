@@ -298,6 +298,29 @@ class OrderWizardCityCoverageTest extends TestCase
             ->assertHasNoErrors(['regionId']);
     }
 
+    public function test_a_composite_device_is_orderable_where_its_part_is_covered(): void
+    {
+        // دستگاهِ ترکیبی (۱۴۰۵/۰۶/۰۳): تگِ جزء (لباسشویی) سفارشِ ترکیبی را
+        // هم باز می‌کند — همان قاعدهٔ ۵۲=۶+۵ با override تنظیمات.
+        $combo = Device::create(['name' => 'ترکیبی', 'slug' => 'combo']);
+        \Modules\CRM\Models\CrmSetting::setJson(
+            \Modules\CRM\Services\ServiceCoverage::ALIAS_SETTING_KEY,
+            [(string) $combo->id => [$this->washer->id]]
+        );
+        $this->technician([$this->mashhad->id], [$this->washer->id]);
+
+        $this->wizard($this->mashhad->id)
+            ->set('deviceId', $combo->id)
+            ->call('next')
+            ->assertHasNoErrors(['deviceId']);
+
+        // یخچال همچنان بسته است — ترکیبی فقط اجزای خودش را به ارث می‌برد.
+        $this->wizard($this->mashhad->id)
+            ->set('deviceId', $this->fridge->id)
+            ->call('next')
+            ->assertHasErrors(['deviceId']);
+    }
+
     public function test_changing_the_city_clears_an_uncovered_selection(): void
     {
         // لباسشویی فقط در مشهد پوشش دارد؛ یخچال فقط در شهر دوم.

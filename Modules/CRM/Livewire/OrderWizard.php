@@ -308,15 +308,21 @@ class OrderWizard extends Component
 
         return $covered === null
             ? $this->devices
-            : $this->devices->whereIn('id', $covered->all())->values();
+            : $this->devices->filter(
+                // دستگاهِ ترکیبی (۵۲=۶+۵، ۵۱=۱۱+۴۹): تگِ هر جزء کافی است.
+                fn ($d) => $covered->intersect(
+                    \Modules\CRM\Services\ServiceCoverage::deviceMatchIds((int) $d->id)
+                )->isNotEmpty()
+            )->values();
     }
 
-    /** آیا این دستگاه در شهرِ انتخاب‌شده تکنسینِ فعال دارد؟ */
+    /** آیا این دستگاه در شهرِ انتخاب‌شده تکنسینِ فعال دارد؟ (ترکیبی: هر جزء) */
     protected function deviceCoveredInCity(int $deviceId): bool
     {
         $covered = $this->coveredDeviceIds;
 
-        return $covered === null || $covered->contains($deviceId);
+        return $covered === null
+            || $covered->intersect(\Modules\CRM\Services\ServiceCoverage::deviceMatchIds($deviceId))->isNotEmpty();
     }
 
     /**
@@ -355,7 +361,9 @@ class OrderWizard extends Component
                     return false;
                 }
                 if ($this->deviceId && $t->devices->isNotEmpty()
-                    && ! $t->devices->pluck('id')->contains((int) $this->deviceId)) {
+                    && $t->devices->pluck('id')->intersect(
+                        \Modules\CRM\Services\ServiceCoverage::deviceMatchIds((int) $this->deviceId)
+                    )->isEmpty()) {
                     return false;
                 }
 

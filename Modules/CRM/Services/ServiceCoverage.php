@@ -42,6 +42,48 @@ class ServiceCoverage
     /** کلیدِ تنظیماتِ «مخفی از سایت» — لیستی از توکن‌های dN و dNcM. */
     public const HIDDEN_SETTING_KEY = 'coverage.site_hidden';
 
+    /**
+     * دستگاه‌های «ترکیبی» (۱۴۰۵/۰۶/۰۳): پوششِ دستگاهِ ترکیبی = اجتماعِ
+     * پوششِ اجزایش — تکنسینی که تگِ یکی از اجزا را دارد، ترکیبی را هم
+     * پوشش می‌دهد. مثال: دستگاه ۵۲ = ترکیبِ ۶ و ۵؛ دستگاه ۵۱ = ۱۱ و ۴۹.
+     * قابلِ override از تنظیمات (کلیدِ coverage.device_aliases به شکلِ
+     * {"52":[6,5],"51":[11,49]}).
+     */
+    private const DEVICE_ALIAS_DEFAULTS = [
+        52 => [6, 5],
+        51 => [11, 49],
+    ];
+
+    public const ALIAS_SETTING_KEY = 'coverage.device_aliases';
+
+    /** @return array<int, array<int, int>> map از device_id → اجزای سازنده */
+    public static function deviceAliases(): array
+    {
+        $saved = \Modules\CRM\Models\CrmSetting::getJson(self::ALIAS_SETTING_KEY, null);
+        $source = is_array($saved) && $saved !== [] ? $saved : self::DEVICE_ALIAS_DEFAULTS;
+
+        $map = [];
+        foreach ($source as $composite => $parts) {
+            $ids = array_values(array_filter(array_map('intval', (array) $parts)));
+            if ((int) $composite > 0 && $ids !== []) {
+                $map[(int) $composite] = $ids;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * idهایی که تگِ تکنسین باید با آن‌ها تطبیق شود تا این دستگاه پوشش
+     * حساب شود: خودِ دستگاه + اجزای ترکیبی‌اش.
+     *
+     * @return array<int, int>
+     */
+    public static function deviceMatchIds(int $deviceId): array
+    {
+        return array_values(array_unique([$deviceId, ...self::deviceAliases()[$deviceId] ?? []]));
+    }
+
     /** توکنِ مخفی‌سازی: کلِ خدمت (city=null) یا خدمت در یک شهر. */
     public static function hiddenToken(int $deviceId, ?int $cityId = null): string
     {
@@ -302,6 +344,16 @@ class ServiceCoverage
                 ? $allDevices->pluck('id')
                 : $covering->flatMap(fn (Technician $t) => $t->devices->pluck('id'))->unique();
 
+            // دستگاهِ ترکیبی به لیستِ شهر اضافه می‌شود اگر یکی از اجزایش
+            // در همین شهر تگ خورده باشد (۵۲ = ۶+۵، ۵۱ = ۱۱+۴۹).
+            if (! $allRounder) {
+                foreach (self::deviceAliases() as $composite => $parts) {
+                    if ($deviceIds->intersect($parts)->isNotEmpty()) {
+                        $deviceIds = $deviceIds->push($composite)->unique();
+                    }
+                }
+            }
+
             $rows[] = [
                 'city_id' => (int) $city->id,
                 'city' => $city->name,
@@ -325,11 +377,13 @@ class ServiceCoverage
 
         $services = [];
         foreach ($allDevices as $device) {
+            // دستگاهِ ترکیبی: تگِ هر یک از اجزا هم پوشش حساب می‌شود.
+            $matchIds = self::deviceMatchIds((int) $device->id);
             $provinces = [];
             foreach ($cities as $city) {
                 $covering = $cityCovering[$city->id]->filter(
                     fn (Technician $t) => $t->devices->isEmpty()
-                        || $t->devices->pluck('id')->contains($device->id)
+                        || $t->devices->pluck('id')->intersect($matchIds)->isNotEmpty()
                 );
                 if ($covering->isEmpty()) {
                     continue;
