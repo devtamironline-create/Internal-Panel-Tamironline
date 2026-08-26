@@ -66,26 +66,50 @@
         .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* دیت‌پیکر - فیکس تداخل Tailwind preflight */
-        .datepicker-container {
+        /* ── دیت‌پیکر — نمایش مودالِ وسط‌چین (دسکتاپ) + تمام‌صفحهٔ کتابخانه (موبایل) ──
+           قبلاً override‌های سلول/موقعیت با !important و بدون استثناکردنِ
+           حالتِ موبایلِ کتابخانه (pwt-mobile-view) نمایش را ناقص می‌کردند.
+           حالا روی دسکتاپ مودالِ وسط‌چینِ بزرگ نشان داده می‌شود و روی موبایل
+           حالتِ تمام‌صفحهٔ خودِ کتابخانه دست‌نخورده می‌ماند. */
+
+        /* پس‌زمینهٔ تیره پشتِ دیت‌پیکر */
+        .dp-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            z-index: 9998;
+            display: none;
+        }
+        body.dp-open .dp-backdrop { display: block; }
+        body.dp-open { overflow: hidden; }
+
+        .datepicker-container * { border-color: #e0e0e0; }
+
+        /* حالتِ دسکتاپ: کارتِ مودالِ وسط‌چین (کتابخانه pwt-mobile-view را فقط روی موبایل می‌زند) */
+        .datepicker-container:not(.datepicker-container-inline):not(.pwt-mobile-view) {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: translate(-50%, -50%) !important;
+            width: 340px !important;
+            max-width: calc(100vw - 32px) !important;
             z-index: 9999 !important;
-            border-radius: 12px !important;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.12) !important;
+            border-radius: 16px !important;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.30) !important;
             border: 1px solid #e0e0e0 !important;
             background: #fff !important;
-            overflow: visible !important;
+            overflow: hidden !important;
         }
-        .datepicker-container * {
-            border-color: #e0e0e0;
-        }
+
         .datepicker-plot-area {
             font-family: 'Vazirmatn', Tahoma, sans-serif !important;
             background: #fff !important;
-            border-radius: 12px !important;
         }
         .datepicker-plot-area .datepicker-header {
             background: #1a5276 !important;
-            padding: 8px 10px !important;
+            padding: 10px 12px !important;
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
@@ -102,27 +126,33 @@
             border-collapse: separate !important;
             border-spacing: 0 !important;
         }
-        .datepicker-container td,
-        .datepicker-container th {
+        .datepicker-container:not(.pwt-mobile-view) td,
+        .datepicker-container:not(.pwt-mobile-view) th {
             padding: 5px !important;
             text-align: center !important;
             border: none !important;
         }
-        .datepicker-container td span {
+        /* سلول‌های بزرگ‌ترِ خوانا — فقط حالتِ دسکتاپ (موبایل ۴۴px خودِ کتابخانه) */
+        .datepicker-container:not(.pwt-mobile-view) td span {
             display: inline-block !important;
-            width: 32px !important;
-            height: 32px !important;
-            line-height: 32px !important;
+            width: 38px !important;
+            height: 38px !important;
+            line-height: 38px !important;
             border-radius: 50% !important;
             cursor: pointer !important;
         }
-        .datepicker-container td span:hover {
-            background: #f0f0f0 !important;
-        }
+        .datepicker-container:not(.pwt-mobile-view) td span:hover { background: #f0f0f0 !important; }
         .datepicker-plot-area .table-days td.selected span { background: #1a5276 !important; color: #fff !important; }
         .datepicker-plot-area .table-days td.today span { color: #f0b929 !important; font-weight: 700; }
-        .datepicker-container .toolbox { background: #f9f9f9 !important; padding: 4px !important; border-top: 1px solid #e0e0e0 !important; }
+        .datepicker-container .toolbox { background: #f9f9f9 !important; padding: 6px !important; border-top: 1px solid #e0e0e0 !important; }
         .datepicker-container .toolbox .btn-today { color: #1a5276 !important; cursor: pointer !important; }
+
+        /* نمای سال/ماه هم در مودالِ دسکتاپ خوانا بماند */
+        .datepicker-container:not(.pwt-mobile-view) .datepicker-year-view .year-item,
+        .datepicker-container:not(.pwt-mobile-view) .datepicker-month-view .month-item {
+            height: 52px !important;
+            line-height: 52px !important;
+        }
     </style>
 </head>
 <body dir="rtl">
@@ -3142,6 +3172,13 @@
             }
 
             try {
+                // پس‌زمینهٔ تیره‌ی مودال — یک‌بار ساخته می‌شود.
+                if (!document.querySelector('.dp-backdrop')) {
+                    var bd = document.createElement('div');
+                    bd.className = 'dp-backdrop';
+                    document.body.appendChild(bd);
+                }
+
                 $("#birth_date").persianDatepicker({
                     format: 'YYYY/MM/DD',
                     autoClose: true,
@@ -3161,6 +3198,15 @@
                     },
                     timePicker: { enabled: false },
                     responsive: true,
+                    // نمایش/بستنِ پس‌زمینه + قفلِ اسکرولِ صفحه هنگام بازبودن.
+                    onShow: function() { document.body.classList.add('dp-open'); },
+                    onHide: function() { document.body.classList.remove('dp-open'); },
+                });
+
+                // کلیک روی پس‌زمینه = کلیکِ بیرون از تقویم → کتابخانه خودش می‌بندد
+                // (onHide پس‌زمینه را برمی‌دارد). این‌جا فقط برای اطمینان پاک می‌کنیم.
+                $(document).on('click', '.dp-backdrop', function() {
+                    document.body.classList.remove('dp-open');
                 });
                 datePickerReady = true;
                 console.log('[DatePicker] initialized OK');
