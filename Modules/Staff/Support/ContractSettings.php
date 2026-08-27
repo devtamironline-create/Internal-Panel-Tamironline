@@ -34,6 +34,14 @@ final class ContractSettings
         'contract_payment_grace_days' => '3',     // بند ۷-۱ — مهلت بررسی تأخیر پرداخت
         'contract_confidentiality_years' => '5',  // بند ۱۰-۵ — مدت محرمانگی
         'contract_holiday_hourly_rate' => '',     // بند ۵-۲ — نرخ ساعتی روز تعطیل (تومان)
+
+        // ── اعدادِ پایهٔ جدولِ حقوقِ قراردادِ نسخه ۲ (به ریال) ──
+        // بقیهٔ جدول (جمع روزانه، ۳۰ و ۳۱ روزه، جمع کل) از این‌ها محاسبه
+        // می‌شود. پیش‌فرض‌ها مقادیرِ قانونیِ سالِ ۱۴۰۵‌اند و از این‌جا یک‌بار
+        // برای کلِ مجموعه به‌روز می‌شوند (موقعِ صدور روی رکورد snapshot می‌شوند).
+        'contract_v2_daily_wage' => '5541850',       // دستمزد روزانه مبنای قرارداد و بیمه
+        'contract_v2_daily_seniority' => '166667',   // پایه سنوات روزانه
+        'contract_v2_monthly_benefits' => '52000000', // مزایای ماهانه مشمول (بن، مسکن، رفاهی)
     ];
 
     public static function get(string $key): string

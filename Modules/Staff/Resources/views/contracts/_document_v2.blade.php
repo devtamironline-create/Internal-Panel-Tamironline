@@ -58,6 +58,10 @@
 
 <h2>۶) مبلغ قرارداد، حقوق و مزایا</h2>
 <p>مبنای حقوق و مزایای کارمند برای سال ۱۴۰۵ به شرح جدول زیر تعیین می‌گردد:</p>
+@php
+    // ارقامِ فارسی برای هم‌خوانی با ظاهرِ رسمیِ قرارداد.
+    $fa = fn ($n) => strtr(number_format((int) $n), ['0'=>'۰','1'=>'۱','2'=>'۲','3'=>'۳','4'=>'۴','5'=>'۵','6'=>'۶','7'=>'۷','8'=>'۸','9'=>'۹',','=>'٬']);
+@endphp
 <table style="width:100%; border-collapse:collapse; margin:6px 0;">
     <thead>
         <tr>
@@ -67,13 +71,13 @@
         </tr>
     </thead>
     <tbody>
-        <tr><td style="border:1px solid #000; padding:4px; text-align:center;">۱</td><td style="border:1px solid #000; padding:4px;">دستمزد روزانه مبنای قرارداد و بیمه</td><td style="border:1px solid #000; padding:4px; text-align:center;">۵٬۵۴۱٬۸۵۰ ریال</td></tr>
-        <tr><td style="border:1px solid #000; padding:4px; text-align:center;">۲</td><td style="border:1px solid #000; padding:4px;">پایه سنوات روزانه</td><td style="border:1px solid #000; padding:4px; text-align:center;">۱۶۶٬۶۶۷ ریال</td></tr>
-        <tr><td style="border:1px solid #000; padding:4px; text-align:center;">۳</td><td style="border:1px solid #000; padding:4px;">جمع دستمزد روزانه با پایه سنوات</td><td style="border:1px solid #000; padding:4px; text-align:center;">۵٬۷۰۸٬۵۱۷ ریال</td></tr>
-        <tr><td style="border:1px solid #000; padding:4px; text-align:center;">۴</td><td style="border:1px solid #000; padding:4px;">جمع دستمزد ۳۰ روزه با پایه سنوات</td><td style="border:1px solid #000; padding:4px; text-align:center;">۱۷۱٬۲۵۵٬۵۱۰ ریال</td></tr>
-        <tr><td style="border:1px solid #000; padding:4px; text-align:center;">۵</td><td style="border:1px solid #000; padding:4px;">مزایای ماهانه مشمول شامل بن، حق مسکن و مزایای رفاهی قانونی</td><td style="border:1px solid #000; padding:4px; text-align:center;">۵۲٬۰۰۰٬۰۰۰ ریال</td></tr>
-        <tr><td style="border:1px solid #000; padding:4px; text-align:center;">۶</td><td style="border:1px solid #000; padding:4px; font-weight:bold;">جمع کل حقوق و مزایای ماهانه ۳۰ روزه</td><td style="border:1px solid #000; padding:4px; text-align:center; font-weight:bold;">۲۲۳٬۲۵۵٬۵۱۰ ریال</td></tr>
-        <tr><td style="border:1px solid #000; padding:4px; text-align:center;">۷</td><td style="border:1px solid #000; padding:4px; font-weight:bold;">جمع کل حقوق و مزایای ماهانه در ماه ۳۱ روزه</td><td style="border:1px solid #000; padding:4px; text-align:center; font-weight:bold;">۲۲۸٬۹۶۴٬۰۲۷ ریال</td></tr>
+        @foreach($contract->v2SalaryTable() as $row)
+            <tr>
+                <td style="border:1px solid #000; padding:4px; text-align:center;">{{ $fa($row['no']) }}</td>
+                <td style="border:1px solid #000; padding:4px;{{ $row['bold'] ? ' font-weight:bold;' : '' }}">{{ $row['label'] }}</td>
+                <td style="border:1px solid #000; padding:4px; text-align:center;{{ $row['bold'] ? ' font-weight:bold;' : '' }}">{{ $fa($row['amount']) }} ریال</td>
+            </tr>
+        @endforeach
     </tbody>
 </table>
 <p><b>تبصره ۱:</b> مبالغ فوق، مبنای توافق طرفین برای سال ۱۴۰۵ بوده و عیدی، سنوات، پایه سنوات، مزایای پایان کار، مالیات، بیمه، کسورات قانونی و سایر حقوق قانونی مطابق مقررات مربوطه محاسبه و اعمال خواهد شد.</p>

@@ -3,7 +3,7 @@
 @section('page-title', 'صدور قرارداد کارمندان')
 
 @section('main')
-<div class="p-6 space-y-4" dir="rtl" x-data="{ selected: [] }">
+<div class="p-6 space-y-4" dir="rtl" x-data="{ selected: [], version: '{{ old('version', 1) }}' }">
     <div>
         <h1 class="text-xl font-bold text-gray-800 dark:text-white">➕ صدور قرارداد کارمندان</h1>
         <p class="text-sm text-gray-500 mt-1">
@@ -24,8 +24,7 @@
         @csrf
 
         {{-- انتخاب نسخهٔ قرارداد --}}
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
-             x-data="{ version: '{{ old('version', 1) }}' }">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 mb-3">نسخهٔ قرارداد</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 @foreach(\Modules\Staff\Models\StaffContract::VERSIONS as $vNum => $vLabel)
@@ -41,6 +40,34 @@
                         </span>
                     </label>
                 @endforeach
+            </div>
+        </div>
+
+        {{-- اعدادِ جدولِ حقوق — فقط نسخه ۲ (کارمند کال‌سنتر). پیش‌فرض از
+             تنظیماتِ مجموعه؛ بقیهٔ جدول خودکار محاسبه می‌شود. --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
+             x-show="version === '2'" x-cloak>
+            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 mb-1">اعداد جدول حقوق (نسخه ۲)</h2>
+            <p class="text-[11px] text-gray-500 mb-3">به <b>ریال</b> — جمع روزانه، ۳۰ و ۳۱ روزه و جمع کل خودکار از این سه عدد محاسبه می‌شوند. پیش‌فرض، مقادیر قانونی سال ۱۴۰۵ است.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">دستمزد روزانه (ریال)</label>
+                    <input type="number" name="v2_daily_wage" min="0" dir="ltr"
+                           value="{{ old('v2_daily_wage', $party1['contract_v2_daily_wage'] ?? '') }}"
+                           class="{{ $box ?? 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm' }}">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">پایه سنوات روزانه (ریال)</label>
+                    <input type="number" name="v2_daily_seniority" min="0" dir="ltr"
+                           value="{{ old('v2_daily_seniority', $party1['contract_v2_daily_seniority'] ?? '') }}"
+                           class="{{ $box ?? 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm' }}">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">مزایای ماهانه مشمول (ریال)</label>
+                    <input type="number" name="v2_monthly_benefits" min="0" dir="ltr"
+                           value="{{ old('v2_monthly_benefits', $party1['contract_v2_monthly_benefits'] ?? '') }}"
+                           class="{{ $box ?? 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm' }}">
+                </div>
             </div>
         </div>
 
