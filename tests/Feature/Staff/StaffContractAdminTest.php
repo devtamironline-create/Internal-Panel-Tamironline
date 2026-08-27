@@ -65,7 +65,7 @@ class StaffContractAdminTest extends TestCase
             '--force' => true,
         ]);
         Artisan::call('migrate', [
-            '--path' => 'Modules/Staff/Database/Migrations/2026_08_27_000001_add_version_to_staff_contracts.php',
+            '--path' => 'database/migrations/2026_08_27_000001_add_version_to_staff_contracts.php',
             '--force' => true,
         ]);
 
