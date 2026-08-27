@@ -10,6 +10,9 @@
         <div>
             <h1 class="text-xl font-bold text-gray-800 dark:text-white">📄 {{ $contract->party_name }}</h1>
             <p class="text-sm text-gray-500 mt-1" dir="ltr">{{ $contract->contract_number }}</p>
+            <span class="inline-block mt-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 text-[11px]">
+                {{ \Modules\Staff\Models\StaffContract::VERSIONS[$contract->version] ?? 'نسخه ۱' }}
+            </span>
         </div>
         <div class="flex items-center gap-2">
             @if($contract->status === 'approved' && $contract->final_pdf_path)
@@ -176,7 +179,7 @@
         <div class="lg:col-span-2">
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
                 <div class="prose-contract text-sm text-gray-700 dark:text-gray-200 leading-7 max-h-[70vh] overflow-y-auto">
-                    @include('staff::contracts._document', [
+                    @include($contract->documentView(), [
                         'contract' => $contract,
                         'party1' => $party1,
                         'forPdf' => false,

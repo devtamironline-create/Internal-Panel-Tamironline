@@ -19,7 +19,7 @@ class StaffContract extends Model
     protected $table = 'staff_contracts';
 
     protected $fillable = [
-        'contract_number', 'user_id',
+        'contract_number', 'version', 'user_id',
         'party_title', 'party_name', 'party_father_name', 'party_national_code',
         'party_address', 'party_phone',
         'contract_date', 'start_date', 'end_date', 'service_description',
@@ -36,6 +36,7 @@ class StaffContract extends Model
     ];
 
     protected $casts = [
+        'version' => 'integer',
         'contract_date' => 'date',
         'start_date' => 'date',
         'end_date' => 'date',
@@ -50,6 +51,20 @@ class StaffContract extends Model
         'payment_grace_days' => 'integer',
         'confidentiality_years' => 'integer',
     ];
+
+    /** نسخه‌های قالبِ قرارداد و برچسب فارسی (۱۴۰۵/۰۶/۰۳). */
+    public const VERSIONS = [
+        1 => 'نسخه ۱ — قرارداد مشاوره‌ای/پروژه‌ای',
+        2 => 'نسخه ۲ — قرارداد کار با مدت معین (کارمند)',
+    ];
+
+    /** نامِ Blade متنِ قرارداد بر اساس نسخه. */
+    public function documentView(): string
+    {
+        return (int) $this->version === 2
+            ? 'staff::contracts._document_v2'
+            : 'staff::contracts._document';
+    }
 
     /** وضعیت‌ها و برچسب فارسی. */
     public const STATUSES = [
