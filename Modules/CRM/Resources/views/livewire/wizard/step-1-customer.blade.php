@@ -162,11 +162,12 @@
                  و اپراتور می‌تواند در dropdown منطقه عوضش کند. --}}
             @if($cityId)
                 {{-- wire:key با cityId: با عوض‌شدن شهر، نقشه از نو با مرکزِ
-                     شهرِ جدید ساخته می‌شود. نقشه Leaflet لوکال + OSM است و
-                     به کلیدِ Web نشان نیازی ندارد (تشخیصِ منطقه سمتِ سرور
-                     با REST نشان انجام می‌شود). --}}
+                     شهرِ جدید ساخته می‌شود. نقشهٔ اصلی نشان است (کلیدِ Web)؛
+                     اگر SDK نشان لود نشد، خودکار به Leaflet+OSM برمی‌گردد.
+                     تشخیصِ منطقه در هر حالت سمتِ سرور با REST نشان است. --}}
+                @php $neshanWebKey = (string) config('services.neshan.web_key'); @endphp
                 <div wire:key="region-detect-tools-{{ $cityId }}"
-                     x-data="window.wizardRegionMap(null, @js($this->mapCenter))"
+                     x-data="window.wizardRegionMap(@js($neshanWebKey !== '' ? $neshanWebKey : null), @js($this->mapCenter))"
                      @map-goto.window="gotoPoint($event.detail.lat, $event.detail.lng, $event.detail.zoom)">
                     <div class="mt-2 flex items-center gap-3 flex-wrap">
                         @if($this->regions->count())
