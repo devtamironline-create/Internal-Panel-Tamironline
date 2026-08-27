@@ -78,6 +78,27 @@
         </div>
     </div>
 
+    {{-- ─── تیله‌های بازه (خط دوم): تکمیل، درآمد، نرخ تبدیل ─── --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-emerald-100 dark:border-emerald-900/40">
+            <p class="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{{ number_format($rng['completed'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">تکمیل‌شده در بازه</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-emerald-100 dark:border-emerald-900/40 col-span-2 lg:col-span-1">
+            <p class="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{{ number_format($rng['revenue'] ?? 0) }} <span class="text-xs font-normal text-gray-400">تومان</span></p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">درآمدِ سفارش‌های تکمیل‌شده</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
+            @php $conv = ($rng['total'] ?? 0) > 0 ? round(($rng['orders'] ?? 0) / $rng['total'] * 100) : 0; @endphp
+            <p class="text-3xl font-bold text-sky-600 dark:text-sky-400">{{ number_format($conv) }}٪</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">نرخِ تبدیل (سفارش از کل)</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border {{ ($snap['unassigned'] ?? 0) > 0 ? 'border-amber-200 dark:border-amber-800' : 'border-gray-100 dark:border-gray-700' }}">
+            <p class="text-3xl font-bold {{ ($snap['unassigned'] ?? 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-gray-800 dark:text-gray-100' }}">{{ number_format($snap['unassigned'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">بدونِ تکنسین (اکنون)</p>
+        </div>
+    </div>
+
     {{-- ─── تیله‌های لحظه‌ای (مستقل از بازه) ─── --}}
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
@@ -97,6 +118,52 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">کل مشتری‌ها</p>
         </div>
     </div>
+
+    {{-- ─── تیله‌های امروز/این‌ماه (مستقل از بازه) ─── --}}
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
+            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{ number_format($snap['today_total'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">کل امروز (سفارش + لید)</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
+            <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ number_format($snap['month_total'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">کل این ماه</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
+            <p class="text-2xl font-bold text-teal-600 dark:text-teal-400">{{ number_format($coverage['province_count'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">استان‌های تحت پوشش</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
+            <p class="text-2xl font-bold text-teal-600 dark:text-teal-400">{{ number_format($coverage['city_count'] ?? 0) }}</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">شهرهای تحت پوشش</p>
+        </div>
+    </div>
+
+    {{-- ─── پوشش سرویس‌دهی (استان/شهرهای واقعی — مشهد و…) ─── --}}
+    @if(!empty($coverage['provinces']))
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
+        <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+            <div>
+                <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100">پوششِ سرویس‌دهی</h3>
+                <p class="text-xs text-gray-400">استان‌ها و شهرهایی که تکنسینِ فعال دارند — خودکار از پروفایلِ تکنسین‌ها</p>
+            </div>
+            @if(Route::has('crm.technicians.service-coverage'))
+            <a href="{{ route('crm.technicians.service-coverage') }}" class="text-xs text-blue-600 hover:underline">مدیریت پوشش ↗</a>
+            @endif
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            @foreach($coverage['provinces'] as $p)
+                <div class="border border-gray-100 dark:border-gray-700 rounded-lg p-3">
+                    <div class="flex items-center justify-between">
+                        <span class="font-bold text-sm text-gray-800 dark:text-gray-100">{{ $p['name'] }}</span>
+                        <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-[11px] font-bold">{{ number_format($p['techs']) }} تکنسین</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1.5">{{ implode('، ', $p['cities']) }}</div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
 
     {{-- ─── نمودارها: روندِ بازه + امروز به تفکیک ساعت ─── --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -137,12 +204,12 @@
     {{-- ─── سفارشاتِ امروز به تفکیکِ منطقه (دایره‌ای) ─── --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">سفارشاتِ امروز به تفکیکِ منطقه</h3>
-            <p class="text-xs text-gray-400 mb-2">سهمِ هر استانِ تحتِ پوشش از سفارش‌های امروز (فعلاً تهران و البرز)</p>
+            <h3 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">سفارش‌های بازه به تفکیکِ استان</h3>
+            <p class="text-xs text-gray-400 mb-2">سهمِ هر استان از سفارش‌های بازهٔ انتخاب‌شده (همهٔ استان‌های دارای سفارش)</p>
             @if(!empty($ordersByRegion['data']))
                 <div id="chart-region"></div>
             @else
-                <p class="text-center text-gray-400 py-10 text-sm">امروز هنوز سفارشی ثبت نشده.</p>
+                <p class="text-center text-gray-400 py-10 text-sm">در این بازه سفارشی ثبت نشده.</p>
             @endif
         </div>
     </div>
