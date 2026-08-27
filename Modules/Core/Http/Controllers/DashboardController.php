@@ -36,9 +36,10 @@ class DashboardController extends Controller
                     'range' => $this->rangeStats($fromCarbon, $toCarbon),
                     'birthdays' => $this->getUpcomingBirthdays(),
                 ],
+                'coverage' => $this->coverageSummary(),
                 'recentOrders' => $this->recentOrders(),
                 'hourly' => $this->hourlyToday(),
-                'ordersByRegion' => $this->ordersByProvinceToday(),
+                'ordersByRegion' => $this->ordersByProvinceRange($fromCarbon, $toCarbon),
                 'trend' => $this->trendRange($fromCarbon, $toCarbon),
                 'statusBreakdown' => $this->statusBreakdownRange($fromCarbon, $toCarbon),
                 'topDevices' => $this->topDevicesRange($fromCarbon, $toCarbon),
@@ -67,10 +68,12 @@ class DashboardController extends Controller
 
         return [
             'stats' => [
-                'snapshot' => ['open' => 0, 'delayed_open' => 0, 'techs_active' => 0, 'customers_total' => 0],
-                'range' => ['orders' => 0, 'leads' => 0, 'total' => 0, 'cancelled' => 0],
+                'snapshot' => ['open' => 0, 'delayed_open' => 0, 'techs_active' => 0, 'customers_total' => 0,
+                    'unassigned' => 0, 'today_total' => 0, 'month_total' => 0],
+                'range' => ['orders' => 0, 'leads' => 0, 'total' => 0, 'cancelled' => 0, 'completed' => 0, 'revenue' => 0],
                 'birthdays' => ['today' => [], 'upcoming' => [], 'total_upcoming' => 0],
             ],
+            'coverage' => ['provinces' => [], 'province_count' => 0, 'city_count' => 0, 'tech_count' => 0, 'complete' => false],
             'recentOrders' => collect(),
             'hourly' => ['labels' => [], 'total' => [], 'leads' => [], 'orders' => []],
             'ordersByRegion' => ['labels' => [], 'data' => [], 'colors' => []],
@@ -145,11 +148,73 @@ class DashboardController extends Controller
                     ->whereNotNull('assigned_at')
                     ->where('assigned_at', '<', $threeDaysAgo)
                     ->count(),
+                // سفارشِ بازِ بدونِ تکنسین — نیازمندِ تخصیص (کارِ فوریِ اپراتور).
+                'unassigned' => Order::realOrders()
+                    ->whereIn('status', [OrderStatus::New->value, OrderStatus::Coordinated->value])
+                    ->whereNull('technician_id')
+                    ->count(),
+                'today_total' => Order::query()
+                    ->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()])->count(),
+                'month_total' => Order::query()
+                    ->where('created_at', '>=', now()->startOfMonth())->count(),
                 'techs_active' => Technician::where('status', 'active')->count(),
                 'customers_total' => Customer::count(),
             ];
         } catch (\Throwable $e) {
-            return ['open' => 0, 'delayed_open' => 0, 'techs_active' => 0, 'customers_total' => 0];
+            return ['open' => 0, 'delayed_open' => 0, 'techs_active' => 0, 'customers_total' => 0,
+                'unassigned' => 0, 'today_total' => 0, 'month_total' => 0];
+        }
+    }
+
+    /**
+     * خلاصهٔ پوششِ سرویس‌دهی برای داشبورد — استان‌های واقعیِ تحتِ پوشش
+     * (تهران، البرز/کرج، خراسان رضوی/مشهد و…) با تعدادِ تکنسینِ هر استان،
+     * مستقیم از موتورِ پوشش (تگِ تکنسین‌ها) — دیگر hardcode «تهران و کرج» نیست.
+     *
+     * @return array<string, mixed>
+     */
+    protected function coverageSummary(): array
+    {
+        try {
+            $data = app(\Modules\CRM\Services\ServiceCoverage::class)->table();
+
+            // اجتماعِ استان‌ها روی همهٔ خدمات + بیشینهٔ تعدادِ تکنسینِ هر استان/شهر.
+            $provinces = [];
+            $cityKeys = [];
+            foreach ($data['services'] as $service) {
+                foreach ($service['provinces'] as $p) {
+                    $name = $p['name'];
+                    $provinces[$name] ??= ['name' => $name, 'techs' => 0, 'cities' => []];
+                    foreach ($p['cities'] as $city) {
+                        $cityKeys[$name.'|'.$city['name']] = true;
+                        $provinces[$name]['cities'][$city['name']] = max(
+                            $provinces[$name]['cities'][$city['name']] ?? 0,
+                            (int) $city['technician_count']
+                        );
+                    }
+                    $provinces[$name]['techs'] = array_sum($provinces[$name]['cities']);
+                }
+            }
+
+            $rows = collect($provinces)
+                ->map(fn ($p) => [
+                    'name' => $p['name'],
+                    'techs' => $p['techs'],
+                    'cities' => array_keys($p['cities']),
+                ])
+                ->sortByDesc('techs')
+                ->values()
+                ->all();
+
+            return [
+                'provinces' => $rows,
+                'province_count' => count($rows),
+                'city_count' => count($cityKeys),
+                'tech_count' => (int) ($data['total_techs'] ?? Technician::where('status', 'active')->count()),
+                'complete' => (bool) ($data['coverage_data_complete'] ?? false),
+            ];
+        } catch (\Throwable $e) {
+            return ['provinces' => [], 'province_count' => 0, 'city_count' => 0, 'tech_count' => 0, 'complete' => false];
         }
     }
 
@@ -163,17 +228,25 @@ class DashboardController extends Controller
         try {
             $orders = Order::realOrders()->whereBetween('created_at', [$from, $to])->count();
             $leads = Order::leads()->whereBetween('created_at', [$from, $to])->count();
+            $completed = Order::realOrders()->whereBetween('created_at', [$from, $to])
+                ->where('status', OrderStatus::Completed->value)->count();
+            // درآمدِ بازه: جمعِ مبلغِ فاکتورِ سفارش‌های تکمیل‌شدهٔ ثبت‌شده در بازه.
+            $revenue = (int) Order::realOrders()->whereBetween('created_at', [$from, $to])
+                ->where('status', OrderStatus::Completed->value)
+                ->sum('total_invoice');
 
             return [
                 'orders' => $orders,
                 'leads' => $leads,
                 'total' => $orders + $leads,
+                'completed' => $completed,
+                'revenue' => $revenue,
                 'cancelled' => Order::realOrders()->whereBetween('created_at', [$from, $to])
                     ->whereIn('status', [OrderStatus::Cancelled->value, OrderStatus::Declined->value])
                     ->count(),
             ];
         } catch (\Throwable $e) {
-            return ['orders' => 0, 'leads' => 0, 'total' => 0, 'cancelled' => 0];
+            return ['orders' => 0, 'leads' => 0, 'total' => 0, 'cancelled' => 0, 'completed' => 0, 'revenue' => 0];
         }
     }
 
@@ -221,13 +294,13 @@ class DashboardController extends Controller
     }
 
     /**
-     * سفارشاتِ امروز به تفکیکِ استانِ تحتِ پوشش — نمودارِ دایره‌ای.
-     * فعلاً فقط تهران و البرز فعال‌اند؛ استان‌های دیگر/بدونِ استان با برچسبِ
-     * خودشان/«نامشخص» می‌آیند. فقط سفارش‌های واقعی (بدونِ لید) شمرده می‌شوند.
+     * سفارشاتِ بازه به تفکیکِ استان — نمودارِ دایره‌ای. همهٔ استان‌هایی که
+     * سفارش دارند می‌آیند (تهران، البرز، خراسان رضوی/مشهد و…)؛ بدونِ استان
+     * «نامشخص». فقط سفارش‌های واقعی (بدونِ لید) شمرده می‌شوند.
      *
      * @return array{labels:array<int,string>, data:array<int,int>, colors:array<int,string>}
      */
-    protected function ordersByProvinceToday(): array
+    protected function ordersByProvinceRange(Carbon $from, Carbon $to): array
     {
         $labels = [];
         $data = [];
@@ -239,7 +312,7 @@ class DashboardController extends Controller
 
         try {
             $rows = Order::realOrders()
-                ->whereBetween('created_at', [now()->startOfDay(), now()->endOfDay()])
+                ->whereBetween('created_at', [$from, $to])
                 ->selectRaw('province_id, COUNT(*) as cnt')
                 ->groupBy('province_id')
                 ->orderByDesc('cnt')
