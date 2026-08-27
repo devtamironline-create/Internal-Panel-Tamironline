@@ -75,6 +75,35 @@ class StaffContractVersionTest extends TestCase
         $this->assertStringContainsString('AB/123', $html);           // شماره سفته
     }
 
+    public function test_v2_salary_table_computes_derived_rows_from_the_three_base_numbers(): void
+    {
+        $c = $this->contract(2);
+        // بدونِ snapshot → پیش‌فرضِ مجموعه (۱۴۰۵).
+        $rows = $c->v2SalaryTable();
+        $this->assertCount(7, $rows);
+        $this->assertSame(5541850, $rows[0]['amount']);          // دستمزد روزانه
+        $this->assertSame(166667, $rows[1]['amount']);           // پایه سنوات
+        $this->assertSame(5541850 + 166667, $rows[2]['amount']); // جمع روزانه
+        $this->assertSame((5541850 + 166667) * 30, $rows[3]['amount']); // ۳۰ روزه
+        $this->assertSame(52000000, $rows[4]['amount']);         // مزایای ماهانه
+        $this->assertSame((5541850 + 166667) * 30 + 52000000, $rows[5]['amount']); // جمع کل ۳۰
+        $this->assertSame((5541850 + 166667) * 31 + 52000000, $rows[6]['amount']); // جمع کل ۳۱
+
+        // با snapshotِ اعدادِ سفارشی، جدول از همان‌ها محاسبه می‌شود.
+        $c->v2_daily_wage = 6000000;
+        $c->v2_daily_seniority = 200000;
+        $c->v2_monthly_benefits = 60000000;
+        $rows2 = $c->v2SalaryTable();
+        $this->assertSame(6200000, $rows2[2]['amount']);
+        $this->assertSame(6200000 * 30 + 60000000, $rows2[5]['amount']);
+
+        // در متنِ رندرشدهٔ v2 هم عددِ سفارشی می‌آید (ارقامِ فارسی).
+        $html = view('staff::contracts._document_v2', [
+            'contract' => $c, 'party1' => $this->party1(), 'forPdf' => false,
+        ])->render();
+        $this->assertStringContainsString('۶٬۲۰۰٬۰۰۰', $html);
+    }
+
     public function test_pdf_html_is_rtl_for_both_versions(): void
     {
         $ref = new \ReflectionMethod(StaffContractPdf::class, 'html');

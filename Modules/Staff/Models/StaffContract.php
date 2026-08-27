@@ -24,6 +24,7 @@ class StaffContract extends Model
         'party_address', 'party_phone',
         'contract_date', 'start_date', 'end_date', 'service_description',
         'monthly_wage', 'holiday_hourly_rate', 'promissory_amount', 'promissory_serial',
+        'v2_daily_wage', 'v2_daily_seniority', 'v2_monthly_benefits',
         'non_solicit_months', 'payment_grace_days', 'confidentiality_years',
         'status', 'reject_reason',
         'doc_national_card_front', 'doc_national_card_back',
@@ -47,6 +48,9 @@ class StaffContract extends Model
         'monthly_wage' => 'integer',
         'holiday_hourly_rate' => 'integer',
         'promissory_amount' => 'integer',
+        'v2_daily_wage' => 'integer',
+        'v2_daily_seniority' => 'integer',
+        'v2_monthly_benefits' => 'integer',
         'non_solicit_months' => 'integer',
         'payment_grace_days' => 'integer',
         'confidentiality_years' => 'integer',
@@ -64,6 +68,48 @@ class StaffContract extends Model
         return (int) $this->version === 2
             ? 'staff::contracts._document_v2'
             : 'staff::contracts._document';
+    }
+
+    /**
+     * سه عددِ پایهٔ جدولِ حقوقِ نسخه ۲ (به ریال): مقدارِ snapshotِ رکورد،
+     * وگرنه پیش‌فرضِ مجموعه (ContractSettings).
+     *
+     * @return array{daily_wage:int, daily_seniority:int, monthly_benefits:int}
+     */
+    public function v2SalaryBase(): array
+    {
+        $get = fn (?int $col, string $key, int $fallback) => $col !== null && $col > 0
+            ? $col
+            : ((int) (\Modules\Staff\Support\ContractSettings::int($key) ?? $fallback));
+
+        return [
+            'daily_wage' => $get($this->v2_daily_wage, 'contract_v2_daily_wage', 5541850),
+            'daily_seniority' => $get($this->v2_daily_seniority, 'contract_v2_daily_seniority', 166667),
+            'monthly_benefits' => $get($this->v2_monthly_benefits, 'contract_v2_monthly_benefits', 52000000),
+        ];
+    }
+
+    /**
+     * جدولِ کاملِ حقوقِ نسخه ۲ — سه عددِ پایه + چهار ردیفِ محاسبه‌شده.
+     *
+     * @return array<int, array{no:int, label:string, amount:int, bold:bool}>
+     */
+    public function v2SalaryTable(): array
+    {
+        $b = $this->v2SalaryBase();
+        $dailyTotal = $b['daily_wage'] + $b['daily_seniority'];
+        $m30 = $dailyTotal * 30;
+        $m31 = $dailyTotal * 31;
+
+        return [
+            ['no' => 1, 'label' => 'دستمزد روزانه مبنای قرارداد و بیمه', 'amount' => $b['daily_wage'], 'bold' => false],
+            ['no' => 2, 'label' => 'پایه سنوات روزانه', 'amount' => $b['daily_seniority'], 'bold' => false],
+            ['no' => 3, 'label' => 'جمع دستمزد روزانه با پایه سنوات', 'amount' => $dailyTotal, 'bold' => false],
+            ['no' => 4, 'label' => 'جمع دستمزد ۳۰ روزه با پایه سنوات', 'amount' => $m30, 'bold' => false],
+            ['no' => 5, 'label' => 'مزایای ماهانه مشمول شامل بن، حق مسکن و مزایای رفاهی قانونی', 'amount' => $b['monthly_benefits'], 'bold' => false],
+            ['no' => 6, 'label' => 'جمع کل حقوق و مزایای ماهانه ۳۰ روزه', 'amount' => $m30 + $b['monthly_benefits'], 'bold' => true],
+            ['no' => 7, 'label' => 'جمع کل حقوق و مزایای ماهانه در ماه ۳۱ روزه', 'amount' => $m31 + $b['monthly_benefits'], 'bold' => true],
+        ];
     }
 
     /** وضعیت‌ها و برچسب فارسی. */

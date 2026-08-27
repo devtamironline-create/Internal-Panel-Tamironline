@@ -75,6 +75,10 @@ class StaffContractController extends Controller
             // پرداخت، محرمانگی، نرخ روز تعطیل) از تنظیماتِ مجموعه می‌آیند.
             'monthly_wage' => 'nullable|integer|min:0',
             'promissory_amount' => 'nullable|integer|min:0',
+            // اعدادِ پایهٔ جدولِ حقوقِ نسخه ۲ (ریال) — نبودشان = پیش‌فرضِ مجموعه.
+            'v2_daily_wage' => 'nullable|integer|min:0',
+            'v2_daily_seniority' => 'nullable|integer|min:0',
+            'v2_monthly_benefits' => 'nullable|integer|min:0',
             // مشخصات اختصاصیِ هر کارمند (اختیاری — در نبودش از پروفایل پر می‌شود)
             'party' => 'nullable|array',
         ], [], [
@@ -122,6 +126,11 @@ class StaffContractController extends Controller
                     'monthly_wage' => $validated['monthly_wage'] ?? null,
                     'promissory_amount' => $validated['promissory_amount'] ?? null,
                     'promissory_serial' => $party['promissory_serial'] ?? null,
+                    // اعدادِ جدولِ حقوقِ نسخه ۲ روی رکورد snapshot می‌شوند (ریال).
+                    // نبودشان → v2SalaryBase از پیش‌فرضِ مجموعه می‌خوانَد.
+                    'v2_daily_wage' => $validated['v2_daily_wage'] ?? null,
+                    'v2_daily_seniority' => $validated['v2_daily_seniority'] ?? null,
+                    'v2_monthly_benefits' => $validated['v2_monthly_benefits'] ?? null,
                     // ثابت برای کلِ مجموعه — در ستون snapshot می‌شود تا تغییرِ
                     // بعدیِ تنظیمات، قراردادِ امضاشده را عوض نکند.
                     'holiday_hourly_rate' => ContractSettings::int('contract_holiday_hourly_rate'),
