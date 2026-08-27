@@ -72,7 +72,7 @@ final class StaffContractPdf
     /** HTML کاملِ قرارداد (با استایلِ چاپ) برای mPDF. */
     private static function html(StaffContract $contract): string
     {
-        $body = view('staff::contracts._document', [
+        $body = view($contract->documentView(), [
             'contract' => $contract,
             'party1' => ContractSettings::all(),
             'forPdf' => true,
@@ -80,15 +80,18 @@ final class StaffContractPdf
             'signatureSrc' => self::dataUri(self::diskPath($contract->signature_path)),
         ])->render();
 
+        // ⚠ RTL: بدونِ dir=rtl و text-align:right روی body، mPDF بعضی بلوک‌ها
+        // را چپ‌چین می‌کرد (گزارشِ ۱۴۰۵/۰۶/۰۳). حالا کلِ سند راست‌چین است.
         $css = '
-            body { font-family: vazir, sans-serif; font-size: 9pt; line-height: 1.85; color: #111; }
-            h1 { font-size: 14pt; }
-            h2 { font-size: 10.5pt; margin: 12px 0 4px; padding-bottom: 2px; border-bottom: 1px solid #ddd; }
+            body { font-family: vazir, sans-serif; font-size: 9pt; line-height: 1.85; color: #111; direction: rtl; text-align: right; }
+            h1 { font-size: 14pt; text-align: center; }
+            h2 { font-size: 10.5pt; margin: 12px 0 4px; padding-bottom: 2px; border-bottom: 1px solid #ddd; text-align: right; }
             p { margin: 0 0 5px; text-align: justify; }
             table { font-size: 8.5pt; }
+            td, th { text-align: right; }
         ';
 
-        return '<html><head><meta charset="utf-8"><style>'.$css.'</style></head><body>'.$body.'</body></html>';
+        return '<html dir="rtl" lang="fa"><head><meta charset="utf-8"><style>'.$css.'</style></head><body dir="rtl">'.$body.'</body></html>';
     }
 
     /** مسیرِ مطلقِ فایل روی دیسک public (یا null). */

@@ -62,6 +62,9 @@ class StaffContractController extends Controller
         $validated = $request->validate([
             'user_ids' => 'required|array|min:1',
             'user_ids.*' => 'exists:users,id',
+            // نسخهٔ قالبِ قرارداد (۱ مشاوره‌ای، ۲ کارمند کال‌سنتر). فرم همیشه
+            // می‌فرستد؛ نبودش = پیش‌فرضِ نسخه ۱ (سازگاریِ عقب‌رو).
+            'version' => 'nullable|integer|in:'.implode(',', array_keys(StaffContract::VERSIONS)),
             // تاریخ‌ها شمسی وارد می‌شوند (`1405/05/11`) و پیش از ذخیره به
             // میلادی تبدیل می‌شوند؛ پس قاعدهٔ `date` لاراول این‌جا کار نمی‌کند.
             'contract_date' => ['required', 'string', $this->jalaliRule()],
@@ -102,6 +105,7 @@ class StaffContractController extends Controller
 
                 $created[] = StaffContract::create([
                     'contract_number' => StaffContract::nextNumber(),
+                    'version' => (int) ($validated['version'] ?? 1) ?: 1,
                     'user_id' => $user->id,
                     // snapshot مشخصات طرف دوم — بعداً با تغییر پروفایل عوض نمی‌شود
                     'party_title' => $party['title'] ?? null,

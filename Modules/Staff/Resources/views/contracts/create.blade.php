@@ -23,6 +23,27 @@
     <form method="POST" action="{{ route('admin.staff-contracts.store') }}" class="space-y-4">
         @csrf
 
+        {{-- انتخاب نسخهٔ قرارداد --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
+             x-data="{ version: '{{ old('version', 1) }}' }">
+            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 mb-3">نسخهٔ قرارداد</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                @foreach(\Modules\Staff\Models\StaffContract::VERSIONS as $vNum => $vLabel)
+                    <label class="flex items-start gap-2 p-3 border rounded-lg cursor-pointer border-gray-300 dark:border-gray-600"
+                           :class="version === '{{ $vNum }}' ? 'bg-brand-50 border-brand-400 dark:bg-brand-900/20' : ''">
+                        <input type="radio" name="version" value="{{ $vNum }}" class="mt-1" x-model="version"
+                               @checked((int) old('version', 1) === $vNum) required>
+                        <span>
+                            <span class="block text-sm font-medium text-gray-800 dark:text-gray-100">{{ $vLabel }}</span>
+                            <span class="block text-[11px] text-gray-500 mt-0.5">
+                                {{ $vNum === 1 ? 'مشاوره‌ای/پروژه‌ای — بدون رابطهٔ کارگری، بیمه و سنوات.' : 'قرارداد کار با مدت معین طبق قانون کار (کارمند کال‌سنتر).' }}
+                            </span>
+                        </span>
+                    </label>
+                @endforeach
+            </div>
+        </div>
+
         {{-- انتخاب کارمندان --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <div class="flex items-center justify-between flex-wrap gap-2 mb-3">

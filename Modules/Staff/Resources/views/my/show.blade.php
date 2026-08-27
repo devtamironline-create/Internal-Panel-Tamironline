@@ -65,7 +65,7 @@
         <summary class="p-4 font-bold text-sm text-gray-800 dark:text-gray-100 cursor-pointer">۱) متن کامل قرارداد — لطفاً با دقت مطالعه کنید</summary>
         <div class="px-6 pb-6">
             <div class="prose-contract text-sm text-gray-700 dark:text-gray-200 leading-7 max-h-[60vh] overflow-y-auto border border-gray-100 dark:border-gray-700 rounded-lg p-4">
-                @include('staff::contracts._document', [
+                @include($contract->documentView(), [
                     'contract' => $contract, 'party1' => $party1, 'forPdf' => false, 'signatureSrc' => $signatureSrc,
                 ])
             </div>
