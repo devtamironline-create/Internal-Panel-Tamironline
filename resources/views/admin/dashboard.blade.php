@@ -89,7 +89,7 @@
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">درآمدِ سفارش‌های تکمیل‌شده</p>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 border border-gray-100 dark:border-gray-700">
-            @php $conv = ($rng['total'] ?? 0) > 0 ? round(($rng['orders'] ?? 0) / $rng['total'] * 100) : 0; @endphp
+            @php($conv = ($rng['total'] ?? 0) > 0 ? round(($rng['orders'] ?? 0) / $rng['total'] * 100) : 0)
             <p class="text-3xl font-bold text-sky-600 dark:text-sky-400">{{ number_format($conv) }}٪</p>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">نرخِ تبدیل (سفارش از کل)</p>
         </div>
