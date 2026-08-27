@@ -26,7 +26,7 @@ class StaffContractTest extends TestCase
             'database/migrations/2026_01_04_100000_create_chat_tables.php',
             'database/migrations/2026_02_03_140854_create_settings_table.php',
             'database/migrations/2026_07_28_100000_create_staff_contracts_table.php',
-            'Modules/Staff/Database/Migrations/2026_08_27_000001_add_version_to_staff_contracts.php',
+            'database/migrations/2026_08_27_000001_add_version_to_staff_contracts.php',
         ] as $path) {
             Artisan::call('migrate', ['--path' => $path, '--force' => true]);
         }
