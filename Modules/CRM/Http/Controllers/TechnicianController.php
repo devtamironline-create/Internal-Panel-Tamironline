@@ -67,6 +67,8 @@ class TechnicianController extends Controller
         $status = $request->string('status')->toString();
 
         $query = Technician::query()
+            // پوشش/خدمات برای ستون‌های اکسل — eager load تا N+1 نشود.
+            ->with(['cities:id,name,is_active', 'regions:id,name', 'devices:id,name'])
             ->search($search)
             ->when($province, fn ($q) => $q->where('province', $province))
             ->when($type, fn ($q) => $q->where('type_tech', $type))
@@ -79,9 +81,18 @@ class TechnicianController extends Controller
             'نام', 'کد تکنسین', 'موبایل', 'تلفن', 'استان',
             'تخصص', 'سطح', 'درصد کارمزد', 'سقف سفارش', 'سقف بدهی',
             'وضعیت', 'موجودی کیف‌پول', 'تاریخ ثبت',
+            // درخواستِ تیم (۱۴۰۵/۰۶/۰۴): پوشش و خدماتِ تکنسین.
+            'نوع خدمات قابل ارائه', 'شهرهای فعال', 'مناطق پوشش', 'دستگاه‌های قابل انجام',
         ];
         $rows = function () use ($query) {
             foreach ($query->lazy(500) as $t) {
+                $serviceTypes = collect((array) $t->service_types)
+                    ->map(fn ($v) => trim((string) $v))->filter()->implode('، ');
+                // «شهرهای فعال» = شهرهای تگ‌خوردهٔ فعال (همان معنای پوشش).
+                $cities = $t->cities->where('is_active', true)->pluck('name')->filter()->implode('، ');
+                $regions = $t->regions->pluck('name')->filter()->implode('، ');
+                $devices = $t->devices->pluck('name')->filter()->implode('، ');
+
                 yield [
                     trim($t->firstname_tech ?: ($t->first_name.' '.($t->last_name ?? ''))),
                     $t->technician_id,
@@ -96,6 +107,10 @@ class TechnicianController extends Controller
                     $t->status,
                     $t->wallet_balance,
                     $t->created_at,
+                    $serviceTypes,
+                    $cities,
+                    $regions,
+                    $devices,
                 ];
             }
         };
