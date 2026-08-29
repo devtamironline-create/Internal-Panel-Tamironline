@@ -50,12 +50,13 @@ class SeoCityPagesController extends Controller
 
         $pages = $query
             ->orderBy('city_id')
-            ->orderByRaw("FIELD(type, 'city','services','device','brands','brand','combo')")
+            ->orderByRaw("CASE type WHEN 'city' THEN 1 WHEN 'services' THEN 2 WHEN 'device' THEN 3 WHEN 'brands' THEN 4 WHEN 'brand' THEN 5 WHEN 'combo' THEN 6 ELSE 7 END")
             ->get();
 
+        // پاسخِ CustomerApp خودکار در {success, data} پیچیده می‌شود؛ پس
+        // فقط data برمی‌گردانیم (کلیدهای اضافه توسطِ wrapper حذف می‌شوند).
         return response()->json([
             'data' => $pages->map(fn (CityPage $p) => $this->transform($p))->values(),
-            'count' => $pages->count(),
         ])->header('Cache-Control', 'public, max-age=3600');
     }
 

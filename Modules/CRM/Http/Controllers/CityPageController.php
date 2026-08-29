@@ -46,7 +46,7 @@ class CityPageController extends Controller
             ->when(in_array($status, [CityPage::STATUS_DRAFT, CityPage::STATUS_PUBLISHED, CityPage::STATUS_ARCHIVED], true),
                 fn ($q) => $q->where('status', $status))
             ->with(['device:id,name', 'brand:id,name'])
-            ->orderByRaw("FIELD(type, 'city','services','device','brands','brand','combo')")
+            ->orderByRaw("CASE type WHEN 'city' THEN 1 WHEN 'services' THEN 2 WHEN 'device' THEN 3 WHEN 'brands' THEN 4 WHEN 'brand' THEN 5 WHEN 'combo' THEN 6 ELSE 7 END")
             ->orderBy('device_id')
             ->orderBy('brand_id')
             ->get()
