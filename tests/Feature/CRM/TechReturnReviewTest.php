@@ -51,6 +51,19 @@ class TechReturnReviewTest extends TestCase
             $t->boolean('return_review_approved')->nullable();
             $t->unsignedTinyInteger('return_review_days')->nullable();
             $t->boolean('is_lead')->default(false);
+            // فیلدهای قیمت/فاکتور که ثبتِ نتیجهٔ بررسیِ برگشتی صفر می‌کند
+            // (Order::reworkPriceResetFields) — در پروداکشن موجودند.
+            $t->bigInteger('price_customer')->nullable();
+            $t->bigInteger('cost_price')->nullable();
+            $t->bigInteger('hire')->nullable();
+            $t->bigInteger('transportation')->nullable();
+            $t->bigInteger('discount')->nullable();
+            $t->bigInteger('total_invoice')->nullable();
+            $t->bigInteger('negative_invoice')->nullable();
+            $t->text('invoice_descripotion')->nullable();
+            $t->text('piece_list')->nullable();
+            $t->text('customer_price_list')->nullable();
+            $t->text('buy_price_list')->nullable();
             $t->timestamps();
         });
 
