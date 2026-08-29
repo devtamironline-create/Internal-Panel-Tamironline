@@ -564,13 +564,16 @@ class DashboardController extends Controller
 
         $approved = filter_var($validated['approved'], FILTER_VALIDATE_BOOLEAN);
 
+        // فیلدهای قیمت/فاکتور صفر می‌شوند تا فاکتورِ تکمیلِ مجدد پیش‌فرضِ ۰
+        // داشته باشد (گارانتی → می‌تواند ۰ بماند؛ غیرگارانتی → تکنسین عددِ
+        // جدید وارد می‌کند). فاکتورِ قبلی دست‌نخورده و فعال می‌ماند.
         $order->update([
             'return_review_pending' => false,
             'return_reviewed_at' => now(),
             'return_review_approved' => $approved,
             'return_review_days' => $approved ? (int) $validated['days'] : null,
             'return_type' => $approved ? 1 : null,
-        ]);
+        ] + Order::reworkPriceResetFields());
 
         $note = trim((string) ($validated['note'] ?? ''));
         OrderStatusLog::create([

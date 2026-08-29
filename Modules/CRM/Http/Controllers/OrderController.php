@@ -13,7 +13,6 @@ use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\Customer;
 use Modules\CRM\Models\Device;
-use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Models\Province;
@@ -1529,78 +1528,21 @@ class OrderController extends Controller
             'order_description_content' => json_encode($existingEvents, JSON_UNESCAPED_UNICODE),
         ]);
 
-        // ── باطل‌کردنِ فاکتورِ قبلی (تصمیمِ مالکِ ۱۴۰۵/۰۶/۰۷) ──────────
-        // با بازگشتِ سفارش، فاکتورهای فعالِ قبلی «باطل» می‌شوند (superseded)
-        // و سهمِ شرکتشان به کیف‌پولِ تکنسین برمی‌گردد تا در محاسبات نیایند.
-        // در تاریخچهٔ سفارش به‌عنوان «فاکتور بایگانی‌شده» دیده می‌شوند و در
-        // تکمیلِ مجدد، فاکتورِ تازه صادر خواهد شد. فاکتورِ پرداخت‌شده باطل
-        // نمی‌شود (پولِ واقعیِ مشتری پشتش است) و برای رسیدگیِ دستی می‌ماند.
-        [$voidedCodes, $skippedPaidCodes] = $this->voidInvoicesOnReturn($order);
-
         // ── crm_order_status_logs (تاریخچهٔ پنل جدید)
-        $voidNote = $voidedCodes === []
-            ? ''
-            : ' — فاکتورهای باطل‌شده: '.implode('، ', $voidedCodes);
+        // نکتهٔ مالی (تصمیمِ ۱۴۰۵/۰۶/۰۷): بازگشتِ سفارش هیچ محاسبه یا برگشتِ
+        // پولی انجام نمی‌دهد و فاکتورِ قبلی دست‌نخورده و فعال می‌ماند. فاکتورِ
+        // تازه در «تکمیلِ مجدد» صادر می‌شود (گارانتی → پیش‌فرضِ ۰ و قابلِ تغییر؛
+        // غیرگارانتی → فاکتورِ کاملِ جدید).
         OrderStatusLog::create([
             'order_id' => $order->id,
             'from_status' => $previousStatus,
             'to_status' => OrderStatus::New->value,
-            'note' => 'بازگشت سفارش ('.$returnTypeLabel.') — '.$returnDesc.$voidNote,
+            'note' => 'بازگشت سفارش ('.$returnTypeLabel.') — '.$returnDesc,
             'changed_by' => auth()->id(),
             'created_at' => now(),
         ]);
 
-        $message = 'سفارش بازگشت داده شد و وضعیت به «جدید» تغییر کرد.';
-        if ($voidedCodes !== []) {
-            $message .= ' فاکتور قبلی باطل شد و سهم شرکت به کیف‌پول تکنسین برگشت.';
-        }
-        if ($skippedPaidCodes !== []) {
-            $message .= ' توجه: فاکتور پرداخت‌شده ('.implode('، ', $skippedPaidCodes)
-                .') باطل نشد — وضعیت پرداخت را دستی رسیدگی کنید.';
-        }
-
-        return back()->with('success', $message);
-    }
-
-    /**
-     * باطل‌کردنِ فاکتورهای فعالِ یک سفارشِ بازگشتی.
-     *
-     * هر فاکتورِ فعالِ پرداخت‌نشده «باطل» (superseded) می‌شود و سهمِ
-     * شرکتش با تراکنشِ معکوس به کیف‌پولِ تکنسین برمی‌گردد (reverseCommission
-     * — idempotent). فاکتورِ پرداخت‌شده دست‌نخورده می‌ماند (پولِ مشتری
-     * پشتش است). فاکتورِ باطل از global scope خارج می‌شود، پس در هیچ
-     * محاسبه‌ای نمی‌آید و در بخشِ «فاکتورهای قبلی» صفحهٔ سفارش دیده می‌شود.
-     *
-     * @return array{0: array<int,string>, 1: array<int,string>} [کدهای باطل‌شده، کدهای پرداخت‌شدهٔ ردشده]
-     */
-    private function voidInvoicesOnReturn(Order $order): array
-    {
-        $voided = [];
-        $skippedPaid = [];
-
-        // scope فعال: فقط فاکتورهای غیرباطل. پرداخت‌شده‌ها را جدا می‌کنیم.
-        $active = Invoice::where('order_id', $order->id)->get();
-
-        foreach ($active as $invoice) {
-            if ($invoice->status === 'paid') {
-                $skippedPaid[] = $invoice->invoice_code;
-
-                continue;
-            }
-
-            DB::transaction(function () use ($invoice) {
-                // سهمِ شرکت را قبل از باطل‌کردن به کیف‌پول برگردان (idempotent).
-                $this->invoiceService->reverseCommission($invoice, auth()->id(), 'بازگشت سفارش');
-                // باطل‌سازی: بدونِ جایگزینِ فعلی؛ فاکتورِ تکمیلِ مجدد بعداً
-                // نقشِ جایگزین را می‌گیرد (resolveReplacement با fallback).
-                Invoice::withoutGlobalScope('active')->whereKey($invoice->id)
-                    ->update(['superseded_at' => now()]);
-            });
-
-            $voided[] = $invoice->invoice_code;
-        }
-
-        return [$voided, $skippedPaid];
+        return back()->with('success', 'سفارش بازگشت داده شد و وضعیت به «جدید» تغییر کرد.');
     }
 
     // ───────────── داشبورد تکنسین ─────────────────────────────

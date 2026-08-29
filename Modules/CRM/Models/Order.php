@@ -518,6 +518,36 @@ class Order extends Model
     }
 
     /**
+     * فیلدهایِ قیمت/فاکتورِ سفارش که با شروعِ «دورِ تازه» (بازگشت یا ثبتِ
+     * نتیجهٔ بررسیِ برگشتی) صفر/خالی می‌شوند تا فاکتورِ تکمیلِ مجدد پیش‌فرضِ
+     * ۰ داشته باشد و تکنسین عددهای واقعیِ این مرحله را وارد کند — نه عددهای
+     * قبلی. فاکتورِ قبلی در crm_invoices دست‌نخورده و فعال می‌ماند (سندِ مالی؛
+     * تصمیمِ ۱۴۰۵/۰۶/۰۷: بازگشت هیچ محاسبه/برگشتِ پولی ندارد).
+     *
+     * - برگشتیِ گارانتی (تأییدشده): پیش‌فرضِ ۰ می‌ماند و تکنسین می‌تواند ۰
+     *   ببندد (فاکتورِ رایگان) یا در صورتِ نیاز تغییر دهد.
+     * - برگشتیِ غیرگارانتی (ردشده): تکنسین باید فاکتورِ کاملِ جدید ثبت کند.
+     *
+     * @return array<string, mixed>
+     */
+    public static function reworkPriceResetFields(): array
+    {
+        return [
+            'price_customer' => 0,
+            'cost_price' => 0,
+            'hire' => 0,
+            'transportation' => 0,
+            'discount' => 0,
+            'total_invoice' => 0,
+            'invoice_descripotion' => null,
+            'piece_list' => null,
+            'customer_price_list' => null,
+            'buy_price_list' => null,
+            'negative_invoice' => 0,
+        ];
+    }
+
+    /**
      * فاکتورهای این سفارش (معمولاً یک، ولی در بازنویسی/cancel چند فاکتور
      * ممکن است). Global scope روی Invoice فاکتورهای superseded را حذف می‌کند.
      */
