@@ -116,6 +116,20 @@ return [
             'sitemap' => false,
             'default_schema' => 'Service',
         ],
+        // صفحاتِ سئوِ شهری (SEO-024). هر ردیفِ CityPage مسیرِ کاملِ خود (path)
+        // را دارد؛ resolver=city_page مستقیماً از pathِ صفحاتِ «منتشرشده»
+        // می‌سازد — نه از الگوی {slug}. فقط published وارد sitemap می‌شود.
+        'city_page' => [
+            'model' => \Modules\CRM\Models\CityPage::class,
+            'resolver' => 'city_page',
+            'slug' => 'path',
+            'url' => '/{path}',
+            'title_attr' => 'title',
+            'excerpt_attr' => 'meta_description',
+            'published' => 'published_at',
+            'sitemap' => true,
+            'default_schema' => 'WebPage',
+        ],
         'taxonomy' => [
             'model' => \Modules\Site\Models\Taxonomy::class,
             'slug' => 'slug',

@@ -88,6 +88,11 @@ Route::prefix('v1/customer')
         Route::get('/seo/coverage', \Modules\CustomerApp\Http\Controllers\Api\V1\SeoCoverageController::class)
             ->name('api.customer.seo.coverage');
 
+        // صفحاتِ سئوِ شهریِ منتشرشده (SEO-024) — فرانتِ Next.js از این
+        // مسیرها می‌سازد؛ هر مسیرِ خارج از این فهرست باید ۴۰۴ واقعی بدهد.
+        Route::get('/seo/city-pages', \Modules\CustomerApp\Http\Controllers\Api\V1\SeoCityPagesController::class)
+            ->name('api.customer.seo.city-pages');
+
         // ─── Private — auth:sanctum + rolling token + device tracking ──
         Route::middleware(['auth:sanctum', RollingToken::class, TrackTokenUsage::class])->group(function () {
 
