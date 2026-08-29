@@ -84,6 +84,11 @@
                             <a href="{{ route('crm.regions.index', ['province_id' => $city->province_id, 'city_id' => $city->id]) }}" class="text-indigo-600 hover:text-indigo-800 text-sm" title="مدیریت مناطق این شهر">مناطق</a>
                             @endcan
                             @endunless
+                            @unless($city->parent_city_id)
+                            @can('manage-crm-cities')
+                            <a href="{{ route('crm.cities.pages.index', $city) }}" class="text-purple-600 hover:text-purple-800 text-sm" title="صفحات سئوی این شهر">صفحات سئو</a>
+                            @endcan
+                            @endunless
                             @can('manage-crm-cities')
                             <a href="{{ route('crm.cities.edit', $city) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
                             <a href="{{ route('crm.cities.convert.form', $city) }}" class="text-emerald-600 hover:text-emerald-800 text-sm" title="تبدیل این شهر به منطقهٔ ذیل شهر دیگر">

@@ -63,6 +63,11 @@ class SitemapBuilder
             return $this->brandDeviceUrls($cfg);
         }
 
+        // صفحاتِ سئوِ شهری — مسیرِ کاملِ pathِ هر صفحهٔ منتشرشده.
+        if (($cfg['resolver'] ?? null) === 'city_page') {
+            return $this->cityPageUrls($cfg);
+        }
+
         /** @var class-string $modelClass */
         $modelClass = $cfg['model'];
         $query = $modelClass::query();
@@ -128,6 +133,33 @@ class SitemapBuilder
     }
 
     /**
+     * URLهای صفحاتِ سئوِ شهریِ منتشرشده (SEO-024). مسیرِ کامل در ستونِ path
+     * است؛ فقط status=published + published_at غیرخالی وارد می‌شوند.
+     *
+     * @param  array<string, mixed>  $cfg
+     * @return list<array{loc:string,lastmod:?string,changefreq:string,priority:string}>
+     */
+    private function cityPageUrls(array $cfg): array
+    {
+        $priority = $this->numeric($cfg['priority'] ?? config('seo.sitemap.priority', 0.7));
+        $changefreq = (string) ($cfg['changefreq'] ?? config('seo.sitemap.changefreq', 'weekly'));
+
+        $out = [];
+        $rows = \Modules\CRM\Models\CityPage::query()->published()->cursor();
+
+        foreach ($rows as $page) {
+            $out[] = [
+                'loc' => $this->absoluteUrl((string) $page->path),
+                'lastmod' => $this->lastmod($page),
+                'changefreq' => $changefreq,
+                'priority' => number_format($priority, 1),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
      * فهرست sitemapهای هر نوع برای <sitemapindex>.
      *
      * @return list<array{type:string,loc:string,lastmod:?string}>
@@ -182,6 +214,7 @@ class SitemapBuilder
     public const SPEC_FILES = [
         // نام‌گذاریِ جدید (نامهٔ نقشهٔ ایندکس)
         'core' => 'page',
+        'local' => 'city_page',
         'services-devices' => 'device',
         'services-combo' => 'brand_device',
         'brands' => 'brand',
@@ -204,7 +237,7 @@ class SitemapBuilder
      * مستقل‌شان بررسی شود (کدشان می‌ماند و از مسیرِ نام‌دار سرو می‌شوند).
      */
     public const INDEX_FILES = [
-        'core', 'services-devices', 'services-combo', 'brands', 'forum', 'blog-1', 'blog-2',
+        'core', 'local', 'services-devices', 'services-combo', 'brands', 'forum', 'blog-1', 'blog-2',
     ];
 
     /** هاب‌ها/صفحاتِ ثابتِ اصلی که باید در sitemap-core باشند. */
@@ -288,6 +321,18 @@ class SitemapBuilder
         if (($cfg['resolver'] ?? null) === 'brand_device') {
             $out = [];
             foreach ($this->brandDeviceUrls($cfg) as $u) {
+                if ($this->passesGuard($u['loc'])) {
+                    $out[] = ['loc' => $u['loc']];
+                }
+            }
+
+            return $out;
+        }
+
+        // صفحاتِ سئوِ شهریِ منتشرشده.
+        if (($cfg['resolver'] ?? null) === 'city_page') {
+            $out = [];
+            foreach ($this->cityPageUrls($cfg) as $u) {
                 if ($this->passesGuard($u['loc'])) {
                     $out[] = ['loc' => $u['loc']];
                 }

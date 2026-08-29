@@ -223,6 +223,17 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         // که «منطقه N» به‌اشتباه به‌عنوان شهر ثبت شده بودند.
         Route::get('cities/{city}/convert-to-region', [\Modules\CRM\Http\Controllers\CityConverterController::class, 'form'])->name('cities.convert.form');
         Route::post('cities/{city}/convert-to-region', [\Modules\CRM\Http\Controllers\CityConverterController::class, 'store'])->name('cities.convert.store');
+
+        // ─── صفحاتِ سئوِ شهری (SEO-024) ─────────────────────────────
+        Route::get('city-pages', [\Modules\CRM\Http\Controllers\CityPageController::class, 'overview'])->name('city-pages.overview');
+        Route::get('cities/{city}/pages', [\Modules\CRM\Http\Controllers\CityPageController::class, 'index'])->name('cities.pages.index');
+        Route::post('cities/{city}/pages/sync', [\Modules\CRM\Http\Controllers\CityPageController::class, 'sync'])->name('cities.pages.sync');
+        Route::post('cities/{city}/pages/publish-all', [\Modules\CRM\Http\Controllers\CityPageController::class, 'publishAll'])->name('cities.pages.publish-all');
+        Route::get('city-pages/{cityPage}/edit', [\Modules\CRM\Http\Controllers\CityPageController::class, 'edit'])->name('city-pages.edit');
+        Route::put('city-pages/{cityPage}', [\Modules\CRM\Http\Controllers\CityPageController::class, 'update'])->name('city-pages.update');
+        Route::put('city-pages/{cityPage}/toggle-publish', [\Modules\CRM\Http\Controllers\CityPageController::class, 'togglePublish'])->name('city-pages.toggle-publish');
+        Route::get('city-pages/{cityPage}/preview', [\Modules\CRM\Http\Controllers\CityPageController::class, 'preview'])->name('city-pages.preview');
+        Route::delete('city-pages/{cityPage}', [\Modules\CRM\Http\Controllers\CityPageController::class, 'destroy'])->name('city-pages.destroy');
     });
 
     // ─── تاکسونومی ── انواع خدمات ──────────────────────────────────
