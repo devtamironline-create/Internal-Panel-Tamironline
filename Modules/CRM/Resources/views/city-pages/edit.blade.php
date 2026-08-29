@@ -3,7 +3,7 @@
 @section('page-title', 'ویرایش صفحهٔ سئو')
 
 @section('main')
-<div class="p-6 max-w-3xl mx-auto space-y-6">
+<div class="p-6 max-w-4xl mx-auto space-y-6">
     <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         <a href="{{ route('crm.cities.pages.index', $cityPage->city_id) }}" class="hover:text-purple-600">صفحات سئوی {{ $cityPage->city?->name }}</a>
         <span>/</span>
@@ -25,32 +25,227 @@
     </div>
     @endif
 
-    <form action="{{ route('crm.city-pages.update', $cityPage) }}" method="POST" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-5">
+    <form action="{{ route('crm.city-pages.update', $cityPage) }}" method="POST" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-6">
         @csrf @method('PUT')
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">عنوان (Title / تگ عنوانِ سئو)</label>
-            <input type="text" name="title" value="{{ old('title', $cityPage->title) }}"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+        {{-- عنوان و H1 --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">عنوان (Title سئو)</label>
+                <input type="text" name="title" value="{{ old('title', $cityPage->title) }}" maxlength="255"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">تیتر صفحه (H1)</label>
+                <input type="text" name="h1" value="{{ old('h1', $cityPage->h1) }}" maxlength="255"
+                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
+            </div>
         </div>
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">تیتر صفحه (H1)</label>
-            <input type="text" name="h1" value="{{ old('h1', $cityPage->h1) }}"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
-        </div>
+        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-6 space-y-6">
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">توضیحات متا (Meta Description)</label>
-            <textarea name="meta_description" rows="3"
-                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">{{ old('meta_description', $cityPage->meta_description) }}</textarea>
-        </div>
+            {{-- سکشن‌های فعال --}}
+            @php
+                $secs = old('sections_enabled', $cityPage->sections_enabled ?? []);
+                $secEnabled = fn (string $k, bool $default = true) => array_key_exists($k, (array) $secs)
+                    ? (bool) $secs[$k] : $default;
+            @endphp
+            <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-lg p-4">
+                <h4 class="text-sm font-bold text-emerald-900 dark:text-emerald-200 mb-2">سکشن‌های فعال در این صفحه</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm text-gray-700 dark:text-gray-200">
+                    @foreach([
+                        'hero'             => 'Hero',
+                        'steps'            => 'مراحل خدمات',
+                        'content'          => 'محتوای کامل',
+                        'faq'              => 'سوالات متداول',
+                        'testimonials'     => 'نظرات مشتریان',
+                        'videos'           => 'ویدیوها',
+                        'forum_questions'  => 'سوالات انجمن',
+                        'related_articles' => 'مقالات مرتبط',
+                    ] as $key => $label)
+                        <label class="inline-flex items-center gap-2">
+                            <input type="hidden" name="sections_enabled[{{ $key }}]" value="0">
+                            <input type="checkbox" name="sections_enabled[{{ $key }}]" value="1" @checked($secEnabled($key, true))>
+                            <span>{{ $label }}</span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
 
-        <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">محتوای صفحه (اختیاری)</label>
-            <textarea name="content" rows="10"
-                      class="rich-editor w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">{{ old('content', $cityPage->content) }}</textarea>
-            <p class="text-xs text-gray-400 mt-1">این متن در بدنهٔ صفحه روی سایت نمایش داده می‌شود.</p>
+            {{-- Hero متن --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Badge / eyebrow</label>
+                    <input type="text" name="eyebrow" value="{{ old('eyebrow', $cityPage->eyebrow) }}" maxlength="120"
+                           placeholder="سرویس تخصصی در شهر شما"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">زیرتیتر</label>
+                    <input type="text" name="subtitle" value="{{ old('subtitle', $cityPage->subtitle) }}" maxlength="500"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium mb-1">کپشن (متن کوتاه)</label>
+                    <input type="text" name="caption" value="{{ old('caption', $cityPage->caption) }}" maxlength="500" dir="auto"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium mb-1">محتوای کامل صفحه (سکشن content)</label>
+                    <textarea name="content" rows="10"
+                              class="rich-editor w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">{{ old('content', $cityPage->content) }}</textarea>
+                    <p class="text-xs text-gray-500 mt-1">HTML از TinyMCE. این متن در بدنهٔ صفحه روی سایت نمایش داده می‌شود.</p>
+                </div>
+            </div>
+
+            {{-- تصاویر Hero --}}
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+                <h4 class="text-sm font-bold mb-3">🖼️ تصاویر Hero این صفحه</h4>
+                @php
+                    $cityHero = \Modules\Site\Services\PageSectionService::normalizeHeroVisual(old('hero_image', $cityPage->hero_image ?? null));
+                @endphp
+                @include('site::admin.partials.hero-visual-picker', [
+                    'name' => 'hero_image',
+                    'desktopLeftUrl' => $cityHero['desktop_left']['url'],
+                    'desktopLeftAlt' => $cityHero['desktop_left']['alt'],
+                    'desktopRightUrl' => $cityHero['desktop_right']['url'],
+                    'desktopRightAlt' => $cityHero['desktop_right']['alt'],
+                    'mobileUrl' => $cityHero['mobile']['url'],
+                    'mobileAlt' => $cityHero['mobile']['alt'],
+                ])
+            </div>
+
+            {{-- CTAs --}}
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+                <h4 class="text-sm font-bold mb-3">دکمه‌های اصلی Hero</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-700/30">
+                        <p class="text-xs font-bold text-gray-600 dark:text-gray-300">دکمه ثبت سفارش (Primary)</p>
+                        <input type="text" name="cta_primary_label" value="{{ old('cta_primary_label', $cityPage->cta_primary_label) }}" maxlength="60" placeholder="ثبت سفارش"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+                        <input type="text" name="cta_primary_url" value="{{ old('cta_primary_url', $cityPage->cta_primary_url) }}" maxlength="500" dir="ltr" placeholder="/order"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm font-mono">
+                        <input type="text" name="cta_primary_icon" value="{{ old('cta_primary_icon', $cityPage->cta_primary_icon) }}" maxlength="60" dir="ltr" placeholder="shopping-cart"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm font-mono">
+                    </div>
+                    <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-700/30">
+                        <p class="text-xs font-bold text-gray-600 dark:text-gray-300">دکمه تماس فوری (Secondary)</p>
+                        <input type="text" name="cta_secondary_label" value="{{ old('cta_secondary_label', $cityPage->cta_secondary_label) }}" maxlength="60" placeholder="تماس فوری"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+                        <input type="text" name="cta_secondary_url" value="{{ old('cta_secondary_url', $cityPage->cta_secondary_url) }}" maxlength="500" dir="ltr" placeholder="tel:..."
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm font-mono">
+                        <input type="text" name="cta_secondary_icon" value="{{ old('cta_secondary_icon', $cityPage->cta_secondary_icon) }}" maxlength="60" dir="ltr" placeholder="phone"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm font-mono">
+                    </div>
+                </div>
+            </div>
+
+            {{-- تصاویر مراحل --}}
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+                <h4 class="text-sm font-bold mb-1">تصاویر سکشن مراحل خدمات</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                    <div>
+                        <label class="block text-xs font-medium mb-1">URL تصویر دسکتاپ</label>
+                        <input type="text" name="steps_image_desktop" value="{{ old('steps_image_desktop', $cityPage->steps_image_desktop) }}" maxlength="500" dir="ltr"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium mb-1">URL تصویر موبایل</label>
+                        <input type="text" name="steps_image_mobile" value="{{ old('steps_image_mobile', $cityPage->steps_image_mobile) }}" maxlength="500" dir="ltr"
+                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm font-mono">
+                    </div>
+                </div>
+            </div>
+
+            {{-- دسته‌بندی سوالات متداول --}}
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+                @php
+                    $faqCatItems = ($allFaqCategories ?? collect())->map(fn ($c) => (object) [
+                        'id' => (int) $c->id,
+                        'label' => $c->name,
+                        'slug' => $c->slug,
+                        'description_text' => 'شامل '.($c->faqs_count ?? 0).' سوال منتشرشده.',
+                        'badge' => 'دسته‌بندی',
+                        'badge_color' => 'emerald',
+                    ]);
+                @endphp
+                @include('crm::partials.multi-picker', [
+                    'name' => 'faq_category_ids',
+                    'items' => $faqCatItems,
+                    'selectedIds' => $selectedFaqCategoryIds ?? [],
+                    'columns' => 'wide',
+                    'label' => 'دسته‌بندی سوالات متداول',
+                    'help' => 'انتخاب نشده = بدون سکشن دسته‌بندی FAQ.',
+                    'emptyText' => 'دسته‌بندی فعالی برای FAQ تعریف نشده.',
+                ])
+            </div>
+
+            {{-- سوالات متداول --}}
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+                @php
+                    $faqItems = ($allFaqs ?? collect())->map(fn ($f) => (object) [
+                        'id' => $f->id,
+                        'label' => $f->question,
+                        'description_text' => \Illuminate\Support\Str::limit(strip_tags((string) ($f->answer ?? '')), 180),
+                        'badge' => 'FAQ',
+                        'badge_color' => 'indigo',
+                    ]);
+                @endphp
+                @include('crm::partials.multi-picker', [
+                    'name' => 'faq_ids',
+                    'items' => $faqItems,
+                    'selectedIds' => $selectedFaqIds ?? [],
+                    'columns' => 'wide',
+                    'label' => 'سوالات متداول این صفحه',
+                    'help' => 'انتخاب نشده = بدون سکشن FAQ اختصاصی.',
+                    'emptyText' => 'FAQ منتشرشده‌ای نیست.',
+                ])
+            </div>
+
+            {{-- نظرات --}}
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+                @php
+                    $reviewItems = ($allReviews ?? collect())->map(function ($r) {
+                        $isAudio = $r->type === \Modules\Site\Models\Review::TYPE_AUDIO;
+                        $stars = str_repeat('★', (int) $r->rating).str_repeat('☆', max(0, 5 - (int) $r->rating));
+                        $body = $isAudio
+                            ? ($r->topic ? $r->topic.' ('.$stars.')' : $stars)
+                            : ($r->content ? $stars.' — '.\Illuminate\Support\Str::limit(strip_tags((string) $r->content), 180) : $stars);
+
+                        return (object) [
+                            'id' => $r->id,
+                            'label' => $r->author_name,
+                            'description_text' => $body,
+                            'badge' => $isAudio ? 'صوتی' : 'متنی',
+                            'badge_color' => $isAudio ? 'purple' : 'sky',
+                        ];
+                    });
+                @endphp
+                @include('crm::partials.multi-picker', [
+                    'name' => 'review_ids',
+                    'items' => $reviewItems,
+                    'selectedIds' => $selectedReviewIds ?? [],
+                    'columns' => 'wide',
+                    'label' => 'دیدگاه‌های نمایش‌داده‌شده در این صفحه',
+                    'help' => 'انتخاب نشده = بدون سکشن نظرات اختصاصی.',
+                    'emptyText' => 'دیدگاه تأییدشده‌ای موجود نیست.',
+                ])
+            </div>
+
+            {{-- متای ساده --}}
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Meta Title</label>
+                    <input type="text" name="meta_title" value="{{ old('meta_title', $cityPage->meta_title) }}" maxlength="200"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+                    <p class="text-xs text-gray-400 mt-1">برای کنترلِ کاملِ سئو از «پنل سئوی حرفه‌ای» پایین استفاده کنید.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Meta Description</label>
+                    <textarea name="meta_description" rows="2" maxlength="500"
+                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">{{ old('meta_description', $cityPage->meta_description) }}</textarea>
+                </div>
+            </div>
         </div>
 
         <div class="flex items-center gap-3 pt-2">

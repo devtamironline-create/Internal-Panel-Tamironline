@@ -61,11 +61,26 @@ class CityPage extends Model
         'path',
         'title',
         'h1',
+        'meta_title',
         'meta_description',
         'content',
         'status',
         'published_at',
         'auto_generated',
+        // محتوایِ غنی (برابر با صفحاتِ اصلی) — فاز B.
+        'eyebrow',
+        'subtitle',
+        'caption',
+        'hero_image',
+        'cta_primary_label',
+        'cta_primary_url',
+        'cta_primary_icon',
+        'cta_secondary_label',
+        'cta_secondary_url',
+        'cta_secondary_icon',
+        'steps_image_desktop',
+        'steps_image_mobile',
+        'sections_enabled',
     ];
 
     protected $casts = [
@@ -75,6 +90,8 @@ class CityPage extends Model
         'brand_id' => 'integer',
         'auto_generated' => 'boolean',
         'published_at' => 'datetime',
+        'hero_image' => 'array',
+        'sections_enabled' => 'array',
     ];
 
     public function city(): BelongsTo
@@ -90,6 +107,26 @@ class CityPage extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    public function faqs(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\Modules\Site\Models\Faq::class, 'crm_city_page_faqs', 'page_id', 'faq_id')
+            ->withPivot('sort_order')
+            ->orderBy('crm_city_page_faqs.sort_order');
+    }
+
+    public function faqCategories(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\Modules\Site\Models\Taxonomy::class, 'crm_city_page_faq_categories', 'page_id', 'taxonomy_id')
+            ->where('site_taxonomies.type', \Modules\Site\Models\Taxonomy::TYPE_FAQ)
+            ->withPivot('sort_order')
+            ->orderBy('crm_city_page_faq_categories.sort_order');
+    }
+
+    public function reviews(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(\Modules\Site\Models\Review::class, 'crm_city_page_reviews', 'page_id', 'review_id');
     }
 
     /** فقط صفحاتِ منتشرشده — برای API عمومی و sitemap. */
