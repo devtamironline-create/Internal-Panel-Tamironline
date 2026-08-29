@@ -49,8 +49,8 @@
         <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">محتوای صفحه (اختیاری)</label>
             <textarea name="content" rows="10"
-                      class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">{{ old('content', $cityPage->content) }}</textarea>
-            <p class="text-xs text-gray-400 mt-1">می‌توانید HTML وارد کنید؛ سایت آن را در بدنهٔ صفحه نمایش می‌دهد.</p>
+                      class="rich-editor w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">{{ old('content', $cityPage->content) }}</textarea>
+            <p class="text-xs text-gray-400 mt-1">این متن در بدنهٔ صفحه روی سایت نمایش داده می‌شود.</p>
         </div>
 
         <div class="flex items-center gap-3 pt-2">
@@ -59,5 +59,10 @@
             <a href="{{ route('crm.cities.pages.index', $cityPage->city_id) }}" class="px-5 py-2 text-gray-600 hover:text-gray-900">انصراف</a>
         </div>
     </form>
+
+    {{-- پنلِ سئوی حرفه‌ای — همان کامپوننتِ صفحاتِ دستگاه/برند (canonical/robots/OG/schema). --}}
+    @can('manage-seo')
+        <livewire:seo.meta-panel type="city_page" :model-id="$cityPage->id" :key="'seo-city-'.$cityPage->id" />
+    @endcan
 </div>
 @endsection

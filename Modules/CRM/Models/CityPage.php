@@ -5,16 +5,21 @@ namespace Modules\CRM\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\Seo\Concerns\HasSeoMeta;
 use Modules\Seo\Models\Concerns\HasStatusWorkflow;
 
 /**
  * صفحهٔ سئوِ شهری — یک ردیف به‌ازای هر صفحه در درختِ یک «شهرِ اصلی».
  * تولیدِ خودکار توسط CityPageGenerator؛ انتشار دستیِ مدیر.
  *
+ * HasSeoMeta: پنلِ سئوِ حرفه‌ای (SeoMeta) — canonical/robots/OG/schema — مثلِ
+ * صفحاتِ دستگاه/برند. رابطهٔ morphOne است، پس جدولِ seo_meta تغییر نمی‌خواهد.
+ *
  * @see \Modules\CRM\Services\CityPageGenerator
  */
 class CityPage extends Model
 {
+    use HasSeoMeta;
     use HasStatusWorkflow;
 
     protected $table = 'crm_city_pages';

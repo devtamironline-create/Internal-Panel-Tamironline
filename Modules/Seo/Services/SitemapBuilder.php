@@ -145,9 +145,13 @@ class SitemapBuilder
         $changefreq = (string) ($cfg['changefreq'] ?? config('seo.sitemap.changefreq', 'weekly'));
 
         $out = [];
-        $rows = \Modules\CRM\Models\CityPage::query()->published()->cursor();
+        $rows = \Modules\CRM\Models\CityPage::query()->published()->with('seoMeta')->cursor();
 
         foreach ($rows as $page) {
+            // صفحه‌ای که در پنلِ سئو noindex خورده از sitemap حذف می‌شود.
+            if ($page->seoMeta && $page->seoMeta->robots_noindex) {
+                continue;
+            }
             $out[] = [
                 'loc' => $this->absoluteUrl((string) $page->path),
                 'lastmod' => $this->lastmod($page),

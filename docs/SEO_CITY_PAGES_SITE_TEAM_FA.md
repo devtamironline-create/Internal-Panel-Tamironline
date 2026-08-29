@@ -63,6 +63,22 @@ GET /v1/customer/seo/city-pages?path=/mashhad/services/washing-machine/bosch
 3. `content` ممکن است `null` باشد؛ در آن صورت از قالبِ پیش‌فرضِ خودِ سایت
    برای آن نوع صفحه استفاده کنید (title/h1/meta از API می‌آید).
 
+## متای سئوی حرفه‌ای (canonical / robots / OG / Schema)
+
+هر صفحهٔ شهری علاوه بر عنوان/متایِ سادهٔ بالا، یک متایِ سئوی کاملِ ویرایش‌شده
+در پنل دارد (canonical، robots، Open Graph، Twitter، JSON-LD). این متا از
+**همان endpointِ عمومیِ متا** که برای بقیهٔ صفحات استفاده می‌کنید سرو می‌شود:
+
+```
+GET /v1/seo/meta?type=city_page&slug={path}
+```
+- `{path}` دقیقاً همان `path`ی است که در فهرست آمده (با اسلشِ ابتدایی)، مثلاً
+  `slug=/mashhad/services/washing-machine/bosch`.
+- خروجی: `title, description, canonical, robots, og, twitter, jsonld` (رزولوشن‌شده
+  با پیش‌فرض‌ها) — دقیقاً مثل بقیهٔ انواع.
+- `type` همیشه ثابتِ `city_page` است (نه نوعِ صفحه). اگر صفحه در پنل `noindex`
+  خورده باشد، در `robots` منعکس می‌شود و از sitemap هم حذف است.
+
 ## Sitemap
 
 پنل صفحاتِ **منتشرشده** را در sitemap منتشر می‌کند:
