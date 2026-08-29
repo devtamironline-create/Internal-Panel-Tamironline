@@ -82,6 +82,9 @@ class CrmServiceProvider extends ServiceProvider
     {
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
         $this->loadViewsFrom(__DIR__.'/../Resources/views', 'crm');
+
+        // با ساختِ شهرِ اصلی، درختِ صفحاتِ سئوِ شهری (پیش‌نویس) ساخته می‌شود.
+        \Modules\CRM\Models\City::observe(\Modules\CRM\Observers\CityPageObserver::class);
         \Illuminate\Support\Facades\Blade::componentNamespace('Modules\\CRM\\View\\Components', 'crm');
         \Illuminate\Support\Facades\Blade::anonymousComponentNamespace('crm::components', 'crm');
 
