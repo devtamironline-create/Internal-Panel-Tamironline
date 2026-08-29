@@ -41,9 +41,20 @@ GET /v1/customer/seo/city-pages?city=mashhad     # فیلترِ یک شهر
   "h1": "…",
   "meta_description": "…",
   "content": "<p>…</p>  یا  null",
+  "eyebrow": "…|null", "subtitle": "…|null", "caption": "…|null",
+  "meta_title": "…|null",
+  "hero_image": { "desktop_left": {"url","alt"}, "desktop_right": {…}, "mobile": {…} } | null,
+  "cta_primary":   { "label","url","icon" } | null,
+  "cta_secondary": { "label","url","icon" } | null,
+  "steps_image": { "desktop": "…|null", "mobile": "…|null" },
+  "sections_enabled": { "hero": true, "faq": false, … } | null,
   "published_at": "2026-08-29T10:39:28+03:30"
 }
 ```
+
+> `sections_enabled` = null یعنی «همه روشن» (پیش‌فرض). سکشن‌های FAQ/نظرات
+> در پنل قابلِ انتخاب‌اند؛ محتوای آن‌ها فعلاً از همان endpointهای موجودِ
+> FAQ/نظرات خوانده می‌شود (در payloadِ صفحه تکرار نمی‌شود).
 
 ### حالت واکشیِ یک صفحه
 ```
@@ -62,6 +73,22 @@ GET /v1/customer/seo/city-pages?path=/mashhad/services/washing-machine/bosch
    نباید روی سایت، منو، لینک‌های داخلی یا sitemap ظاهر شوند.
 3. `content` ممکن است `null` باشد؛ در آن صورت از قالبِ پیش‌فرضِ خودِ سایت
    برای آن نوع صفحه استفاده کنید (title/h1/meta از API می‌آید).
+
+## متای سئوی حرفه‌ای (canonical / robots / OG / Schema)
+
+هر صفحهٔ شهری علاوه بر عنوان/متایِ سادهٔ بالا، یک متایِ سئوی کاملِ ویرایش‌شده
+در پنل دارد (canonical، robots، Open Graph، Twitter، JSON-LD). این متا از
+**همان endpointِ عمومیِ متا** که برای بقیهٔ صفحات استفاده می‌کنید سرو می‌شود:
+
+```
+GET /v1/seo/meta?type=city_page&slug={path}
+```
+- `{path}` دقیقاً همان `path`ی است که در فهرست آمده (با اسلشِ ابتدایی)، مثلاً
+  `slug=/mashhad/services/washing-machine/bosch`.
+- خروجی: `title, description, canonical, robots, og, twitter, jsonld` (رزولوشن‌شده
+  با پیش‌فرض‌ها) — دقیقاً مثل بقیهٔ انواع.
+- `type` همیشه ثابتِ `city_page` است (نه نوعِ صفحه). اگر صفحه در پنل `noindex`
+  خورده باشد، در `robots` منعکس می‌شود و از sitemap هم حذف است.
 
 ## Sitemap
 

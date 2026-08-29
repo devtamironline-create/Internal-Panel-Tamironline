@@ -32,9 +32,24 @@ class CityPageApiAndWorkflowTest extends TestCase
             $x->string('type', 20), $x->unsignedBigInteger('device_id')->nullable(),
             $x->unsignedBigInteger('brand_id')->nullable(), $x->string('path')->unique(),
             $x->string('title')->nullable(), $x->string('h1')->nullable(),
-            $x->text('meta_description')->nullable(), $x->longText('content')->nullable(),
+            $x->string('meta_title')->nullable(), $x->text('meta_description')->nullable(),
+            $x->longText('content')->nullable(),
+            $x->string('eyebrow')->nullable(), $x->string('subtitle')->nullable(), $x->string('caption')->nullable(),
+            $x->json('hero_image')->nullable(), $x->json('sections_enabled')->nullable(),
+            $x->string('cta_primary_label')->nullable(), $x->string('cta_primary_url')->nullable(), $x->string('cta_primary_icon')->nullable(),
+            $x->string('cta_secondary_label')->nullable(), $x->string('cta_secondary_url')->nullable(), $x->string('cta_secondary_icon')->nullable(),
+            $x->string('steps_image_desktop')->nullable(), $x->string('steps_image_mobile')->nullable(),
             $x->string('status', 20)->default('draft'), $x->timestamp('published_at')->nullable(),
             $x->boolean('auto_generated')->default(true), $x->timestamps(),
+        ]));
+        Schema::create('crm_city_page_faqs', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->unsignedBigInteger('page_id'), $x->ulid('faq_id'), $x->unsignedTinyInteger('sort_order')->default(0), $x->timestamps(),
+        ]));
+        Schema::create('crm_city_page_faq_categories', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->unsignedBigInteger('page_id'), $x->unsignedBigInteger('taxonomy_id'), $x->unsignedTinyInteger('sort_order')->default(0), $x->timestamps(),
+        ]));
+        Schema::create('crm_city_page_reviews', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->unsignedBigInteger('page_id'), $x->ulid('review_id'), $x->timestamps(),
         ]));
         Schema::create('settings', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->string('key')->unique(), $x->text('value')->nullable(),

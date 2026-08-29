@@ -74,9 +74,33 @@ class SeoCityPagesController extends Controller
             'brand' => $page->brand ? ['name' => $page->brand->name, 'slug' => $page->brand->slug] : null,
             'title' => $page->title,
             'h1' => $page->h1,
+            'eyebrow' => $page->eyebrow,
+            'subtitle' => $page->subtitle,
+            'caption' => $page->caption,
+            'meta_title' => $page->meta_title,
             'meta_description' => $page->meta_description,
             'content' => $page->content,
+            'hero_image' => $page->hero_image,
+            'cta_primary' => $this->cta($page, 'primary'),
+            'cta_secondary' => $this->cta($page, 'secondary'),
+            'steps_image' => [
+                'desktop' => $page->steps_image_desktop,
+                'mobile' => $page->steps_image_mobile,
+            ],
+            'sections_enabled' => $page->sections_enabled,
             'published_at' => $page->published_at?->toIso8601String(),
         ];
+    }
+
+    /** دکمهٔ CTA (اگر برچسب یا لینک داشته باشد). */
+    private function cta(CityPage $page, string $which): ?array
+    {
+        $label = $page->{"cta_{$which}_label"};
+        $url = $page->{"cta_{$which}_url"};
+        if (! $label && ! $url) {
+            return null;
+        }
+
+        return ['label' => $label, 'url' => $url, 'icon' => $page->{"cta_{$which}_icon"}];
     }
 }
