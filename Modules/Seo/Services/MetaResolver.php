@@ -220,6 +220,17 @@ class MetaResolver
         $slug = (string) ($model->getAttribute($cfg['slug'] ?? 'slug') ?? '');
         $year = (string) (int) date('Y');
 
+        // متغیرهای دامنه‌ای — پیش‌فرض از attribute؛ برای صفحاتِ شهری از خودِ
+        // رکورد (device/brand/city) تا الگویِ «%device% %brand% در %city%» درست شود.
+        $brandName = (string) ($model->getAttribute('brand_name') ?? '');
+        $deviceName = (string) ($model->getAttribute('device_name') ?? '');
+        $city = (string) (SeoSetting::get('default_city') ?: 'تهران');
+        if ($model instanceof \Modules\CRM\Models\CityPage) {
+            $city = (string) ($model->city?->name ?? $city);
+            $deviceName = (string) ($model->device?->name ?? $deviceName);
+            $brandName = (string) ($model->brand?->name ?? $brandName);
+        }
+
         return [
             'title' => $title,
             'slug' => $slug,
@@ -229,9 +240,9 @@ class MetaResolver
             'sep' => $sep,
             'excerpt' => $excerpt !== '' ? $excerpt : $sitedesc,
             // متغیرهای دامنه‌ای — برای قالب‌های دستگاه/برند/شهر (خالی‌ها در render حذف می‌شوند).
-            'brand' => (string) ($model->getAttribute('brand_name') ?? ''),
-            'device' => (string) ($model->getAttribute('device_name') ?? ''),
-            'city' => (string) (SeoSetting::get('default_city') ?: 'تهران'),
+            'brand' => $brandName,
+            'device' => $deviceName,
+            'city' => $city,
             'guarantee' => (string) (SeoSetting::get('guarantee_text') ?? ''),
             'phone' => (string) (SeoSetting::get('contact_phone') ?: SeoSetting::get('lb_phone') ?: ''),
             'date' => $this->formatDate($cfg, $model),

@@ -232,19 +232,13 @@
                 ])
             </div>
 
-            {{-- متای ساده --}}
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                <div>
-                    <label class="block text-sm font-medium mb-1">Meta Title</label>
-                    <input type="text" name="meta_title" value="{{ old('meta_title', $cityPage->meta_title) }}" maxlength="200"
-                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
-                    <p class="text-xs text-gray-400 mt-1">برای کنترلِ کاملِ سئو از «پنل سئوی حرفه‌ای» پایین استفاده کنید.</p>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Meta Description</label>
-                    <textarea name="meta_description" rows="2" maxlength="500"
-                              class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">{{ old('meta_description', $cityPage->meta_description) }}</textarea>
-                </div>
+            {{-- سئو — یکپارچه در پنلِ سئوی حرفه‌ای پایین صفحه --}}
+            <div class="pt-4 border-t border-gray-100 dark:border-gray-700">
+                <p class="text-sm text-gray-600 dark:text-gray-300">
+                    مدیریت کاملِ سئو (عنوان، توضیحات، canonical، robots، Open Graph، اسکیما و امتیاز سئو)
+                    در <b>«پنل سئوی حرفه‌ای»</b> در انتهای همین صفحه انجام می‌شود — ساختارِ سئو برای همهٔ
+                    صفحات (دستگاه/برند/شهر) یکسان است.
+                </p>
             </div>
         </div>
 
