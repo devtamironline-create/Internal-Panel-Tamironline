@@ -180,14 +180,28 @@ class CityPageGenerator
     }
 
     /**
-     * اگر صفحه با این path نباشد، آن را به‌صورت پیش‌نویس می‌سازد.
+     * اگر صفحه برای این «ترکیبِ منطقی» (شهر+نوع+دستگاه+برند) نباشد، به‌صورت
+     * پیش‌نویس ساخته می‌شود. تشخیص بر اساسِ ترکیب است نه path — تا اگر ادمین
+     * مسیرِ صفحه‌ای را دستی عوض کرده باشد، همگام‌سازیِ بعدی صفحهٔ تکراری نسازد.
      *
      * @return int 1 اگر ساخته شد، 0 اگر از قبل بود
      */
     private function ensure(City $city, string $type, ?Device $device = null, ?Brand $brand = null): int
     {
-        $path = $this->path($city, $type, $device, $brand);
+        $existing = CityPage::query()
+            ->where('city_id', $city->id)
+            ->where('type', $type)
+            ->when($device, fn ($q) => $q->where('device_id', $device->id), fn ($q) => $q->whereNull('device_id'))
+            ->when($brand, fn ($q) => $q->where('brand_id', $brand->id), fn ($q) => $q->whereNull('brand_id'))
+            ->exists();
 
+        if ($existing) {
+            return 0;
+        }
+
+        $path = $this->path($city, $type, $device, $brand);
+        // احتیاط: اگر مسیرِ محاسبه‌شده به‌خاطرِ ویرایشِ دستیِ صفحهٔ دیگری اشغال
+        // شده، برای جلوگیری از نقضِ یکتاییِ path از ساخت صرف‌نظر می‌شود.
         if (CityPage::query()->where('path', $path)->exists()) {
             return 0;
         }

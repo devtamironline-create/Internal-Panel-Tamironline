@@ -106,7 +106,7 @@ class CityPageController extends Controller
 
     public function update(Request $request, CityPage $cityPage)
     {
-        $validated = $this->validateRequest($request);
+        $validated = $this->validateRequest($request, $cityPage);
 
         $faqIds = $this->extract($validated, 'faq_ids');
         $faqCategoryIds = $this->extract($validated, 'faq_category_ids');
@@ -152,9 +152,16 @@ class CityPageController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function validateRequest(Request $request): array
+    private function validateRequest(Request $request, CityPage $page): array
     {
         return $request->validate([
+            // مسیر/slugِ عمومیِ صفحه — قابلِ ویرایشِ دستیِ ادمین. باید انگلیسی،
+            // با / شروع شود و یکتا باشد (مثلاً /mashhad/services/washing-machine).
+            'path' => [
+                'required', 'string', 'max:255',
+                'regex:#^/[a-z0-9]+(?:-[a-z0-9]+)*(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*$#',
+                \Illuminate\Validation\Rule::unique('crm_city_pages', 'path')->ignore($page->id),
+            ],
             'title' => 'nullable|string|max:255',
             'h1' => 'nullable|string|max:255',
             'eyebrow' => 'nullable|string|max:120',
@@ -192,6 +199,10 @@ class CityPageController extends Controller
             'faq_category_ids.*' => 'integer|exists:site_taxonomies,id',
             'review_ids' => 'nullable|array',
             'review_ids.*' => 'string|exists:site_reviews,id',
+        ], [
+            'path.required' => 'مسیرِ صفحه الزامی است.',
+            'path.regex' => 'مسیر باید انگلیسی و با / شروع شود (مثلاً /mashhad/services/washing-machine).',
+            'path.unique' => 'این مسیر قبلاً برای صفحهٔ دیگری ثبت شده است.',
         ]);
     }
 
