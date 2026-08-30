@@ -4,9 +4,10 @@ namespace Modules\CRM\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Str;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\Province;
+use Modules\CRM\Services\CityPageGenerator;
+use Modules\CRM\Support\CitySlug;
 
 class CityController extends Controller
 {
@@ -42,7 +43,8 @@ class CityController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
+        // slug همیشه انگلیسیِ kebab است (کرج → karaj) تا آدرسِ سئو انگلیسی بماند.
+        $validated['slug'] = CitySlug::make($validated['name'], $validated['slug'] ?? null);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
@@ -77,7 +79,7 @@ class CityController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
-        $validated['slug'] = $validated['slug'] ?: Str::slug($validated['name']);
+        $validated['slug'] = CitySlug::make($validated['name'], $validated['slug'] ?? null);
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
         $validated['is_active'] = (bool) ($validated['is_active'] ?? true);
 
@@ -90,10 +92,18 @@ class CityController extends Controller
             return back()->withErrors(['slug' => 'این Slug در همین استان قبلاً ثبت شده.'])->withInput();
         }
 
+        $oldSlug = $city->slug;
         $city->update($validated);
 
+        // با تغییرِ slugِ شهرِ اصلی، مسیرِ صفحاتِ سئوی شهری بازسازی می‌شود
+        // (مثلاً /city/کرج/... → /city/karaj/...).
+        $rebuilt = 0;
+        if (! $city->isDistrict() && $oldSlug !== $city->slug) {
+            $rebuilt = app(CityPageGenerator::class)->rebuildPathsForCity($city, (string) $oldSlug);
+        }
+
         return redirect()->route('crm.cities.index')
-            ->with('success', 'شهر ویرایش شد.');
+            ->with('success', 'شهر ویرایش شد.'.($rebuilt > 0 ? " مسیرِ {$rebuilt} صفحهٔ سئو به‌روزرسانی شد." : ''));
     }
 
     public function destroy(City $city)

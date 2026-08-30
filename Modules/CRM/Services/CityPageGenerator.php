@@ -68,6 +68,43 @@ class CityPageGenerator
     }
 
     /**
+     * بازسازیِ مسیرِ صفحاتِ یک شهر پس از تغییرِ slugِ شهر
+     * (مثلاً /کرج/services → /karaj/services). فقط قطعهٔ اولِ مسیر (شهر)
+     * جایگزین می‌شود؛ بقیهٔ مسیر دست‌نخورده می‌ماند.
+     *
+     * @return int تعدادِ صفحاتِ به‌روزشده
+     */
+    public function rebuildPathsForCity(City $city, string $oldSlug): int
+    {
+        $new = (string) $city->slug;
+        if ($oldSlug === '' || $new === '' || $oldSlug === $new) {
+            return 0;
+        }
+
+        $count = 0;
+        CityPage::query()->where('city_id', $city->id)->get()->each(function (CityPage $page) use ($oldSlug, $new, &$count) {
+            $old = (string) $page->path;
+            $newPath = match (true) {
+                $old === "/{$oldSlug}" => "/{$new}",
+                str_starts_with($old, "/{$oldSlug}/") => '/'.$new.substr($old, strlen($oldSlug) + 1),
+                default => null,
+            };
+            if ($newPath === null || $newPath === $old) {
+                return;
+            }
+            // از تصادفِ path (یکتا) جلوگیری کن.
+            if (CityPage::query()->where('path', $newPath)->where('id', '!=', $page->id)->exists()) {
+                return;
+            }
+            $page->path = $newPath;
+            $page->save();
+            $count++;
+        });
+
+        return $count;
+    }
+
+    /**
      * دستگاه‌ها و برندهایِ معتبرِ یک شهر از ServiceCoverage.
      *
      * @return array{0: array<int,Device>, 1: array<int, array{0:Device,1:array<int,Brand>}>, 2: array<int,Brand>}

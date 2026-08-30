@@ -64,6 +64,21 @@ class CityPageApiAndWorkflowTest extends TestCase
         ]));
     }
 
+    public function test_dynamic_tokens_are_resolved_in_page_text(): void
+    {
+        $city = $this->mashhad();
+        CityPage::create([
+            'city_id' => $city->id, 'type' => CityPage::TYPE_CITY, 'path' => '/mashhad',
+            'title' => 'تعمیرات در {city}', 'caption' => 'خدماتِ ما در {city}',
+            'status' => CityPage::STATUS_PUBLISHED, 'published_at' => now(),
+        ]);
+
+        $this->getJson('/v1/customer/seo/city-pages?path=/mashhad')
+            ->assertOk()
+            ->assertJsonPath('data.title', 'تعمیرات در مشهد')
+            ->assertJsonPath('data.caption', 'خدماتِ ما در مشهد');
+    }
+
     public function test_empty_hero_falls_back_to_the_device_image(): void
     {
         $city = $this->mashhad();

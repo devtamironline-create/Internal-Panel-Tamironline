@@ -19,9 +19,10 @@
     </div>
 
     <div>
-        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Slug (در صورت خالی، خودکار از نام)</label>
-        <input type="text" name="slug" value="{{ old('slug', $city->slug ?? '') }}"
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Slug (انگلیسی — مثلاً <span dir="ltr">karaj</span>)</label>
+        <input type="text" name="slug" value="{{ old('slug', $city->slug ?? '') }}" placeholder="karaj"
                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-brand-500" dir="ltr">
+        <p class="text-xs text-gray-400 mt-1">در آدرسِ سئو استفاده می‌شود؛ باید انگلیسی باشد. اگر فارسی وارد شود یا خالی بماند، سیستم خودکار انگلیسی می‌سازد (کرج → karaj). با تغییرِ آن، مسیرِ صفحاتِ سئوی شهر هم به‌روزرسانی می‌شود.</p>
         @error('slug')<p class="text-red-500 text-xs mt-1">{{ $message }}</p>@enderror
     </div>
 
