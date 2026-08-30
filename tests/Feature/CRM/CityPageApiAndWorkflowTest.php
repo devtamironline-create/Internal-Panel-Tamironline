@@ -53,15 +53,33 @@ class CityPageApiAndWorkflowTest extends TestCase
         ]));
         Schema::create('crm_devices', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->string('name'), $x->string('slug')->nullable(), $x->boolean('is_active')->default(true),
-            $x->unsignedInteger('sort_order')->default(0), $x->timestamps(),
+            $x->json('hero_image')->nullable(), $x->unsignedInteger('sort_order')->default(0), $x->timestamps(),
         ]));
         Schema::create('crm_brands', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->string('name'), $x->string('slug')->nullable(),
-            $x->unsignedInteger('sort_order')->default(0), $x->timestamps(),
+            $x->json('hero_image')->nullable(), $x->unsignedInteger('sort_order')->default(0), $x->timestamps(),
         ]));
         Schema::create('settings', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->string('key')->unique(), $x->text('value')->nullable(),
         ]));
+    }
+
+    public function test_empty_hero_falls_back_to_the_device_image(): void
+    {
+        $city = $this->mashhad();
+        $washer = \Modules\CRM\Models\Device::create([
+            'name' => 'لباسشویی', 'slug' => 'washing-machine',
+            'hero_image' => ['mobile' => ['url' => 'https://cdn/washer.jpg', 'alt' => 'لباسشویی']],
+        ]);
+        // صفحهٔ «لباسشویی در مشهد» بدونِ عکس → باید از عکسِ دستگاه بخواند.
+        CityPage::create([
+            'city_id' => $city->id, 'type' => CityPage::TYPE_DEVICE, 'device_id' => $washer->id,
+            'path' => '/mashhad/services/washing-machine', 'title' => 'تعمیر لباسشویی در مشهد',
+            'status' => CityPage::STATUS_PUBLISHED, 'published_at' => now(), 'hero_image' => null,
+        ]);
+
+        $res = $this->getJson('/v1/customer/seo/city-pages?path=/mashhad/services/washing-machine');
+        $res->assertOk()->assertJsonPath('data.hero_image.mobile.url', 'https://cdn/washer.jpg');
     }
 
     public function test_combo_page_has_auto_breadcrumbs_and_works_standalone(): void

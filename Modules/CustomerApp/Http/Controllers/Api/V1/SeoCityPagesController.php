@@ -29,7 +29,7 @@ class SeoCityPagesController extends Controller
     {
         $query = CityPage::query()
             ->published()
-            ->with(['city:id,name,slug', 'device:id,name,slug', 'brand:id,name,slug']);
+            ->with(['city:id,name,slug', 'device:id,name,slug,hero_image', 'brand:id,name,slug,hero_image']);
 
         // واکشیِ یک صفحه با مسیرِ دقیق.
         if ($path = trim((string) $request->query('path'))) {
@@ -80,7 +80,7 @@ class SeoCityPagesController extends Controller
             'meta_title' => $page->meta_title,
             'meta_description' => $page->meta_description,
             'content' => $page->content,
-            'hero_image' => $page->hero_image,
+            'hero_image' => $this->resolveHero($page),
             'cta_primary' => $this->cta($page, 'primary'),
             'cta_secondary' => $this->cta($page, 'secondary'),
             'steps_image' => [
@@ -140,6 +140,54 @@ class SeoCityPagesController extends Controller
         $items[count($items) - 1]['path'] = $page->path;
 
         return $items;
+    }
+
+    /**
+     * تصویرِ Hero با fallback از والد (در صورتِ خالی‌بودن) — دقیقاً مثلِ
+     * صفحاتِ ترکیبیِ فعلی:
+     *   - device / combo  → عکسِ خودِ صفحه ← عکسِ «دستگاه»
+     *   - brand           → عکسِ خودِ صفحه ← عکسِ «برند»
+     *   - بقیه            → فقط عکسِ خودِ صفحه
+     * خروجی: { "mobile": {url, alt} } یا null (یک تصویر برای دسکتاپ/موبایل).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function resolveHero(CityPage $page): ?array
+    {
+        $own = $this->pickHero($page->hero_image);
+        if ($own) {
+            return ['mobile' => $own];
+        }
+
+        $parent = match ($page->type) {
+            CityPage::TYPE_DEVICE, CityPage::TYPE_COMBO => $this->pickHero($page->device?->hero_image),
+            CityPage::TYPE_BRAND => $this->pickHero($page->brand?->hero_image),
+            default => null,
+        };
+
+        return $parent ? ['mobile' => $parent] : null;
+    }
+
+    /**
+     * یک تصویرِ مؤثر از ساختارِ hero_image بیرون می‌کشد (mobile ← desktop_left
+     * ← desktop_right) تا با دادهٔ قدیمیِ سه‌اسلاتی هم سازگار باشد.
+     *
+     * @param  mixed  $hero
+     * @return array{url:string, alt:string}|null
+     */
+    private function pickHero($hero): ?array
+    {
+        if (! is_array($hero)) {
+            return null;
+        }
+        foreach (['mobile', 'desktop_left', 'desktop_right'] as $slot) {
+            $url = $hero[$slot]['url'] ?? null;
+            if (! empty($url)) {
+                return ['url' => $url, 'alt' => (string) ($hero[$slot]['alt'] ?? '')];
+            }
+        }
+
+        return null;
     }
 
     /** دکمهٔ CTA (اگر برچسب یا لینک داشته باشد). */
