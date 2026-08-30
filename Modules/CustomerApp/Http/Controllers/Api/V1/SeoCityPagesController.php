@@ -29,7 +29,7 @@ class SeoCityPagesController extends Controller
     {
         $query = CityPage::query()
             ->published()
-            ->with(['city:id,name,slug', 'device:id,name,slug,hero_image', 'brand:id,name,slug,hero_image']);
+            ->with(['city:id,name,slug,province_id', 'city.province:id,name', 'device:id,name,slug,hero_image', 'brand:id,name,slug,hero_image']);
 
         // واکشیِ یک صفحه با مسیرِ دقیق.
         if ($path = trim((string) $request->query('path'))) {
@@ -72,14 +72,14 @@ class SeoCityPagesController extends Controller
             ],
             'device' => $page->device ? ['name' => $page->device->name, 'slug' => $page->device->slug] : null,
             'brand' => $page->brand ? ['name' => $page->brand->name, 'slug' => $page->brand->slug] : null,
-            'title' => $page->title,
-            'h1' => $page->h1,
-            'eyebrow' => $page->eyebrow,
-            'subtitle' => $page->subtitle,
-            'caption' => $page->caption,
-            'meta_title' => $page->meta_title,
-            'meta_description' => $page->meta_description,
-            'content' => $page->content,
+            'title' => $this->tokens($page->title, $page),
+            'h1' => $this->tokens($page->h1, $page),
+            'eyebrow' => $this->tokens($page->eyebrow, $page),
+            'subtitle' => $this->tokens($page->subtitle, $page),
+            'caption' => $this->tokens($page->caption, $page),
+            'meta_title' => $this->tokens($page->meta_title, $page),
+            'meta_description' => $this->tokens($page->meta_description, $page),
+            'content' => $this->tokens($page->content, $page),
             'hero_image' => $this->resolveHero($page),
             'cta_primary' => $this->cta($page, 'primary'),
             'cta_secondary' => $this->cta($page, 'secondary'),
@@ -147,6 +147,26 @@ class SeoCityPagesController extends Controller
 
             return $i;
         }, $items);
+    }
+
+    /**
+     * جایگزینیِ متغیرهای پویا در متنِ صفحه: {city} {device} {brand} {province}.
+     * ادمین می‌تواند این توکن‌ها را در عنوان/کپشن/محتوا بنویسد و این‌جا با
+     * مقدارِ واقعیِ همان صفحه پر می‌شوند. (بدنهٔ FAQ/نظرات از کاتالوگ می‌آید و
+     * سمتِ فرانت با همین قاعده resolve می‌شود.)
+     */
+    private function tokens(?string $text, CityPage $page): ?string
+    {
+        if ($text === null || ! str_contains($text, '{')) {
+            return $text;
+        }
+
+        return strtr($text, [
+            '{city}' => (string) ($page->city?->name ?? ''),
+            '{device}' => (string) ($page->device?->name ?? ''),
+            '{brand}' => (string) ($page->brand?->name ?? ''),
+            '{province}' => (string) ($page->city?->province?->name ?? ''),
+        ]);
     }
 
     /**
