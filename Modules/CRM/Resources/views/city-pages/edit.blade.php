@@ -24,16 +24,12 @@
     <form action="{{ route('crm.city-pages.update', $cityPage) }}" method="POST" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-6">
         @csrf @method('PUT')
 
-        {{-- مسیر/Slug صفحه (قابلِ ویرایشِ دستی) --}}
-        <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">مسیر صفحه (Slug / URL)</label>
-            <input type="text" name="path" value="{{ old('path', $cityPage->path) }}" dir="ltr"
-                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg font-mono text-sm text-left">
-            <p class="text-xs text-gray-400 mt-1">
-                آدرسِ عمومیِ صفحه — انگلیسی و با «/» شروع شود (مثلاً
-                <span dir="ltr">/mashhad/services/washing-machine</span>). روی سایت زیرِ
-                <span dir="ltr">/city</span> سِرو می‌شود. تغییرِ آن فقط همین صفحه را عوض می‌کند (نه صفحاتِ فرزند).
-            </p>
+        {{-- مسیرِ صفحه فقط‌خواندنی است: از slugِ شهر/دستگاه/برند ساخته می‌شود.
+             برای تغییرِ آن، slugِ شهر (یا دستگاه/برند) را عوض کنید تا همهٔ
+             صفحاتِ زیرمجموعه هماهنگ به‌روزرسانی شوند. --}}
+        <div class="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-3 flex items-center justify-between gap-3">
+            <span class="text-xs text-gray-500 dark:text-gray-400 dir-ltr text-left font-mono">/city{{ $cityPage->path }}</span>
+            <a href="{{ route('crm.cities.edit', $cityPage->city_id) }}" class="text-xs text-purple-600 hover:text-purple-800 whitespace-nowrap">ویرایش slug شهر ←</a>
         </div>
 
         {{-- عنوان و H1 --}}

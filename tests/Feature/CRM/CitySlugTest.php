@@ -28,28 +28,39 @@ class CitySlugTest extends TestCase
         $this->assertTrue(CitySlug::isValid(CitySlug::fromName('فلان‌شهر')));
     }
 
-    public function test_rebuild_paths_replaces_the_city_segment(): void
+    public function test_changing_city_slug_recomputes_all_child_paths(): void
     {
+        Schema::create('crm_cities', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->string('name'), $x->string('slug')->nullable(),
+            $x->unsignedBigInteger('parent_city_id')->nullable(), $x->timestamps(),
+        ]));
+        Schema::create('crm_devices', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->string('name'), $x->string('slug')->nullable(), $x->boolean('is_active')->default(true), $x->timestamps(),
+        ]));
         Schema::create('crm_city_pages', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->unsignedBigInteger('city_id'), $x->unsignedBigInteger('province_id')->nullable(),
             $x->string('type', 20), $x->unsignedBigInteger('device_id')->nullable(), $x->unsignedBigInteger('brand_id')->nullable(),
             $x->string('path')->unique(), $x->string('title')->nullable(), $x->string('status', 20)->default('draft'),
             $x->timestamp('published_at')->nullable(), $x->boolean('auto_generated')->default(true), $x->timestamps(),
         ]));
+        // ساختِ شهر/دستگاه نسخهٔ کشِ اپ را bump می‌کند (AppCacheVersion → settings).
+        Schema::create('settings', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->string('key')->unique(), $x->text('value')->nullable(),
+        ]));
 
-        $city = new City;
-        $city->setAttribute('id', 1);
-        $city->slug = 'karaj';
+        $city = City::create(['name' => 'کرج', 'slug' => 'karaj']);
+        $washer = \Modules\CRM\Models\Device::create(['name' => 'لباسشویی', 'slug' => 'washing-machine']);
 
-        foreach (['/karaj-old', '/karaj-old/services', '/karaj-old/services/washer'] as $p) {
-            CityPage::create(['city_id' => 1, 'type' => 'city', 'path' => $p, 'status' => 'draft']);
-        }
+        // مسیرهای «قدیمی» (انگار slug قبلاً فارسی/دیگر بوده).
+        CityPage::create(['city_id' => $city->id, 'type' => 'city', 'path' => '/old', 'status' => 'draft']);
+        CityPage::create(['city_id' => $city->id, 'type' => 'services', 'path' => '/old/services', 'status' => 'draft']);
+        CityPage::create(['city_id' => $city->id, 'type' => 'device', 'device_id' => $washer->id, 'path' => '/old/services/washing-machine', 'status' => 'draft']);
 
-        $count = (new CityPageGenerator(new ServiceCoverage))->rebuildPathsForCity($city, 'karaj-old');
+        $count = (new CityPageGenerator(new ServiceCoverage))->recomputePathsForCity($city);
 
         $this->assertSame(3, $count);
         $this->assertEqualsCanonicalizing(
-            ['/karaj', '/karaj/services', '/karaj/services/washer'],
+            ['/karaj', '/karaj/services', '/karaj/services/washing-machine'],
             CityPage::pluck('path')->all()
         );
     }

@@ -135,7 +135,15 @@ class DeviceController extends Controller
         $brandIds = $this->extractBrandIds($validated);
         $this->applyDefaults($validated, false);
 
+        $oldSlug = $device->slug;
         $device->update($validated);
+
+        // با تغییرِ slugِ دستگاه، مسیرِ صفحاتِ سئوی شهریِ آن دستگاه هماهنگ
+        // به‌روزرسانی می‌شود (استانداردِ درختِ شهری حفظ می‌شود).
+        if ($oldSlug !== $device->slug) {
+            app(\Modules\CRM\Services\CityPageGenerator::class)->recomputePathsForDevice($device);
+        }
+
         $device->faqs()->sync($this->withSortOrder($faqIds));
         $device->faqCategories()->sync($this->withSortOrder($faqCategoryIds));
         $device->reviews()->sync($reviewIds);

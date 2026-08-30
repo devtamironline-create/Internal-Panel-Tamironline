@@ -68,40 +68,79 @@ class CityPageGenerator
     }
 
     /**
-     * بازسازیِ مسیرِ صفحاتِ یک شهر پس از تغییرِ slugِ شهر
-     * (مثلاً /کرج/services → /karaj/services). فقط قطعهٔ اولِ مسیر (شهر)
-     * جایگزین می‌شود؛ بقیهٔ مسیر دست‌نخورده می‌ماند.
-     *
-     * @return int تعدادِ صفحاتِ به‌روزشده
+     * مسیرِ استانداردِ یک صفحه — همیشه از slugهای فعلیِ شهر/دستگاه/برند ساخته
+     * می‌شود (منبعِ حقیقت). مسیرِ صفحات دستی نیست؛ با تغییرِ slugِ شهر/دستگاه/
+     * برند، همهٔ صفحاتِ زیرمجموعه هماهنگ به‌روزرسانی می‌شوند.
      */
-    public function rebuildPathsForCity(City $city, string $oldSlug): int
+    private function pathForPage(CityPage $page): ?string
     {
-        $new = (string) $city->slug;
-        if ($oldSlug === '' || $new === '' || $oldSlug === $new) {
-            return 0;
+        $c = $page->city?->slug;
+        if (! $c) {
+            return null;
         }
 
+        return match ($page->type) {
+            CityPage::TYPE_CITY => "/{$c}",
+            CityPage::TYPE_SERVICES => "/{$c}/services",
+            CityPage::TYPE_DEVICE => $page->device ? "/{$c}/services/{$page->device->slug}" : null,
+            CityPage::TYPE_BRANDS => "/{$c}/brands",
+            CityPage::TYPE_BRAND => $page->brand ? "/{$c}/brands/{$page->brand->slug}" : null,
+            CityPage::TYPE_COMBO => ($page->device && $page->brand)
+                ? "/{$c}/services/{$page->device->slug}/{$page->brand->slug}" : null,
+            default => null,
+        };
+    }
+
+    /**
+     * مسیرِ مجموعه‌ای از صفحات را از slugهای فعلی بازمی‌سازد.
+     *
+     * @param  \Illuminate\Support\Collection<int, CityPage>  $pages
+     * @return int تعدادِ صفحاتِ به‌روزشده
+     */
+    private function recompute($pages): int
+    {
         $count = 0;
-        CityPage::query()->where('city_id', $city->id)->get()->each(function (CityPage $page) use ($oldSlug, $new, &$count) {
-            $old = (string) $page->path;
-            $newPath = match (true) {
-                $old === "/{$oldSlug}" => "/{$new}",
-                str_starts_with($old, "/{$oldSlug}/") => '/'.$new.substr($old, strlen($oldSlug) + 1),
-                default => null,
-            };
-            if ($newPath === null || $newPath === $old) {
-                return;
+        foreach ($pages as $page) {
+            $newPath = $this->pathForPage($page);
+            if ($newPath === null || $newPath === $page->path) {
+                continue;
             }
-            // از تصادفِ path (یکتا) جلوگیری کن.
             if (CityPage::query()->where('path', $newPath)->where('id', '!=', $page->id)->exists()) {
-                return;
+                continue; // از نقضِ یکتاییِ path جلوگیری کن
             }
             $page->path = $newPath;
             $page->save();
             $count++;
-        });
+        }
 
         return $count;
+    }
+
+    /** با تغییرِ slugِ شهر: مسیرِ همهٔ صفحاتِ آن شهر بازسازی می‌شود. */
+    public function recomputePathsForCity(City $city): int
+    {
+        return $this->recompute(
+            CityPage::query()->where('city_id', $city->id)
+                ->with(['city:id,slug', 'device:id,slug', 'brand:id,slug'])->get()
+        );
+    }
+
+    /** با تغییرِ slugِ دستگاه: مسیرِ صفحاتِ شهریِ آن دستگاه بازسازی می‌شود. */
+    public function recomputePathsForDevice(Device $device): int
+    {
+        return $this->recompute(
+            CityPage::query()->where('device_id', $device->id)
+                ->with(['city:id,slug', 'device:id,slug', 'brand:id,slug'])->get()
+        );
+    }
+
+    /** با تغییرِ slugِ برند: مسیرِ صفحاتِ شهریِ آن برند بازسازی می‌شود. */
+    public function recomputePathsForBrand(Brand $brand): int
+    {
+        return $this->recompute(
+            CityPage::query()->where('brand_id', $brand->id)
+                ->with(['city:id,slug', 'device:id,slug', 'brand:id,slug'])->get()
+        );
     }
 
     /**
