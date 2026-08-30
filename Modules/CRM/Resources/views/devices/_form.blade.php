@@ -101,7 +101,7 @@
 
     {{-- ─── ۲) تصویر Hero ─── --}}
     <x-crm::section-card sectionKey="hero-image" title="تصاویر Hero اختصاصی این دستگاه" icon="🖼️"
-        description="۲ تصویر دسکتاپ (چپ/راست) + ۱ تصویر موبایل، هرکدام با alt مجزا. هر slot خالی → از template دستگاه">
+        description="یک تصویر Hero برای این دستگاه (دسکتاپ و موبایل). خالی → از template دستگاه">
         @php
             $deviceHero = \Modules\Site\Services\PageSectionService::normalizeHeroVisual(old('hero_image', $device->hero_image ?? null));
         @endphp
@@ -397,19 +397,12 @@
 
     {{-- ─── ۱۳) سئو ─── --}}
     <x-crm::section-card sectionKey="seo" title="سئو (Meta)" icon="🔍"
-        description="Meta Title و Meta Description مخصوص این دستگاه">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium mb-1">Meta Title</label>
-                <input type="text" name="meta_title" value="{{ old('meta_title', $device->meta_title ?? '') }}" maxlength="200"
-                       class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
-            </div>
-            <div>
-                <label class="block text-sm font-medium mb-1">Meta Description</label>
-                <textarea name="meta_description" rows="2" maxlength="500"
-                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('meta_description', $device->meta_description ?? '') }}</textarea>
-            </div>
-        </div>
+        description="مدیریت سئو یکپارچه است">
+        <p class="text-sm text-gray-600 dark:text-gray-300">
+            مدیریت کاملِ سئو (عنوان، توضیحات، canonical، robots، Open Graph، اسکیما و امتیاز سئو)
+            در <b>«پنل سئوی حرفه‌ای»</b> در انتهای همین صفحه انجام می‌شود — تا ساختارِ سئو برای همهٔ
+            صفحات (دستگاه/برند/شهر) یکسان بماند.
+        </p>
     </x-crm::section-card>
 
     {{-- ─── فیلدهای legacy مخفی (هنوز submit می‌شوند) ─── --}}

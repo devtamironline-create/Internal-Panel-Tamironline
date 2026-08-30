@@ -51,9 +51,47 @@ class CityPageApiAndWorkflowTest extends TestCase
         Schema::create('crm_city_page_reviews', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->unsignedBigInteger('page_id'), $x->ulid('review_id'), $x->timestamps(),
         ]));
+        Schema::create('crm_devices', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->string('name'), $x->string('slug')->nullable(), $x->boolean('is_active')->default(true),
+            $x->unsignedInteger('sort_order')->default(0), $x->timestamps(),
+        ]));
+        Schema::create('crm_brands', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->string('name'), $x->string('slug')->nullable(),
+            $x->unsignedInteger('sort_order')->default(0), $x->timestamps(),
+        ]));
         Schema::create('settings', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->string('key')->unique(), $x->text('value')->nullable(),
         ]));
+    }
+
+    public function test_combo_page_has_auto_breadcrumbs_and_works_standalone(): void
+    {
+        $city = $this->mashhad();
+        $washer = \Modules\CRM\Models\Device::create(['name' => 'لباسشویی', 'slug' => 'washing-machine']);
+        $bosch = \Modules\CRM\Models\Brand::create(['name' => 'بوش', 'slug' => 'bosch']);
+
+        // فقط همین یک صفحه لایو است — هیچ صفحهٔ والدی منتشر نشده.
+        CityPage::create([
+            'city_id' => $city->id, 'type' => CityPage::TYPE_COMBO,
+            'device_id' => $washer->id, 'brand_id' => $bosch->id,
+            'path' => '/mashhad/services/washing-machine/bosch',
+            'title' => 'تعمیر لباسشویی بوش در مشهد',
+            'status' => CityPage::STATUS_PUBLISHED, 'published_at' => now(),
+        ]);
+
+        $res = $this->getJson('/v1/customer/seo/city-pages?path=/mashhad/services/washing-machine/bosch');
+        $res->assertOk();
+        $crumbs = $res->json('data.breadcrumbs');
+
+        // خانه ← مشهد ← خدمات ← لباسشویی ← (فعلی)
+        $this->assertCount(5, $crumbs);
+        $this->assertSame('/', $crumbs[0]['path']);
+        $this->assertSame('/mashhad', $crumbs[1]['path']);
+        $this->assertSame('/mashhad/services', $crumbs[2]['path']);
+        $this->assertSame('/mashhad/services/washing-machine', $crumbs[3]['path']);
+        $this->assertSame('/mashhad/services/washing-machine/bosch', $crumbs[4]['path']);
+        $this->assertTrue($crumbs[4]['current']);
+        $this->assertFalse($crumbs[0]['current']);
     }
 
     private function mashhad(): City

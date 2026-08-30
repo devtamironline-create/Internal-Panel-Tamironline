@@ -121,8 +121,8 @@
             $comboHero = \Modules\Site\Services\PageSectionService::normalizeHeroVisual(old('hero_image', $page?->hero_image ?? null));
         @endphp
         <p class="text-xs text-gray-500 mb-3">
-            ۲ تصویر دسکتاپ (چپ/راست) + ۱ تصویر موبایل، هرکدام با alt مجزا. هر slot که پر کنید فقط برای همین صفحهٔ ترکیبی override می‌شود؛
-            slotهای خالی از دستگاه ← برند ← <a href="{{ route('site.admin.page-content.edit', 'device_brand') }}" target="_blank" class="text-blue-600 hover:underline">الگوی ترکیبی</a> پر می‌شوند.
+            یک تصویر Hero برای همین صفحهٔ ترکیبی (override). خالی →
+            از دستگاه ← برند ← <a href="{{ route('site.admin.page-content.edit', 'device_brand') }}" target="_blank" class="text-blue-600 hover:underline">الگوی ترکیبی</a> پر می‌شود.
         </p>
         @include('site::admin.partials.hero-visual-picker', [
             'name' => 'hero_image',
@@ -252,18 +252,13 @@
         ])
     </div>
 
-    {{-- SEO --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-100">
-        <div>
-            <label class="block text-sm font-medium mb-1">Meta Title</label>
-            <input type="text" name="meta_title" value="{{ old('meta_title', $page?->meta_title ?? '') }}" maxlength="200"
-                   class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm">
-        </div>
-        <div>
-            <label class="block text-sm font-medium mb-1">Meta Description</label>
-            <textarea name="meta_description" rows="2" maxlength="500"
-                      class="w-full px-3 py-2 border border-gray-300 dark:bg-gray-700 rounded text-sm">{{ old('meta_description', $page?->meta_description ?? '') }}</textarea>
-        </div>
+    {{-- SEO — یکپارچه در پنلِ سئوی حرفه‌ای پایین صفحه --}}
+    <div class="pt-4 border-t border-gray-100">
+        <p class="text-sm text-gray-600 dark:text-gray-300">
+            مدیریت کاملِ سئو (عنوان، توضیحات، canonical، robots، Open Graph، اسکیما و امتیاز سئو)
+            در <b>«پنل سئوی حرفه‌ای»</b> در انتهای همین صفحه انجام می‌شود — ساختارِ سئو برای همهٔ
+            صفحات یکسان است.
+        </p>
     </div>
 </div>
 

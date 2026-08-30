@@ -27,16 +27,13 @@
      })" class="space-y-4">
 
     <p class="text-xs text-gray-500">
-        Hero از ۳ تصویر مستقل تشکیل می‌شود: دو تصویر دکوراتیو در طرفین دسکتاپ + یک تصویر اختصاصی موبایل.
-        هر کدام alt مستقل دارد — برای SEO و دسترسی‌پذیری.
+        یک تصویرِ Hero برای این صفحه — روی سایت در دسکتاپ و موبایل نمایش داده می‌شود. متن جایگزین (alt) برای SEO و دسترسی‌پذیری مهم است.
     </p>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="max-w-md">
 
         @foreach([
-            'desktop_left'  => ['تصویر دسکتاپ — چپ (دکوراتیو)',  '≈ ۴۰۰×۵۰۰ عمودی', 'aspect-[4/5]', 'uploadLeft',  false],
-            'desktop_right' => ['تصویر دسکتاپ — راست (دکوراتیو)', '≈ ۴۰۰×۵۰۰ عمودی', 'aspect-[4/5]', 'uploadRight', false],
-            'mobile'        => ['تصویر مخصوص موبایل',              '≈ ۷۵۰×۲۵۰ یا banner', 'aspect-[3/1]', 'uploadMobile', true],
+            'mobile' => ['تصویر Hero صفحه', '≈ ۱۲۰۰×۶۳۰ (banner)', 'aspect-[16/9]', 'uploadMobile', true],
         ] as $slot => [$label, $sizeHint, $aspect, $ref, $isMobile])
             <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3 bg-gray-50/40 dark:bg-gray-900/30">
                 <div class="flex items-center justify-between">
