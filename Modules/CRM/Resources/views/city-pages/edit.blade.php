@@ -15,10 +15,6 @@
         <span class="inline-flex px-2.5 py-1 rounded-full text-xs {{ $cityPage->statusBadge() }}">{{ $cityPage->statusLabel() }}</span>
     </div>
 
-    <div class="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-3 text-xs text-gray-500 dark:text-gray-400 dir-ltr text-left">
-        {{ $cityPage->path }}
-    </div>
-
     @if($errors->any())
     <div class="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 text-sm">
         <ul class="list-disc pr-5 space-y-1">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
@@ -27,6 +23,18 @@
 
     <form action="{{ route('crm.city-pages.update', $cityPage) }}" method="POST" class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-6">
         @csrf @method('PUT')
+
+        {{-- مسیر/Slug صفحه (قابلِ ویرایشِ دستی) --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">مسیر صفحه (Slug / URL)</label>
+            <input type="text" name="path" value="{{ old('path', $cityPage->path) }}" dir="ltr"
+                   class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg font-mono text-sm text-left">
+            <p class="text-xs text-gray-400 mt-1">
+                آدرسِ عمومیِ صفحه — انگلیسی و با «/» شروع شود (مثلاً
+                <span dir="ltr">/mashhad/services/washing-machine</span>). روی سایت زیرِ
+                <span dir="ltr">/city</span> سِرو می‌شود. تغییرِ آن فقط همین صفحه را عوض می‌کند (نه صفحاتِ فرزند).
+            </p>
+        </div>
 
         {{-- عنوان و H1 --}}
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
