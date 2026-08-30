@@ -139,7 +139,14 @@ class SeoCityPagesController extends Controller
         $items[count($items) - 1]['current'] = true;
         $items[count($items) - 1]['path'] = $page->path;
 
-        return $items;
+        // مسیرِ عمومیِ فرانت زیرِ /city است؛ خانه (/) بدونِ پیشوند می‌ماند.
+        return array_map(function ($i) {
+            if (($i['path'] ?? '/') !== '/') {
+                $i['path'] = '/city'.$i['path'];
+            }
+
+            return $i;
+        }, $items);
     }
 
     /**

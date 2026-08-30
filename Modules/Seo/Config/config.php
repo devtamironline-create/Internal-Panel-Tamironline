@@ -123,7 +123,12 @@ return [
             'model' => \Modules\CRM\Models\CityPage::class,
             'resolver' => 'city_page',
             'slug' => 'path',
-            'url' => '/{path}',
+            // مسیرِ عمومیِ فرانت زیرِ پیشوندِ /city سِرو می‌شود (تصمیمِ تیمِ سایت
+            // برای رفعِ تداخلِ آدرسِ تک‌بخشیِ شهر با ریدایرکتِ legacy بلاگ). چون
+            // ستونِ path خودش با / شروع می‌شود، الگو «/city{path}» = /city/mashhad/…
+            // (این هم double-slashِ قبلی «/{path}» را رفع می‌کند و هم canonical را
+            // با آدرسِ واقعیِ سایت هم‌راستا می‌کند). کوئریِ ?slug= همچنان ریشه‌ای است.
+            'url' => '/city{path}',
             'title_attr' => 'title',
             'excerpt_attr' => 'meta_description',
             'published' => 'published_at',

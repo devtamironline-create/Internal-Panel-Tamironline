@@ -101,13 +101,13 @@ class CityPageApiAndWorkflowTest extends TestCase
         $res->assertOk();
         $crumbs = $res->json('data.breadcrumbs');
 
-        // خانه ← مشهد ← خدمات ← لباسشویی ← (فعلی)
+        // خانه ← مشهد ← خدمات ← لباسشویی ← (فعلی) — مسیرها زیرِ /city (جز خانه)
         $this->assertCount(5, $crumbs);
         $this->assertSame('/', $crumbs[0]['path']);
-        $this->assertSame('/mashhad', $crumbs[1]['path']);
-        $this->assertSame('/mashhad/services', $crumbs[2]['path']);
-        $this->assertSame('/mashhad/services/washing-machine', $crumbs[3]['path']);
-        $this->assertSame('/mashhad/services/washing-machine/bosch', $crumbs[4]['path']);
+        $this->assertSame('/city/mashhad', $crumbs[1]['path']);
+        $this->assertSame('/city/mashhad/services', $crumbs[2]['path']);
+        $this->assertSame('/city/mashhad/services/washing-machine', $crumbs[3]['path']);
+        $this->assertSame('/city/mashhad/services/washing-machine/bosch', $crumbs[4]['path']);
         $this->assertTrue($crumbs[4]['current']);
         $this->assertFalse($crumbs[0]['current']);
     }

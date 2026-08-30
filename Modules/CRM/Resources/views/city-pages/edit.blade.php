@@ -52,16 +52,23 @@
             @endphp
             <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 rounded-lg p-4">
                 <h4 class="text-sm font-bold text-emerald-900 dark:text-emerald-200 mb-2">سکشن‌های فعال در این صفحه</h4>
+                {{-- کلیدها دقیقاً همان‌هایی‌اند که فرانتِ Next.js می‌شناسد. --}}
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm text-gray-700 dark:text-gray-200">
                     @foreach([
-                        'hero'             => 'Hero',
-                        'steps'            => 'مراحل خدمات',
-                        'content'          => 'محتوای کامل',
-                        'faq'              => 'سوالات متداول',
-                        'testimonials'     => 'نظرات مشتریان',
-                        'videos'           => 'ویدیوها',
-                        'forum_questions'  => 'سوالات انجمن',
-                        'related_articles' => 'مقالات مرتبط',
+                        'hero'         => 'Hero',
+                        'activity'     => 'نوار فعالیت زنده',
+                        'steps'        => 'مراحل کار',
+                        'content'      => 'متن محتوایی',
+                        'pricing'      => 'تعرفه خدمات',
+                        'faq'          => 'سوالات متداول',
+                        'brands'       => 'برندها / دستگاه‌ها',
+                        'otherDevices' => 'سایر دستگاه‌های برند',
+                        'videos'       => 'ویدیوها',
+                        'forum'        => 'پرسش‌های انجمن',
+                        'related'      => 'مقالات مرتبط',
+                        'testimonials' => 'نظرات',
+                        'promo'        => 'بنر اپلیکیشن',
+                        'links'        => 'گرید لینک فرزندان',
                     ] as $key => $label)
                         <label class="inline-flex items-center gap-2">
                             <input type="hidden" name="sections_enabled[{{ $key }}]" value="0">
