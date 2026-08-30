@@ -95,11 +95,11 @@ class CityController extends Controller
         $oldSlug = $city->slug;
         $city->update($validated);
 
-        // با تغییرِ slugِ شهرِ اصلی، مسیرِ صفحاتِ سئوی شهری بازسازی می‌شود
-        // (مثلاً /city/کرج/... → /city/karaj/...).
+        // با تغییرِ slugِ شهرِ اصلی، مسیرِ همهٔ صفحاتِ سئوی آن هماهنگ بازسازی
+        // می‌شود (مثلاً /city/کرج/... → /city/karaj/...).
         $rebuilt = 0;
         if (! $city->isDistrict() && $oldSlug !== $city->slug) {
-            $rebuilt = app(CityPageGenerator::class)->rebuildPathsForCity($city, (string) $oldSlug);
+            $rebuilt = app(CityPageGenerator::class)->recomputePathsForCity($city);
         }
 
         return redirect()->route('crm.cities.index')

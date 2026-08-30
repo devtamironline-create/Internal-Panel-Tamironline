@@ -97,7 +97,14 @@ class BrandController extends Controller
         $reviewIds = $this->extractReviewIds($validated);
         $this->applyDefaults($validated, false);
 
+        $oldSlug = $brand->slug;
         $brand->update($validated);
+
+        // با تغییرِ slugِ برند، مسیرِ صفحاتِ سئوی شهریِ آن برند هماهنگ می‌شود.
+        if ($oldSlug !== $brand->slug) {
+            app(\Modules\CRM\Services\CityPageGenerator::class)->recomputePathsForBrand($brand);
+        }
+
         $brand->devices()->sync($this->withSortOrder($deviceIds));
         $brand->faqs()->sync($this->withSortOrder($faqIds));
         $brand->faqCategories()->sync($this->withSortOrder($faqCategoryIds));

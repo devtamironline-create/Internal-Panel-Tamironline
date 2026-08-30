@@ -83,7 +83,6 @@ class CityPageRichEditTest extends TestCase
 
         $this->actingAs($this->admin())
             ->put(route('crm.city-pages.update', $page), [
-                'path' => '/mashhad',
                 'title' => 'تعمیرات لوازم خانگی در مشهد',
                 'h1' => 'تعمیرکار در مشهد',
                 'eyebrow' => 'سرویس تخصصی',
@@ -110,28 +109,5 @@ class CityPageRichEditTest extends TestCase
         $this->assertSame('https://cdn/h.jpg', $page->hero_image['desktop_left']['url'] ?? null);
         // ویرایشِ دستی → دیگر خودکار نیست.
         $this->assertFalse((bool) $page->auto_generated);
-    }
-
-    public function test_admin_can_manually_change_the_page_slug(): void
-    {
-        $city = City::withoutEvents(fn () => City::create(['name' => 'مشهد', 'slug' => 'mashhad']));
-        $page = CityPage::create([
-            'city_id' => $city->id, 'type' => CityPage::TYPE_CITY, 'path' => '/mashhad',
-            'title' => 'عنوان', 'status' => CityPage::STATUS_DRAFT,
-        ]);
-
-        $admin = $this->admin();
-        $this->actingAs($admin)
-            ->put(route('crm.city-pages.update', $page), [
-                'path' => '/mashhad-landing', 'title' => 'عنوان',
-            ])->assertRedirect();
-
-        $this->assertSame('/mashhad-landing', $page->fresh()->path);
-
-        // مسیرِ فارسی/نامعتبر رد می‌شود.
-        $this->actingAs($admin)
-            ->put(route('crm.city-pages.update', $page), [
-                'path' => '/مشهد', 'title' => 'عنوان',
-            ])->assertSessionHasErrors('path');
     }
 }
