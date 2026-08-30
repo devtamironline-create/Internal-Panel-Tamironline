@@ -153,7 +153,9 @@ class SitemapBuilder
                 continue;
             }
             $out[] = [
-                'loc' => $this->absoluteUrl((string) $page->path),
+                // مسیرِ عمومیِ فرانت زیرِ /city است (نه ریشه) — sitemap باید همان
+                // آدرسِ نهایی را بدهد وگرنه گوگل URLهای ۳۰۱-شونده را ایندکس می‌کند.
+                'loc' => $this->absoluteUrl('/city'.$page->path),
                 'lastmod' => $this->lastmod($page),
                 'changefreq' => $changefreq,
                 'priority' => number_format($priority, 1),
