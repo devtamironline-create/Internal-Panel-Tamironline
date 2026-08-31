@@ -91,6 +91,10 @@
                         </td>
                         <td class="px-6 py-3 text-left whitespace-nowrap">
                             <div class="flex items-center gap-3 justify-end">
+                                @if($page->isPublished())
+                                    <a href="{{ $page->publicUrl() }}" target="_blank" rel="noopener"
+                                       class="text-green-600 hover:text-green-800 text-sm font-medium" title="باز کردن صفحه روی سایت اصلی">مشاهده در سایت ↗</a>
+                                @endif
                                 <a href="{{ route('crm.city-pages.preview', $page) }}" target="_blank" class="text-gray-600 hover:text-gray-900 text-sm">پیش‌نمایش</a>
                                 <a href="{{ route('crm.city-pages.edit', $page) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
                                 <form action="{{ route('crm.city-pages.toggle-publish', $page) }}" method="POST" class="inline">

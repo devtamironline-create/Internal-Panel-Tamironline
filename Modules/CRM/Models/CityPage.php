@@ -156,6 +156,15 @@ class CityPage extends Model
         $this->save();
     }
 
+    /**
+     * آدرسِ عمومیِ صفحه روی سایتِ اصلی (Next.js) — زیرِ پیشوندِ /city.
+     * مثال: https://tamironline.com/city/karaj/services/washing-machine
+     */
+    public function publicUrl(): string
+    {
+        return rtrim((string) config('seo.site_url'), '/').'/city'.$this->path;
+    }
+
     /** برچسبِ فارسیِ نوعِ صفحه — برای نمایش در پنل. */
     public function typeLabel(): string
     {

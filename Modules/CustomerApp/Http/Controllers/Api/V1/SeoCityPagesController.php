@@ -186,13 +186,47 @@ class SeoCityPagesController extends Controller
             return ['mobile' => $own];
         }
 
+        // هر زیرمجموعه به «والدِ خودش» نگاه می‌کند:
+        //   ترکیبی (لباسشویی بوش در کرج) → دستگاه‌در‌شهر (لباسشویی در کرج) → دستگاهِ سراسری
+        //   دستگاه‌در‌شهر (لباسشویی در کرج)                              → دستگاهِ سراسری
+        //   برند‌در‌شهر (بوش در کرج)                                    → برندِ سراسری
         $parent = match ($page->type) {
-            CityPage::TYPE_DEVICE, CityPage::TYPE_COMBO => $this->pickHero($page->device?->hero_image),
+            CityPage::TYPE_COMBO => $this->deviceCityHero($page) ?? $this->pickHero($page->device?->hero_image),
+            CityPage::TYPE_DEVICE => $this->pickHero($page->device?->hero_image),
             CityPage::TYPE_BRAND => $this->pickHero($page->brand?->hero_image),
             default => null,
         };
 
         return $parent ? ['mobile' => $parent] : null;
+    }
+
+    /** @var array<string, array{url:string,alt:string}|null> */
+    private array $deviceCityHeroCache = [];
+
+    /**
+     * تصویرِ صفحهٔ «همین دستگاه در همین شهر» (والدِ صفحهٔ ترکیبی) — تا عکسِ
+     * «لباسشویی بوش در کرج» از «لباسشویی در کرج» خوانده شود، نه دستگاهِ سراسری.
+     *
+     * @return array{url:string,alt:string}|null
+     */
+    private function deviceCityHero(CityPage $combo): ?array
+    {
+        if (! $combo->city_id || ! $combo->device_id) {
+            return null;
+        }
+        $key = $combo->city_id.':'.$combo->device_id;
+
+        if (! array_key_exists($key, $this->deviceCityHeroCache)) {
+            // first() تا cast آرایه‌ایِ hero_image اعمال شود (value() خامِ JSON می‌دهد).
+            $devPage = CityPage::query()
+                ->where('city_id', $combo->city_id)
+                ->where('type', CityPage::TYPE_DEVICE)
+                ->where('device_id', $combo->device_id)
+                ->first(['id', 'hero_image']);
+            $this->deviceCityHeroCache[$key] = $this->pickHero($devPage?->hero_image);
+        }
+
+        return $this->deviceCityHeroCache[$key];
     }
 
     /**
