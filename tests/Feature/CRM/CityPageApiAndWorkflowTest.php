@@ -97,6 +97,33 @@ class CityPageApiAndWorkflowTest extends TestCase
         $res->assertOk()->assertJsonPath('data.hero_image.mobile.url', 'https://cdn/washer.jpg');
     }
 
+    public function test_combo_hero_falls_back_to_the_device_in_city_page(): void
+    {
+        $city = $this->mashhad();
+        $washer = \Modules\CRM\Models\Device::create([
+            'name' => 'لباسشویی', 'slug' => 'washing-machine',
+            'hero_image' => ['mobile' => ['url' => 'https://cdn/global-washer.jpg', 'alt' => 'x']],
+        ]);
+        $bosch = \Modules\CRM\Models\Brand::create(['name' => 'بوش', 'slug' => 'bosch']);
+
+        // «لباسشویی در مشهد» عکسِ اختصاصیِ شهری دارد.
+        CityPage::create([
+            'city_id' => $city->id, 'type' => CityPage::TYPE_DEVICE, 'device_id' => $washer->id,
+            'path' => '/mashhad/services/washing-machine', 'status' => CityPage::STATUS_PUBLISHED, 'published_at' => now(),
+            'hero_image' => ['mobile' => ['url' => 'https://cdn/washer-in-mashhad.jpg', 'alt' => 'لباسشویی مشهد']],
+        ]);
+        // «لباسشویی بوش در مشهد» عکس ندارد → باید از «لباسشویی در مشهد» بخواند، نه دستگاهِ سراسری.
+        CityPage::create([
+            'city_id' => $city->id, 'type' => CityPage::TYPE_COMBO, 'device_id' => $washer->id, 'brand_id' => $bosch->id,
+            'path' => '/mashhad/services/washing-machine/bosch', 'status' => CityPage::STATUS_PUBLISHED, 'published_at' => now(),
+            'hero_image' => null,
+        ]);
+
+        $this->getJson('/v1/customer/seo/city-pages?path=/mashhad/services/washing-machine/bosch')
+            ->assertOk()
+            ->assertJsonPath('data.hero_image.mobile.url', 'https://cdn/washer-in-mashhad.jpg');
+    }
+
     public function test_combo_page_has_auto_breadcrumbs_and_works_standalone(): void
     {
         $city = $this->mashhad();
