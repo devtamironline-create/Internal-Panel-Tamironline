@@ -27,9 +27,14 @@
         {{-- مسیرِ صفحه فقط‌خواندنی است: از slugِ شهر/دستگاه/برند ساخته می‌شود.
              برای تغییرِ آن، slugِ شهر (یا دستگاه/برند) را عوض کنید تا همهٔ
              صفحاتِ زیرمجموعه هماهنگ به‌روزرسانی شوند. --}}
-        <div class="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-3 flex items-center justify-between gap-3">
+        <div class="bg-gray-50 dark:bg-gray-700/40 rounded-lg p-3 flex items-center justify-between gap-3 flex-wrap">
             <span class="text-xs text-gray-500 dark:text-gray-400 dir-ltr text-left font-mono">/city{{ $cityPage->path }}</span>
-            <a href="{{ route('crm.cities.edit', $cityPage->city_id) }}" class="text-xs text-purple-600 hover:text-purple-800 whitespace-nowrap">ویرایش slug شهر ←</a>
+            <div class="flex items-center gap-3">
+                @if($cityPage->isPublished())
+                    <a href="{{ $cityPage->publicUrl() }}" target="_blank" rel="noopener" class="text-xs text-green-600 hover:text-green-800 font-medium whitespace-nowrap">مشاهده در سایت ↗</a>
+                @endif
+                <a href="{{ route('crm.cities.edit', $cityPage->city_id) }}" class="text-xs text-purple-600 hover:text-purple-800 whitespace-nowrap">ویرایش slug شهر ←</a>
+            </div>
         </div>
 
         {{-- عنوان و H1 --}}
