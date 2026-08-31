@@ -136,10 +136,15 @@
     </div>
 
     {{-- ─── باکس‌های جمع‌بندی (ردیف ۲) ─── --}}
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div class="{{ $boxClass }} border-emerald-200 dark:border-emerald-800">
             <div class="{{ $labelClass }}">شارژ کیف‌پول انجام شده</div>
             <div class="{{ $valueClass }} text-emerald-600" dir="ltr">{{ number_format($summary['wallet_charge']) }} <span class="text-xs font-normal">تومان</span></div>
+        </div>
+
+        <div class="{{ $boxClass }} border-cyan-200 dark:border-cyan-800">
+            <div class="{{ $labelClass }}">پرداخت آنلاین مشتری</div>
+            <div class="{{ $valueClass }} text-cyan-600" dir="ltr">{{ number_format($summary['online_payment'] ?? 0) }} <span class="text-xs font-normal">تومان</span></div>
         </div>
 
         <div class="{{ $boxClass }} {{ $summary['tech_status_val'] > 0 ? 'border-emerald-200' : ($summary['tech_status_val'] < 0 ? 'border-rose-200' : 'border-gray-200') }}">

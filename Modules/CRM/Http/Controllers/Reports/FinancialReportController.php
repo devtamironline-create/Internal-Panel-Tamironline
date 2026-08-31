@@ -159,6 +159,8 @@ class FinancialReportController extends Controller
         $adjPos = (int) (clone $txQ)->where('type', WalletTxType::Adjustment->value)->where('amount', '>', 0)->sum('amount');
         $adjNeg = (int) (clone $txQ)->where('type', WalletTxType::Adjustment->value)->where('amount', '<', 0)->sum('amount');
         $chargeSum = (int) (clone $txQ)->where('type', WalletTxType::WalletCharge->value)->sum('amount');
+        // پرداختِ آنلاینِ مشتری هم ورودیِ کیف‌پولِ تکنسین است و باید در گزارش دیده شود.
+        $onlinePaymentSum = (int) (clone $txQ)->where('type', WalletTxType::OnlinePayment->value)->sum('amount');
 
         $totalInvoice = (int) $invAgg->total_amount;
         $companyShare = (int) $invAgg->company_share;
@@ -198,6 +200,7 @@ class FinancialReportController extends Controller
             'profit_pct' => $profitPct,
             'expenses' => $expenses,
             'wallet_charge' => $chargeSum,
+            'online_payment' => $onlinePaymentSum,
             'tech_status' => $techStatusLabel,
             'tech_status_val' => $techStatusValue,
             'invoice_count' => (int) $invAgg->cnt,
@@ -343,10 +346,11 @@ class FinancialReportController extends Controller
     protected function txTypesForDocFilter(string $docType): array
     {
         return match ($docType) {
-            '' => [WalletTxType::Reward->value, WalletTxType::Penalty->value, WalletTxType::WalletCharge->value, WalletTxType::Adjustment->value, WalletTxType::Payout->value, WalletTxType::Credit->value],
+            '' => [WalletTxType::Reward->value, WalletTxType::Penalty->value, WalletTxType::WalletCharge->value, WalletTxType::OnlinePayment->value, WalletTxType::Adjustment->value, WalletTxType::Payout->value, WalletTxType::Credit->value],
             'reward' => [WalletTxType::Reward->value],
             'penalty' => [WalletTxType::Penalty->value],
             'charge' => [WalletTxType::WalletCharge->value],
+            'online_payment' => [WalletTxType::OnlinePayment->value],
             'invoice' => [],
             default => [],
         };
@@ -358,6 +362,7 @@ class FinancialReportController extends Controller
             '' => '— همه —',
             'invoice' => 'فاکتور',
             'charge' => 'شارژ کیف‌پول',
+            'online_payment' => 'پرداخت آنلاین مشتری',
             'reward' => 'بستانکاری',
             'penalty' => 'بدهکاری',
         ];
