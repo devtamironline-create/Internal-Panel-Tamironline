@@ -97,6 +97,32 @@ class CityPageApiAndWorkflowTest extends TestCase
         $res->assertOk()->assertJsonPath('data.hero_image.mobile.url', 'https://cdn/washer.jpg');
     }
 
+    public function test_services_page_lists_published_device_children(): void
+    {
+        $city = $this->mashhad();
+        $washer = \Modules\CRM\Models\Device::create(['name' => 'لباسشویی', 'slug' => 'washing-machine']);
+        $fridge = \Modules\CRM\Models\Device::create(['name' => 'یخچال', 'slug' => 'fridge']);
+        $oven = \Modules\CRM\Models\Device::create(['name' => 'اجاق', 'slug' => 'oven']);
+
+        CityPage::create(['city_id' => $city->id, 'type' => CityPage::TYPE_SERVICES, 'path' => '/mashhad/services',
+            'title' => 'خدمات در مشهد', 'status' => CityPage::STATUS_PUBLISHED, 'published_at' => now()]);
+        CityPage::create(['city_id' => $city->id, 'type' => CityPage::TYPE_DEVICE, 'device_id' => $washer->id,
+            'path' => '/mashhad/services/washing-machine', 'title' => 'لباسشویی', 'status' => CityPage::STATUS_PUBLISHED, 'published_at' => now()]);
+        CityPage::create(['city_id' => $city->id, 'type' => CityPage::TYPE_DEVICE, 'device_id' => $fridge->id,
+            'path' => '/mashhad/services/fridge', 'title' => 'یخچال', 'status' => CityPage::STATUS_PUBLISHED, 'published_at' => now()]);
+        // پیش‌نویس → نباید در فرزندان بیاید.
+        CityPage::create(['city_id' => $city->id, 'type' => CityPage::TYPE_DEVICE, 'device_id' => $oven->id,
+            'path' => '/mashhad/services/oven', 'title' => 'اجاق', 'status' => CityPage::STATUS_DRAFT]);
+
+        $res = $this->getJson('/v1/customer/seo/city-pages?path=/mashhad/services')->assertOk();
+        $paths = collect($res->json('data.children'))->pluck('path')->all();
+
+        $this->assertContains('/mashhad/services/washing-machine', $paths);
+        $this->assertContains('/mashhad/services/fridge', $paths);
+        $this->assertNotContains('/mashhad/services/oven', $paths); // پیش‌نویس
+        $this->assertCount(2, $paths);
+    }
+
     public function test_combo_hero_falls_back_to_the_device_in_city_page(): void
     {
         $city = $this->mashhad();

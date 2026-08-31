@@ -89,8 +89,41 @@ class SeoCityPagesController extends Controller
             ],
             'sections_enabled' => $page->sections_enabled,
             'breadcrumbs' => $this->breadcrumbs($page),
+            'children' => $this->children($page),
             'published_at' => $page->published_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * فرزندانِ صفحاتِ فهرستی (برای گریدِ کارت‌ها، مثلِ صفحهٔ اصلیِ /services):
+     *   services / city → صفحاتِ «دستگاه در همین شهر»
+     *   brands          → صفحاتِ «برند در همین شهر»
+     * فقط فرزندانِ منتشرشده. برای صفحاتِ غیرفهرستی null (تا کوئریِ اضافه نزند).
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function children(CityPage $page): ?array
+    {
+        $listTypes = [CityPage::TYPE_CITY, CityPage::TYPE_SERVICES, CityPage::TYPE_BRANDS];
+        if (! in_array($page->type, $listTypes, true) || ! $page->city_id) {
+            return null;
+        }
+
+        $childType = $page->type === CityPage::TYPE_BRANDS ? CityPage::TYPE_BRAND : CityPage::TYPE_DEVICE;
+
+        return CityPage::query()
+            ->published()
+            ->where('city_id', $page->city_id)
+            ->where('type', $childType)
+            ->with(['device:id,name,slug', 'brand:id,name,slug'])
+            ->orderBy('device_id')->orderBy('brand_id')
+            ->get()
+            ->map(fn (CityPage $c) => [
+                'path' => $c->path,
+                'title' => $this->tokens($c->title, $c),
+                'device' => $c->device ? ['name' => $c->device->name, 'slug' => $c->device->slug] : null,
+                'brand' => $c->brand ? ['name' => $c->brand->name, 'slug' => $c->brand->slug] : null,
+            ])->values()->all();
     }
 
     /**
