@@ -158,9 +158,12 @@ class FinancialReportController extends Controller
         // adjustment+ → بستانکاری، adjustment− → بدهکاری
         $adjPos = (int) (clone $txQ)->where('type', WalletTxType::Adjustment->value)->where('amount', '>', 0)->sum('amount');
         $adjNeg = (int) (clone $txQ)->where('type', WalletTxType::Adjustment->value)->where('amount', '<', 0)->sum('amount');
-        $chargeSum = (int) (clone $txQ)->where('type', WalletTxType::WalletCharge->value)->sum('amount');
-        // پرداختِ آنلاینِ مشتری هم ورودیِ کیف‌پولِ تکنسین است و باید در گزارش دیده شود.
+        // پرداختِ آنلاینِ مشتری هم ورودیِ کیف‌پولِ تکنسین است؛ پس هم به‌صورتِ
+        // جدا گزارش می‌شود و هم داخلِ «شارژ کیف‌پول انجام شده» جمع می‌شود.
         $onlinePaymentSum = (int) (clone $txQ)->where('type', WalletTxType::OnlinePayment->value)->sum('amount');
+        $chargeSum = (int) (clone $txQ)
+            ->whereIn('type', [WalletTxType::WalletCharge->value, WalletTxType::OnlinePayment->value])
+            ->sum('amount');
 
         $totalInvoice = (int) $invAgg->total_amount;
         $companyShare = (int) $invAgg->company_share;

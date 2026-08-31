@@ -140,11 +140,13 @@
         <div class="{{ $boxClass }} border-emerald-200 dark:border-emerald-800">
             <div class="{{ $labelClass }}">شارژ کیف‌پول انجام شده</div>
             <div class="{{ $valueClass }} text-emerald-600" dir="ltr">{{ number_format($summary['wallet_charge']) }} <span class="text-xs font-normal">تومان</span></div>
+            <div class="text-[10px] text-gray-400 mt-0.5">شاملِ پرداخت آنلاین مشتری</div>
         </div>
 
         <div class="{{ $boxClass }} border-cyan-200 dark:border-cyan-800">
             <div class="{{ $labelClass }}">پرداخت آنلاین مشتری</div>
             <div class="{{ $valueClass }} text-cyan-600" dir="ltr">{{ number_format($summary['online_payment'] ?? 0) }} <span class="text-xs font-normal">تومان</span></div>
+            <div class="text-[10px] text-gray-400 mt-0.5">از عددِ بالا (جزء)</div>
         </div>
 
         <div class="{{ $boxClass }} {{ $summary['tech_status_val'] > 0 ? 'border-emerald-200' : ($summary['tech_status_val'] < 0 ? 'border-rose-200' : 'border-gray-200') }}">
