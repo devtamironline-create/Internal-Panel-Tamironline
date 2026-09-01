@@ -77,7 +77,7 @@ class OrderSlaTest extends TestCase
             'status_changed_at' => $assigned->addHours(30),
         ]);
 
-        $this->assertTrue($assigned->addHours(48)->equalTo(SlaPolicy::deadlineFor($order)));
+        $this->assertTrue($assigned->addHours(24)->equalTo(SlaPolicy::deadlineFor($order)));
     }
 
     public function test_coordinated_deadline_is_the_agreed_visit_time(): void
@@ -111,9 +111,9 @@ class OrderSlaTest extends TestCase
     {
         return [
             'معلق — ۳ روز' => ['suspended', 72],
-            'در انتظار قطعه — ۷ روز' => ['awaiting_part', 168],
+            'در انتظار قطعه — ۵ روز' => ['awaiting_part', 120],
             'در انتظار تأیید مشتری — ۲۴ ساعت' => ['awaiting_customer_approval', 24],
-            'باز شده (انتقال به تعمیرگاه) — ۱۴ روز' => ['open', 336],
+            'باز شده (انتقال به تعمیرگاه) — ۱۰ روز' => ['open', 240],
         ];
     }
 
