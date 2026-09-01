@@ -33,7 +33,7 @@ final class InvoiceBuilder
         // مبلغ مرجع = total فاکتور رسمی (تومان).
         $grandTotal = (int) ($invoice?->total_amount ?? 0);
 
-        $rows = self::buildRows($order, $grandTotal);
+        $rows = self::buildRows($order, $grandTotal, $invoice);
         $subtotal = (int) array_sum(array_column($rows, '_amount'));
 
         // اگر فاکتوری نیست (draft)، مبلغ کل از مجموع ردیف‌ها.
@@ -85,7 +85,7 @@ final class InvoiceBuilder
                 'currency' => 'IRT',
             ],
             'payment' => self::buildPayment($invoice, $paidAt),
-            'notes' => trim((string) ($order->invoice_descripotion ?? '')) ?: null,
+            'notes' => trim((string) ($invoice?->description ?? $order->invoice_descripotion ?? '')) ?: null,
             'pdf_url' => $invoice?->invoice_code
                 ? route('crm.invoice.public.pdf', ['invoiceCode' => $invoice->public_token])
                 : null,
@@ -136,15 +136,27 @@ final class InvoiceBuilder
      *
      * @return array<int, array<string, mixed>>
      */
-    private static function buildRows(Order $order, int $grandTotal): array
+    private static function buildRows(Order $order, int $grandTotal, ?Invoice $invoice = null): array
     {
-        $customerDesc = trim((string) ($order->invoice_descripotion ?? ''));
+        // اول از snapshotِ خودِ فاکتور (مستقلِ هر فاکتور)؛ فقط فاکتورهای
+        // قدیمیِ بدونِ snapshot به فیلدِ زندهٔ سفارش fallback می‌شوند.
+        $customerDesc = trim((string) ($invoice?->description ?? $order->invoice_descripotion ?? ''));
+        $invItems = is_array($invoice?->items_snapshot) ? $invoice->items_snapshot : [];
         $rows = [];
         $i = 1;
 
         if ($customerDesc !== '') {
             // مطابق رسید: یک ردیف با «متن فاکتور برای مشتری» و مبلغ کل.
             $rows[] = self::row(1, 'service', $customerDesc, 1, $grandTotal, $grandTotal, null);
+        } elseif ($invItems !== []) {
+            foreach ($invItems as $it) {
+                $t = is_array($it) ? trim((string) ($it['title'] ?? '')) : trim((string) $it);
+                if ($t === '') {
+                    continue;
+                }
+                $amt = is_array($it) ? (int) ($it['total'] ?? 0) : 0;
+                $rows[] = self::row($i++, 'part', $t, 1, $amt, $amt, null);
+            }
         } elseif ($order->items->isNotEmpty()) {
             foreach ($order->items as $item) {
                 $rows[] = self::row(

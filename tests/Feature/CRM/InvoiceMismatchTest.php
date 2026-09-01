@@ -91,6 +91,8 @@ class InvoiceMismatchTest extends TestCase
             $t->unsignedBigInteger('customer_id')->nullable();
             $t->unsignedBigInteger('technician_id')->nullable();
             $t->bigInteger('total_amount')->default(0);
+            $t->text('description')->nullable();
+            $t->text('items_snapshot')->nullable();
             $t->bigInteger('tech_share')->default(0);
             $t->bigInteger('company_share')->default(0);
             $t->string('calc_type', 30)->nullable();
