@@ -48,6 +48,9 @@ class Order extends Model
         'عدم سرویس‌دهی از سمت مجموعه',
     ];
 
+    /** حداکثر دفعاتِ تغییرِ «زمانِ مراجعه» توسطِ تکنسین پیش از قفل‌شدن. */
+    public const VISIT_RESCHEDULE_LIMIT = 2;
+
     /**
      * لیستِ دلایلِ کنسل/رد سفارش — قابلِ مدیریت توسطِ ادمین در تنظیمات
      * (کلیدِ crm_settings: order_cancel_reasons). اگر چیزی ذخیره نشده باشد،
@@ -82,7 +85,7 @@ class Order extends Model
         'customer_name', 'customer_mobile', 'customer_phone',
         'province_id', 'city_id', 'district_id', 'address', 'postal_code', 'address_id',
         'problem_title', 'problem_description',
-        'visit_scheduled_at', 'visit_scheduled_slot',
+        'visit_scheduled_at', 'visit_scheduled_slot', 'visit_reschedule_count',
 
         // وضعیت
         'status', 'status_changed_at', 'cancel_reason', 'cancel_reason_id',

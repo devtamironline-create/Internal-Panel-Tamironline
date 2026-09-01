@@ -271,14 +271,37 @@ class OrderActionController extends Controller
         $datetime = $validated['visit_date'].' '.$slot['start'];
 
         $order->refresh();
+
+        // محدودیتِ تغییرِ زمانِ مراجعه: بارِ اولِ ثبت شمرده نمی‌شود؛ هر تغییرِ
+        // بعدی +۱ می‌شود و پس از سقفِ مجاز، تکنسین قفل می‌شود تا ادمین شمارنده
+        // را صفر کند. (پاک‌کردن هم شمارنده را نگه می‌دارد تا دور زده نشود.)
+        $hasScheduledBefore = $order->visit_scheduled_at !== null
+            || (int) $order->visit_reschedule_count > 0;
+        $newRescheduleCount = (int) $order->visit_reschedule_count;
+
+        if ($hasScheduledBefore) {
+            if ($newRescheduleCount >= Order::VISIT_RESCHEDULE_LIMIT) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'زمانِ مراجعه حداکثر '.Order::VISIT_RESCHEDULE_LIMIT
+                        .' بار قابلِ تغییر است. برای تغییرِ بیشتر با پشتیبانی/ادمین هماهنگ کنید.',
+                ], 423);
+            }
+            $newRescheduleCount++;
+        }
+
         $previous = $order->status;
         $autoCoordinated = $previous !== OrderStatus::Coordinated
             && in_array(OrderStatus::Coordinated, $previous->technicianTransitions(), true);
 
-        $order->update(array_filter([
+        $updates = [
             'visit_scheduled_at' => $datetime,
-            'status' => $autoCoordinated ? OrderStatus::Coordinated->value : null,
-        ]));
+            'visit_reschedule_count' => $newRescheduleCount,
+        ];
+        if ($autoCoordinated) {
+            $updates['status'] = OrderStatus::Coordinated->value;
+        }
+        $order->update($updates);
 
         $jalali = \Morilog\Jalali\Jalalian::fromDateTime($datetime)->format('Y/m/d');
         OrderStatusLog::create([

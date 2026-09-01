@@ -475,6 +475,29 @@
                             <span class="text-gray-900 dark:text-gray-100 font-bold" dir="ltr">@jdatetime($order->visit_scheduled_at)</span>
                         </div>
                         @endif
+                        @php $rescheduleLimit = \Modules\CRM\Models\Order::VISIT_RESCHEDULE_LIMIT; @endphp
+                        @if((int) $order->visit_reschedule_count > 0)
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">تغییرِ زمان:</span>
+                            <span class="flex items-center gap-2 flex-wrap">
+                                <span class="{{ (int) $order->visit_reschedule_count >= $rescheduleLimit ? 'text-rose-600 font-bold' : 'text-gray-900 dark:text-gray-100' }}">
+                                    {{ $order->visit_reschedule_count }} از {{ $rescheduleLimit }} بار
+                                    @if((int) $order->visit_reschedule_count >= $rescheduleLimit)
+                                        <span class="text-[11px]">(قفل برای تکنسین)</span>
+                                    @endif
+                                </span>
+                                @can('change-crm-order-status')
+                                @if((int) $order->visit_reschedule_count >= $rescheduleLimit)
+                                <form action="{{ route('crm.orders.reset-visit-reschedule', $order) }}" method="POST"
+                                      onsubmit="return confirm('اجازهٔ تغییرِ بیشترِ زمانِ مراجعه به تکنسین داده شود؟');">
+                                    @csrf
+                                    <button class="text-[11px] px-2 py-0.5 bg-brand-600 text-white rounded hover:bg-brand-700">آزادسازی تغییر</button>
+                                </form>
+                                @endif
+                                @endcan
+                            </span>
+                        </div>
+                        @endif
                         <div class="flex items-start">
                             <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">ثبت شده در:</span>
                             <span class="text-gray-900 dark:text-gray-100" dir="ltr">@jdatetime($order->created_at)</span>

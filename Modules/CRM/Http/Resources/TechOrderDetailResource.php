@@ -71,9 +71,18 @@ class TechOrderDetailResource extends JsonResource
                 'days' => $this->return_review_days !== null ? (int) $this->return_review_days : null,
             ],
             'max_estimate_date' => \Modules\CRM\Support\SlaPolicy::maxEstimateDate()->format('Y-m-d'),
+            // شمارندهٔ تغییرِ زمانِ مراجعه — تکنسین حداکثر VISIT_RESCHEDULE_LIMIT
+            // بار می‌تواند زمان را تغییر دهد؛ پس از آن تا ریستِ ادمین قفل است.
+            'visit_reschedule_count' => (int) $this->visit_reschedule_count,
+            'visit_reschedule_limit' => \Modules\CRM\Models\Order::VISIT_RESCHEDULE_LIMIT,
+            'visit_reschedule_locked' => $rescheduleLocked = (
+                ($this->visit_scheduled_at !== null || (int) $this->visit_reschedule_count > 0)
+                && (int) $this->visit_reschedule_count >= \Modules\CRM\Models\Order::VISIT_RESCHEDULE_LIMIT
+            ),
             // آیا تکنسین همین حالا مجاز است زمانِ مراجعه را تنظیم/تغییر/پاک کند؟
-            // (سرور enforce می‌کند — فرانت نباید حدس بزند.)
-            'can_schedule' => (bool) $status?->allowsVisitScheduling(),
+            // (سرور enforce می‌کند — فرانت نباید حدس بزند.) پس از رسیدن به سقفِ
+            // تغییر، تنظیمِ مجدد قفل است تا ادمین شمارنده را صفر کند.
+            'can_schedule' => (bool) $status?->allowsVisitScheduling() && ! $rescheduleLocked,
             // آیا همین حالا می‌توان برای این سفارش پیش‌فاکتور صادر کرد؟
             // (پس از هماهنگی و پیش از بسته‌شدن، و مشروط به روشن‌بودنِ فلگِ
             // پیش‌فاکتورِ تکنسین.) سرور همین قاعده را با ۴۲۲ enforce می‌کند.
