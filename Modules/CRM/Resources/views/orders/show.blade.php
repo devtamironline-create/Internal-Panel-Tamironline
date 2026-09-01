@@ -1504,6 +1504,14 @@
                 $allowedTransitions = $order->status instanceof \Modules\CRM\Enums\OrderStatus
                     ? $order->status->allowedTransitions()
                     : [];
+                // سفارشِ بازگشتی وضعیتِ «رد» ندارد — تصمیمِ گارانتی/غیرگارانتی
+                // با تکنسین است و سفارش نباید رد شود.
+                if ($order->return_type !== null) {
+                    $allowedTransitions = array_values(array_filter(
+                        $allowedTransitions,
+                        fn ($s) => $s !== \Modules\CRM\Enums\OrderStatus::Declined
+                    ));
+                }
                 $isFinal = $order->status instanceof \Modules\CRM\Enums\OrderStatus
                     ? $order->status->isFinal()
                     : false;

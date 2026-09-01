@@ -1096,6 +1096,11 @@ class OrderController extends Controller
             return back()->with('error', 'وضعیت نامعتبر.');
         }
 
+        // سفارشِ بازگشتی وضعیتِ «رد» ندارد.
+        if ($order->return_type !== null && $newStatus === OrderStatus::Declined) {
+            return back()->with('error', 'سفارشِ بازگشتی را نمی‌توان «رد» کرد.');
+        }
+
         $previousStatus = $order->status instanceof OrderStatus ? $order->status->value : $order->status;
         if ($previousStatus === $newStatus->value) {
             return back()->with('error', 'وضعیت قبلاً همین بوده.');
