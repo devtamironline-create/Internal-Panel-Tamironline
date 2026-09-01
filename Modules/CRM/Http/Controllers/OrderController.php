@@ -1265,6 +1265,43 @@ class OrderController extends Controller
     }
 
     /**
+     * «اجبار به تعیینِ وضعیت» — اپِ تکنسین را (مثلِ حالتِ مهلتِ گذشته) قفلِ
+     * تمام‌صفحه می‌کند تا تکنسین این سفارش را تعیین‌تکلیف کند. با اولین
+     * تعیینِ وضعیتِ تکنسین خودکار برداشته می‌شود؛ ادمین هم می‌تواند دستی
+     * بردارد. برخلافِ is_locked، تغییرِ وضعیت را بلاک نمی‌کند — برعکس،
+     * تکنسین را وادار به تعیینِ وضعیت می‌کند.
+     */
+    public function toggleForceReview(Request $request, Order $order)
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('crm_orders', 'force_review')) {
+            return back()->with('error', 'این قابلیت هنوز روی سرور فعال نشده است (نیازمندِ اجرای migrate).');
+        }
+
+        if ($order->force_review) {
+            $order->update(['force_review' => false, 'force_review_at' => null, 'force_review_by' => null]);
+            $this->logSecurity($order, 'قفلِ «اجبار به تعیینِ وضعیت» برداشته شد.');
+
+            return back()->with('success', 'قفلِ «اجبار به تعیینِ وضعیت» برداشته شد.');
+        }
+
+        $currentStatus = $order->status instanceof OrderStatus
+            ? $order->status
+            : OrderStatus::tryFrom((string) $order->status);
+        if ($currentStatus?->isFinal()) {
+            return back()->with('error', 'سفارشِ نهایی‌شده را نمی‌توان «اجبار به تعیینِ وضعیت» کرد.');
+        }
+
+        $order->update([
+            'force_review' => true,
+            'force_review_at' => now(),
+            'force_review_by' => auth()->id(),
+        ]);
+        $this->logSecurity($order, 'سفارش «اجبار به تعیینِ وضعیت» شد؛ اپِ تکنسین تا تعیینِ وضعیت قفل می‌شود.');
+
+        return back()->with('success', 'اپِ تکنسین تا تعیینِ وضعیتِ این سفارش قفل شد.');
+    }
+
+    /**
      * علامت‌گذاری/برداشتنِ «مشکوک به تقلب» (پرچمِ امنیتیِ مستقل — فقط برای بررسی؛
      * جریانِ سفارش را مسدود نمی‌کند).
      */

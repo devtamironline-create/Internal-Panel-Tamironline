@@ -54,6 +54,9 @@ class TechOrderDetailResource extends JsonResource
             // دکمه‌ها را نشان دهد.
             'is_locked' => (bool) $this->is_locked,
             'lock_reason' => $this->is_locked ? $this->lock_reason : null,
+            // «اجبار به تعیینِ وضعیت» — اپ باید قفلِ تمام‌صفحه بگذارد تا تکنسین
+            // وضعیت را تعیین کند (sla_deadline_at هم گذشته می‌شود).
+            'force_review' => (bool) $this->force_review,
             'is_returned' => ! is_null($this->return_type),
             'return_type' => $this->return_type ? (int) $this->return_type : null,
 

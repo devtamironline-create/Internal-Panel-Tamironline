@@ -166,6 +166,7 @@ class OrderActionController extends Controller
         $order->refresh();
         $previous = $order->status?->value ?? '';
         $order->update($updates);
+        $this->clearForceReview($order);
 
         // توضیحاتِ فاکتوری که تکنسین وارد می‌کند هم باید در تاریخچهٔ لاگ‌ها
         // بماند (۱۴۰۵/۰۶/۰۳) — نه فقط روی فیلدِ سفارش که با ویرایشِ بعدی
@@ -321,6 +322,7 @@ class OrderActionController extends Controller
             $updates['status'] = OrderStatus::Coordinated->value;
         }
         $order->update($updates);
+        $this->clearForceReview($order);
 
         $jalali = \Morilog\Jalali\Jalalian::fromDateTime($datetime)->format('Y/m/d');
         OrderStatusLog::create([
@@ -414,6 +416,8 @@ class OrderActionController extends Controller
                 'created_at' => now(),
             ]);
 
+            $this->clearForceReview($order);
+
             return response()->json([
                 'success' => true,
                 'message' => 'نتیجهٔ تماس ثبت شد: مشتری پاسخگو نیست.',
@@ -430,6 +434,8 @@ class OrderActionController extends Controller
             ...OrderStatusLog::technicianActor($tech),
             'created_at' => now(),
         ]);
+
+        $this->clearForceReview($order);
 
         $hasDefaultTime = $order->visit_scheduled_at !== null;
 
@@ -677,6 +683,22 @@ class OrderActionController extends Controller
     private function authorizeOwnership(Order $order, $tech): void
     {
         abort_unless((int) $order->technician_id === (int) $tech->id, 403, 'این سفارش به شما تخصیص داده نشده است.');
+    }
+
+    /**
+     * پاک‌کردنِ «اجبار به تعیینِ وضعیت» — به‌محضِ اینکه تکنسین روی سفارش
+     * اقدامی برای تعیینِ وضعیت انجام دهد، قفلِ تمام‌صفحهٔ اپ برداشته می‌شود.
+     * فقط وقتی پرچم روشن است می‌نویسد (اگر ستون نباشد force_review نال است).
+     */
+    private function clearForceReview(Order $order): void
+    {
+        if ($order->force_review) {
+            $order->forceFill([
+                'force_review' => false,
+                'force_review_at' => null,
+                'force_review_by' => null,
+            ])->save();
+        }
     }
 
     /**
