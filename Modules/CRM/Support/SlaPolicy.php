@@ -25,8 +25,14 @@ use Modules\CRM\Models\Order;
  */
 final class SlaPolicy
 {
-    /** سقف تخمین تکنسین برای آماده‌شدن دستگاه (روز). */
-    public const MAX_ESTIMATE_DAYS = 14;
+    /** سقف تخمین تکنسین برای «چند روز برای رفع مشکل» (روز). */
+    public const MAX_ESTIMATE_DAYS = 6;
+
+    /** سقف انتخابِ «زمانِ مراجعه» در سفارشِ عادی (روز). */
+    public const MAX_VISIT_DAYS = 5;
+
+    /** سقف انتخابِ «زمانِ مراجعه» در سفارشِ بازگشتی (روز). */
+    public const MAX_RETURN_VISIT_DAYS = 3;
 
     /** پیش‌فرضِ ساعت‌ها — کلیدها همان مقادیر OrderStatus هستند. */
     public const DEFAULT_HOURS = [
@@ -155,6 +161,17 @@ final class SlaPolicy
     public static function maxEstimateDate(): CarbonImmutable
     {
         return CarbonImmutable::now()->addDays(self::MAX_ESTIMATE_DAYS)->endOfDay();
+    }
+
+    /**
+     * بیشترین تاریخی که تکنسین می‌تواند به‌عنوان «زمانِ مراجعه» انتخاب کند —
+     * سفارشِ بازگشتی سقفِ کوتاه‌تری دارد.
+     */
+    public static function maxVisitDate(bool $isReturn = false): CarbonImmutable
+    {
+        $days = $isReturn ? self::MAX_RETURN_VISIT_DAYS : self::MAX_VISIT_DAYS;
+
+        return CarbonImmutable::now()->addDays($days)->endOfDay();
     }
 
     private static function offset(mixed $base, int $hours): ?CarbonImmutable

@@ -235,11 +235,12 @@ class OrderSlaTest extends TestCase
         $this->assertSame(AppMessages::DEFAULTS['lock_title'], AppMessages::all()['lock_title']);
     }
 
-    public function test_max_estimate_is_fourteen_days_out(): void
+    public function test_max_estimate_is_six_days_out(): void
     {
         $this->assertSame(
-            now()->addDays(14)->format('Y-m-d'),
+            now()->addDays(SlaPolicy::MAX_ESTIMATE_DAYS)->format('Y-m-d'),
             SlaPolicy::maxEstimateDate()->format('Y-m-d')
         );
+        $this->assertSame(6, SlaPolicy::MAX_ESTIMATE_DAYS);
     }
 }

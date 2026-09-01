@@ -81,7 +81,7 @@ class OrderActionController extends Controller
             'description.required' => 'برای ثبت تغییر این وضعیت، توضیحات الزامی است.',
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد.',
             'estimated_ready_at.after_or_equal' => 'تاریخ تخمینی نمی‌تواند در گذشته باشد.',
-            'estimated_ready_at.before_or_equal' => 'تاریخ تخمینی حداکثر می‌تواند ۱۴ روز آینده باشد.',
+            'estimated_ready_at.before_or_equal' => 'برای رفعِ مشکل حداکثر '.\Modules\CRM\Support\SlaPolicy::MAX_ESTIMATE_DAYS.' روز می‌توانید انتخاب کنید.',
             'device_img1.max' => \Modules\CRM\Support\UploadLimits::tooLargeMessage(),
             'device_img1.uploaded' => \Modules\CRM\Support\UploadLimits::failedMessage(),
             'device_img1.image' => 'فایل انتخابی عکس نیست. یک عکس (JPG یا PNG) انتخاب کنید.',
@@ -264,9 +264,22 @@ class OrderActionController extends Controller
             return response()->json(['success' => true, 'message' => 'زمان مراجعه پاک شد.']);
         }
 
+        // سقفِ انتخابِ روز: سفارشِ بازگشتی ۳ روز، عادی ۵ روز.
+        $isReturn = (bool) $order->return_review_pending || $order->return_type !== null;
+        $maxVisit = \Modules\CRM\Support\SlaPolicy::maxVisitDate($isReturn);
+        $maxDays = $isReturn
+            ? \Modules\CRM\Support\SlaPolicy::MAX_RETURN_VISIT_DAYS
+            : \Modules\CRM\Support\SlaPolicy::MAX_VISIT_DAYS;
+
         $validated = $request->validate([
-            'visit_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'visit_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today', 'before_or_equal:'.$maxVisit->format('Y-m-d')],
             'visit_slot' => ['required', 'integer', 'in:1,2,3,4'],
+        ], [
+            'visit_date.after_or_equal' => 'زمانِ مراجعه نمی‌تواند در گذشته باشد.',
+            'visit_date.before_or_equal' => 'زمانِ مراجعه حداکثر می‌تواند تا '.$maxDays.' روزِ آینده باشد.',
+            'visit_date.date_format' => 'قالبِ تاریخِ مراجعه نامعتبر است.',
+            'visit_slot.required' => 'بازهٔ ساعتِ مراجعه را انتخاب کنید.',
+            'visit_slot.in' => 'بازهٔ ساعتِ مراجعه نامعتبر است.',
         ]);
 
         $slot = OrderWizard::VISIT_SLOTS[$validated['visit_slot']];
@@ -484,13 +497,13 @@ class OrderActionController extends Controller
 
         $validated = $request->validate([
             'approved' => 'required|boolean',
-            // تخمینِ انجامِ کار فقط برای تأیید معنا دارد — سقف همان قاعدهٔ ۱۴ روز.
+            // تخمینِ انجامِ کار فقط برای تأیید معنا دارد — سقف همان قاعدهٔ رفعِ مشکل.
             'days' => 'required_if:approved,1,true|nullable|integer|min:1|max:'.\Modules\CRM\Support\SlaPolicy::MAX_ESTIMATE_DAYS,
             'note' => 'nullable|string|max:1000',
         ], [
             'approved.required' => 'نتیجهٔ بررسی (تأیید یا رد) را مشخص کنید.',
             'days.required_if' => 'برای تأییدِ برگشتی، زمان تخمینی انجام کار (روز) الزامی است.',
-            'days.max' => 'تخمین حداکثر می‌تواند ۱۴ روز باشد.',
+            'days.max' => 'تخمین حداکثر می‌تواند '.\Modules\CRM\Support\SlaPolicy::MAX_ESTIMATE_DAYS.' روز باشد.',
         ]);
 
         $approved = filter_var($validated['approved'], FILTER_VALIDATE_BOOLEAN);
