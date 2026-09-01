@@ -114,6 +114,14 @@ final class SlaPolicy
             return null;
         }
 
+        // «اجبار به تعیینِ وضعیت» توسطِ ادمین: روی سفارشِ غیرنهایی، مهلت را
+        // «گذشته» می‌کنیم تا اپِ تکنسین (مثلِ حالتِ مهلتِ گذشته) قفلِ
+        // تمام‌صفحه شود. با اولین تعیینِ وضعیتِ تکنسین، خودِ این پرچم پاک
+        // می‌شود. (اگر ستون نباشد، force_review نال است و اثری ندارد.)
+        if ($order->force_review && ! $status->isFinal()) {
+            return CarbonImmutable::now()->subHour();
+        }
+
         $hours = self::hours();
 
         return match ($status) {

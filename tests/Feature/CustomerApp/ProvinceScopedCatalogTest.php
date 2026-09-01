@@ -155,6 +155,32 @@ class ProvinceScopedCatalogTest extends TestCase
         $this->assertSame([], $this->getJson('/v1/customer/services/categories?city_id=999999')->assertOk()->json('data'));
     }
 
+    public function test_app_shows_merged_subtypes_not_the_umbrella_parent(): void
+    {
+        // مدلِ ادغام: والدِ «گاز» برای سایت/مدیریتِ پوشش فعال است ولی در اپ
+        // مخفی؛ زیرمجموعه‌ها در سایت مخفی‌اند ولی در اپ نمایش داده می‌شوند.
+        $gas = Device::create(['name' => 'گاز', 'slug' => 'gas', 'is_active' => true, 'is_active_app' => false]);
+        $stove = Device::create(['name' => 'اجاق گاز', 'slug' => 'stove', 'is_active' => false, 'is_active_app' => true]);
+        $cooktop = Device::create(['name' => 'گاز رومیزی', 'slug' => 'cooktop', 'is_active' => false, 'is_active_app' => true]);
+
+        \Modules\CRM\Models\CrmSetting::setJson('coverage.device_aliases', [
+            $gas->id => [$stove->id, $cooktop->id],
+        ]);
+
+        // تکنسینِ مشهد با تگِ زیرمجموعه (اجاق گاز) → والدِ گاز پوشش می‌گیرد.
+        $this->tech([$this->mashhad->id], [$stove->id]);
+
+        $slugs = collect(
+            $this->getJson('/v1/customer/services/categories?state_id='.$this->khorasan->id)
+                ->assertOk()->json('data')
+        )->pluck('slug')->all();
+
+        // اپ باید زیرمجموعه‌ها را نشان دهد، نه والدِ «گاز» را.
+        $this->assertContains('stove', $slugs);
+        $this->assertContains('cooktop', $slugs);
+        $this->assertNotContains('gas', $slugs);
+    }
+
     public function test_no_filtering_until_coverage_data_is_complete(): void
     {
         // هیچ تکنسینی تگِ شهر ندارد → فیچر بدونِ داده → بدونِ محدودیت.

@@ -46,6 +46,7 @@ class Order extends Model
         'درخواست مشاوره تلفنی داشتند',
         'نبود قطعات مورد نیاز جهت تعمیر دستگاه',
         'عدم سرویس‌دهی از سمت مجموعه',
+        'کنسل به دلیل عدم هماهنگی مشتری',
     ];
 
     /** حداکثر دفعاتِ تغییرِ «زمانِ مراجعه» توسطِ تکنسین پیش از قفل‌شدن. */
@@ -100,6 +101,7 @@ class Order extends Model
         'province_id', 'city_id', 'district_id', 'address', 'postal_code', 'address_id',
         'problem_title', 'problem_description',
         'visit_scheduled_at', 'visit_scheduled_slot', 'visit_reschedule_count',
+        'force_review', 'force_review_at', 'force_review_by',
 
         // وضعیت
         'status', 'status_changed_at', 'cancel_reason', 'cancel_reason_id',
@@ -147,6 +149,8 @@ class Order extends Model
         'return_review_approved' => 'boolean',
         'return_review_days' => 'integer',
         'visit_scheduled_at' => 'datetime',
+        'force_review' => 'boolean',
+        'force_review_at' => 'datetime',
         'assigned_at' => 'datetime',
         'completed_at' => 'datetime',
         'is_locked' => 'boolean',

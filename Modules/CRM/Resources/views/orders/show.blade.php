@@ -1717,6 +1717,27 @@
                 </form>
                 @endif
 
+                {{-- اجبار به تعیینِ وضعیت — اپِ تکنسین را قفلِ تمام‌صفحه می‌کند تا
+                     این سفارش تعیین‌تکلیف شود (با اولین اقدامِ تکنسین خودکار برداشته
+                     می‌شود). برخلافِ «قفلِ سفارش», جریان را نمی‌بندد بلکه تکنسین را
+                     وادار به تعیینِ وضعیت می‌کند. --}}
+                @if($order->force_review)
+                <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-3">
+                    <div class="text-sm font-bold text-orange-800 dark:text-orange-200 mb-1">⏰ اجبار به تعیینِ وضعیت فعال است</div>
+                    <p class="text-[11px] text-orange-600 dark:text-orange-300 mb-2">اپِ تکنسین تا تعیینِ وضعیتِ این سفارش قفلِ تمام‌صفحه است.</p>
+                    <form action="{{ route('crm.orders.force-review', $order) }}" method="POST">
+                        @csrf
+                        <button class="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-xs font-bold">برداشتنِ اجبار</button>
+                    </form>
+                </div>
+                @elseif(! $order->status->isFinal())
+                <form action="{{ route('crm.orders.force-review', $order) }}" method="POST"
+                      onsubmit="return confirm('اپِ تکنسین تا تعیینِ وضعیتِ این سفارش قفلِ تمام‌صفحه شود؟');">
+                    @csrf
+                    <button class="px-3 py-1.5 bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-200 rounded-lg hover:bg-orange-200 text-xs font-bold">⏰ اجبار به تعیینِ وضعیت (قفلِ اپ تکنسین)</button>
+                </form>
+                @endif
+
                 {{-- مشکوک به تقلب --}}
                 @if($order->is_suspected_fraud)
                 <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">

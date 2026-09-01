@@ -400,6 +400,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     // موارد امنیتی — دسترسیِ مستقل (پیش‌فرض فقط ادمین‌کل؛ قابلِ واگذاری به نقش‌های دیگر)
     Route::middleware('can:manage-order-security')->group(function () {
         Route::post('orders/{order}/lock', [OrderController::class, 'toggleLock'])->name('orders.lock');
+        Route::post('orders/{order}/force-review', [OrderController::class, 'toggleForceReview'])->name('orders.force-review');
         Route::post('orders/{order}/fraud', [OrderController::class, 'toggleFraud'])->name('orders.fraud');
         Route::post('customers/{customer}/block', [CustomerController::class, 'toggleBlock'])->name('customers.block');
     });

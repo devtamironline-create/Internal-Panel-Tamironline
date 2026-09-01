@@ -223,6 +223,18 @@ class ServiceCoverage
             }
         }
 
+        // گسترشِ اپ: «والدِ ادغامی» (مثلِ «گاز»/«تلویزیون») فقط برای سایت و
+        // مدیریتِ پوشش است؛ در اپ باید زیرمجموعه‌هایش («اجاق گاز/گاز رومیزی»،
+        // «LCD/LED») دیده شوند. پس اگر والد پوشش دارد، idهای زیرمجموعه‌اش را هم
+        // مجاز می‌کنیم — کوئریِ کاتالوگِ اپ خودش والدِ is_active_app=false را حذف
+        // و زیرمجموعه‌های is_active_app=true را نگه می‌دارد.
+        $aliases = self::deviceAliases();
+        foreach ($ids as $coveredId) {
+            foreach ($aliases[$coveredId] ?? [] as $childId) {
+                $ids[] = (int) $childId;
+            }
+        }
+
         return array_values(array_unique($ids));
     }
 

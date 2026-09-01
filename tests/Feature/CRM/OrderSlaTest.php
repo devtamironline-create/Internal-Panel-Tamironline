@@ -39,6 +39,7 @@ class OrderSlaTest extends TestCase
             $t->timestamp('assigned_at')->nullable();
             $t->timestamp('visit_scheduled_at')->nullable();
             $t->string('return_type')->nullable();
+            $t->boolean('force_review')->default(false);
             $t->boolean('is_lead')->default(false);
             $t->timestamps();
         });
@@ -233,6 +234,27 @@ class OrderSlaTest extends TestCase
         AppMessages::flush();
 
         $this->assertSame(AppMessages::DEFAULTS['lock_title'], AppMessages::all()['lock_title']);
+    }
+
+    public function test_admin_force_review_makes_the_order_overdue(): void
+    {
+        // «اجبار به تعیینِ وضعیت»: روی سفارشِ غیرنهایی مهلت را «گذشته» می‌کند
+        // تا اپ قفلِ تمام‌صفحه شود.
+        $order = $this->order('coordinated', [
+            'visit_scheduled_at' => now()->addDays(3), // مهلتِ عادی در آینده
+            'force_review' => true,
+        ]);
+
+        $this->assertTrue(SlaPolicy::isOverdue($order), 'سفارشِ force_review باید overdue شود.');
+        $this->assertTrue(SlaPolicy::deadlineFor($order)->isPast());
+    }
+
+    public function test_force_review_has_no_effect_on_a_final_order(): void
+    {
+        $order = $this->order('completed', ['force_review' => true]);
+
+        // سفارشِ نهایی مهلت ندارد؛ اجبار هم آن را overdue نمی‌کند.
+        $this->assertNull(SlaPolicy::deadlineFor($order));
     }
 
     public function test_max_estimate_is_six_days_out(): void
