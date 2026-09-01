@@ -161,10 +161,10 @@
                     @csrf
                     <textarea name="description" rows="3" placeholder="توضیح انتقال (مثلاً: دستگاه جهت تعویض برد به تعمیرگاه منتقل شد)"
                               class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm"></textarea>
-                    <button class="w-full px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-bold">ثبت رسید انتقال</button>
+                    <button class="w-full px-3 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-bold">ارسال رسید انتقال</button>
                 </form>
                 @else
-                <p class="text-xs text-gray-400">ثبت رسید انتقال فقط در وضعیت «انتقال به تعمیرگاه» یا «شروع تعمیر» ممکن است.</p>
+                <p class="text-xs text-gray-400">ارسال رسید انتقال فقط در وضعیت «انتقال به تعمیرگاه» ممکن است.</p>
                 @endif
             </div>
             @endif

@@ -75,6 +75,9 @@ class TechOrderDetailResource extends JsonResource
                 'approved' => $this->return_reviewed_at !== null ? (bool) $this->return_review_approved : null,
                 'days' => $this->return_review_days !== null ? (int) $this->return_review_days : null,
             ],
+            // توضیحاتی که ادمین موقعِ بازگشتی‌کردنِ سفارش نوشته — تکنسین باید
+            // آن را در مودالِ «ثبت بررسی» ببیند (فقط برای سفارشِ بازگشتی).
+            'return_description' => $this->return_type !== null ? $this->return_description : null,
             'max_estimate_date' => \Modules\CRM\Support\SlaPolicy::maxEstimateDate()->format('Y-m-d'),
             // شمارندهٔ تغییرِ زمانِ مراجعه — تکنسین حداکثر VISIT_RESCHEDULE_LIMIT
             // بار می‌تواند زمان را تغییر دهد؛ پس از آن تا ریستِ ادمین قفل است.

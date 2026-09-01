@@ -564,8 +564,14 @@ class OrderActionController extends Controller
         $hasExistingImage = ! empty($order->device_img1);
 
         $errors = [];
-        if (! $isDraft && ! $isReturned && ! $hasNewImage && ! $hasExistingImage) {
-            $errors['device_img1'] = 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.';
+        // عکسِ دستگاه برای بستنِ فاکتور همیشه اجباری است. سفارشِ بازگشتی
+        // باید عکسِ *جدید* داشته باشد (عکسِ سرویسِ قبلی کافی نیست)؛ سفارشِ
+        // عادی با عکسِ موجود هم بسته می‌شود (تصمیمِ ۱۴۰۵/۰۶/۱۰).
+        $photoOk = $isReturned ? $hasNewImage : ($hasNewImage || $hasExistingImage);
+        if (! $isDraft && ! $photoOk) {
+            $errors['device_img1'] = $isReturned
+                ? 'برای بستنِ سفارشِ بازگشتی، آپلودِ عکسِ جدیدِ دستگاه اجباری است.'
+                : 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.';
         }
         // توضیحاتِ فاکتور برای «بستنِ» سفارش همیشه اجباری است — حتی
         // برگشتیِ رایگان (تصمیمِ ۱۴۰۵/۰۵/۲۷): این متن سندِ کارِ انجام‌شده است.
