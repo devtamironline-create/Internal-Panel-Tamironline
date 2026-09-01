@@ -28,20 +28,31 @@
     $orderAddr    = $order?->address ?? '';
     $custAddr     = trim(implode('، ', array_filter([$provinceName, $cityName, $orderAddr])));
 
-    // متن توضیح فاکتور (نوشتهٔ تکنسین/اپراتور برای مشتری) — این متن
-    // به‌عنوان عنوان اصلیِ خدمت در ردیف فاکتور استفاده می‌شود.
-    $customerDesc = trim((string) ($order->invoice_descripotion ?? ''));
+    // متن توضیح فاکتور — اول از snapshotِ خودِ فاکتور (مستقلِ هر فاکتور در
+    // سفارشِ بازگشتیِ جمع‌شونده)؛ فقط برای فاکتورهای قدیمیِ بدونِ snapshot به
+    // فیلدِ زندهٔ سفارش fallback می‌شود.
+    $invItems = is_array($invoice->items_snapshot ?? null) ? $invoice->items_snapshot : [];
+    $customerDesc = trim((string) ($invoice->description ?? $order->invoice_descripotion ?? ''));
 
     $grandTotal = (int) ($invoice->total_amount ?? 0);
 
-    // اگر `invoice_descripotion` ست شده، فقط یک ردیف با همان متن داریم.
-    // در غیر این‌صورت از OrderItem / piece_list به‌عنوان عنوان استفاده می‌شود.
+    // اولویت: شرحِ snapshotِ فاکتور → اقلامِ snapshotِ فاکتور → (قدیمی)
+    // OrderItem / piece_listِ سفارش.
     $rows = collect();
     if ($customerDesc !== '') {
         $rows->push([
             'title' => $customerDesc,
             'total' => $grandTotal,
         ]);
+    } elseif ($invItems !== []) {
+        foreach ($invItems as $it) {
+            $t = is_array($it) ? (string) ($it['title'] ?? '') : (string) $it;
+            if (trim($t) === '') continue;
+            $rows->push([
+                'title' => $t,
+                'total' => is_array($it) ? (int) ($it['total'] ?? 0) : 0,
+            ]);
+        }
     } elseif ($order && $order->items->isNotEmpty()) {
         foreach ($order->items as $item) {
             $rows->push([

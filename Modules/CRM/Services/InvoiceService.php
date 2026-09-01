@@ -68,6 +68,34 @@ class InvoiceService
      * @param  string|null  $collectionMethod  «روش دریافت» انتخابِ تکنسین
      *                                         (cash|online) — null = قدیمی
      */
+    /**
+     * snapshotِ شرح/اقلامِ فاکتور در لحظهٔ صدور — تا هر فاکتور (به‌ویژه در
+     * سفارشِ بازگشتیِ جمع‌شونده) شرحِ مستقلِ خودش را داشته باشد و به فیلدِ
+     * زندهٔ سفارش (که با تکمیلِ بعدی بازنویسی می‌شود) وابسته نباشد.
+     *
+     * @return array{description: ?string, items_snapshot: ?array}
+     */
+    private function snapshotFor(Order $order): array
+    {
+        $desc = trim((string) ($order->invoice_descripotion ?? ''));
+
+        $rows = [];
+        $titles = is_array($order->piece_list) ? $order->piece_list : [];
+        $sells = is_array($order->customer_price_list) ? $order->customer_price_list : [];
+        foreach ($titles as $i => $title) {
+            $t = is_string($title) ? $title : (string) ($title['title'] ?? '');
+            if (trim($t) === '') {
+                continue;
+            }
+            $rows[] = ['title' => $t, 'total' => (int) ($sells[$i] ?? 0)];
+        }
+
+        return [
+            'description' => $desc !== '' ? $desc : null,
+            'items_snapshot' => $rows !== [] ? $rows : null,
+        ];
+    }
+
     public function generateForOrder(Order $order, ?int $createdBy = null, bool|string $mode = false, ?string $collectionMethod = null): ?Invoice
     {
         // هر مقدارِ ناشناخته (از جمله true و 'supersede' قدیمی) به حالتِ
@@ -117,12 +145,16 @@ class InvoiceService
                     'tech_share' => 0, 'company_share' => (int) ($order->final_price ?? $order->items_subtotal ?? 0),
                     'percent' => 0, 'calc_type' => null];
 
+            $snapshot = $this->snapshotFor($order);
+
             $invoice = Invoice::create([
                 'invoice_code' => Invoice::generateInvoiceCode(),
                 'order_id' => $order->id,
                 'customer_id' => $order->customer_id,
                 'technician_id' => $order->technician_id,
                 'total_amount' => $totals['total'],
+                'description' => $snapshot['description'],
+                'items_snapshot' => $snapshot['items_snapshot'],
                 'tech_share' => $totals['tech_share'],
                 'company_share' => $totals['company_share'],
                 'calc_type' => $totals['calc_type'],
@@ -225,12 +257,18 @@ class InvoiceService
                 $collectionMethod = 'cash';
             }
 
+            // اصلاحِ مبلغ = همان کار با عددِ درست؛ شرح/اقلام از فاکتورِ قبلی
+            // به ارث می‌رسد (اگر snapshot داشت)، وگرنه از سفارش.
+            $fallback = $this->snapshotFor($order);
+
             $invoice = Invoice::create([
                 'invoice_code' => Invoice::generateInvoiceCode(),
                 'order_id' => $order->id,
                 'customer_id' => $order->customer_id,
                 'technician_id' => $order->technician_id,
                 'total_amount' => $totals['total'],
+                'description' => $old->description ?? $fallback['description'],
+                'items_snapshot' => $old->items_snapshot ?? $fallback['items_snapshot'],
                 'tech_share' => $totals['tech_share'],
                 'company_share' => $totals['company_share'],
                 'calc_type' => $totals['calc_type'],

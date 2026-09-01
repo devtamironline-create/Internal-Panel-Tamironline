@@ -20,6 +20,8 @@ class Invoice extends Model
         'customer_id',
         'technician_id',
         'total_amount',
+        'description',
+        'items_snapshot',
         'tech_share',
         'company_share',
         'calc_type',
@@ -37,6 +39,7 @@ class Invoice extends Model
     protected $casts = [
         'wp_id' => 'integer',
         'total_amount' => 'integer',
+        'items_snapshot' => 'array',
         'tech_share' => 'integer',
         'company_share' => 'integer',
         'commission_percent' => 'integer',
