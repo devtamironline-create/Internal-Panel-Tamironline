@@ -49,6 +49,58 @@
                     searchPlaceholder="جستجوی تکنسین..." />
             </div>
             <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">استان</label>
+                @php
+                    $provinceOptions = ['' => '— همه —'];
+                    foreach ($provinces as $p) { $provinceOptions[(string) $p->id] = $p->name; }
+                @endphp
+                <x-searchable-select
+                    name="province_id"
+                    :options="$provinceOptions"
+                    :value="$filters['province_id']"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی استان..." />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">شهر</label>
+                @php
+                    $cityOptions = ['' => '— همه —'];
+                    foreach ($cities as $c) { $cityOptions[(string) $c->id] = $c->name; }
+                @endphp
+                <x-searchable-select
+                    name="city_id"
+                    :options="$cityOptions"
+                    :value="$filters['city_id']"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی شهر..." />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">دستگاه</label>
+                @php
+                    $deviceOptions = ['' => '— همه —'];
+                    foreach ($devices as $d) { $deviceOptions[(string) $d->id] = $d->name; }
+                @endphp
+                <x-searchable-select
+                    name="device_id"
+                    :options="$deviceOptions"
+                    :value="$filters['device_id']"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی دستگاه..." />
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">برند</label>
+                @php
+                    $brandOptions = ['' => '— همه —'];
+                    foreach ($brands as $b) { $brandOptions[(string) $b->id] = $b->name; }
+                @endphp
+                <x-searchable-select
+                    name="brand_id"
+                    :options="$brandOptions"
+                    :value="$filters['brand_id']"
+                    placeholder="— همه —"
+                    searchPlaceholder="جستجوی برند..." />
+            </div>
+            <div>
                 <label class="block text-xs font-medium text-gray-700 dark:text-gray-200 mb-1">نوع سند</label>
                 <select name="doc_type" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
                     @foreach($docTypes as $k => $v)
@@ -157,6 +209,69 @@
         </div>
     </div>
 
+    @php
+        $orderScoped = $filters['province_id'] || $filters['city_id'] || $filters['device_id'] || $filters['brand_id'];
+    @endphp
+    @if($orderScoped)
+        <div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-4 py-2 text-xs text-amber-700 dark:text-amber-300">
+            به دلیل فعال بودن فیلترِ شهر/استان/دستگاه/برند، فقط <b>فاکتورها</b> نمایش داده می‌شوند (تراکنش‌های کیف‌پول به سفارش گره نمی‌خورند و کنار گذاشته شده‌اند).
+        </div>
+    @endif
+
+    {{-- ─── نمودار و مقایسه بر اساس شهر / تکنسین / دستگاه ─── --}}
+    @php
+        $breakdownMeta = [
+            ['key' => 'by_city',       'title' => '🏙️ بر اساس شهر',    'col' => 'شهر',    'color' => '#6366f1'],
+            ['key' => 'by_technician', 'title' => '🧑‍🔧 بر اساس تکنسین', 'col' => 'تکنسین', 'color' => '#0ea5e9'],
+            ['key' => 'by_device',     'title' => '🔧 بر اساس دستگاه',  'col' => 'دستگاه',  'color' => '#f59e0b'],
+        ];
+    @endphp
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        @foreach($breakdownMeta as $meta)
+            @php $bd = $breakdowns[$meta['key']]; @endphp
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 flex flex-col">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">{{ $meta['title'] }}</h2>
+                    <span class="text-[11px] text-gray-500">{{ number_format($bd['dim_count']) }} مورد · جمع {{ number_format($bd['grand_total']) }}</span>
+                </div>
+
+                @if(empty($bd['chart']['labels']))
+                    <div class="py-10 text-center text-xs text-gray-400">داده‌ای در این بازه نیست.</div>
+                @else
+                    <div id="chart-{{ $meta['key'] }}"
+                         data-chart='@json($bd['chart'])'
+                         data-color="{{ $meta['color'] }}"></div>
+
+                    <div class="overflow-x-auto mt-3 -mx-1">
+                        <table class="w-full text-xs">
+                            <thead class="text-gray-500">
+                                <tr>
+                                    <th class="px-2 py-1 text-right font-medium">{{ $meta['col'] }}</th>
+                                    <th class="px-2 py-1 text-center font-medium">تعداد</th>
+                                    <th class="px-2 py-1 text-left font-medium">جمع فاکتور</th>
+                                    <th class="px-2 py-1 text-left font-medium">سهم شرکت</th>
+                                    <th class="px-2 py-1 text-center font-medium">سود٪</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                @foreach($bd['rows'] as $r)
+                                    <tr>
+                                        <td class="px-2 py-1 text-gray-700 dark:text-gray-300">{{ $r['name'] }}</td>
+                                        <td class="px-2 py-1 text-center text-gray-500" dir="ltr">{{ number_format($r['count']) }}</td>
+                                        <td class="px-2 py-1 text-left font-medium text-gray-800 dark:text-gray-200" dir="ltr">{{ number_format($r['total']) }}</td>
+                                        <td class="px-2 py-1 text-left text-emerald-600" dir="ltr">{{ number_format($r['company_share']) }}</td>
+                                        <td class="px-2 py-1 text-center text-amber-600" dir="ltr">{{ $r['profit_pct'] }}%</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        @endforeach
+    </div>
+
     {{-- ─── لیست ردیف‌به‌ردیف اسناد ─── --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
@@ -228,4 +343,36 @@
     </div>
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof ApexCharts === 'undefined') return;
+    const isDark = document.documentElement.classList.contains('dark');
+
+    document.querySelectorAll('[id^="chart-by_"]').forEach(function (el) {
+        let data;
+        try { data = JSON.parse(el.dataset.chart); } catch (e) { return; }
+        if (!data || !data.labels || !data.labels.length) return;
+
+        const options = {
+            chart: { type: 'bar', height: Math.max(160, data.labels.length * 34), stacked: false,
+                     toolbar: { show: false }, fontFamily: 'inherit' },
+            plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '70%' } },
+            series: [
+                { name: 'جمع فاکتور', data: data.totals, color: el.dataset.color || '#6366f1' },
+                { name: 'سهم شرکت', data: data.company, color: '#10b981' },
+            ],
+            xaxis: { categories: data.labels,
+                     labels: { style: { fontSize: '10px' }, formatter: v => Intl.NumberFormat('en-US', { notation: 'compact' }).format(v) } },
+            yaxis: { labels: { style: { fontSize: '10px' } } },
+            dataLabels: { enabled: false },
+            legend: { position: 'top', fontSize: '11px' },
+            grid: { borderColor: isDark ? '#374151' : '#e5e7eb' },
+            theme: { mode: isDark ? 'dark' : 'light' },
+            tooltip: { y: { formatter: v => Intl.NumberFormat('en-US').format(v) + ' تومان' } },
+        };
+        new ApexCharts(el, options).render();
+    });
+});
+</script>
 @endsection
