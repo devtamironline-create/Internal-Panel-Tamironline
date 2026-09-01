@@ -52,6 +52,20 @@ class Order extends Model
     public const VISIT_RESCHEDULE_LIMIT = 2;
 
     /**
+     * آیا ستونِ شمارندهٔ تغییرِ زمانِ مراجعه در DB موجود است؟ (سازگاری با
+     * پنجرهٔ دیپلوی که کد پیش از migrate می‌رود — تا نبودِ ستون باعثِ ۵۰۰ نشود.)
+     */
+    public static function supportsVisitRescheduleCount(): bool
+    {
+        static $has = null;
+        if ($has === null) {
+            $has = \Illuminate\Support\Facades\Schema::hasColumn('crm_orders', 'visit_reschedule_count');
+        }
+
+        return $has;
+    }
+
+    /**
      * لیستِ دلایلِ کنسل/رد سفارش — قابلِ مدیریت توسطِ ادمین در تنظیمات
      * (کلیدِ crm_settings: order_cancel_reasons). اگر چیزی ذخیره نشده باشد،
      * به لیستِ پیش‌فرضِ CANCEL_REASONS برمی‌گردد.
@@ -125,7 +139,7 @@ class Order extends Model
     ];
 
     protected $casts = [
-        'status' => OrderStatus::class,
+        'status' => \Modules\CRM\Casts\OrderStatusCast::class,
         'status_changed_at' => 'datetime',
         'estimated_ready_at' => 'date',
         'return_review_pending' => 'boolean',

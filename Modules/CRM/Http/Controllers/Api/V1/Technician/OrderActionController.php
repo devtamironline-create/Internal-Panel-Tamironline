@@ -290,29 +290,33 @@ class OrderActionController extends Controller
         // محدودیتِ تغییرِ زمانِ مراجعه: بارِ اولِ ثبت شمرده نمی‌شود؛ هر تغییرِ
         // بعدی +۱ می‌شود و پس از سقفِ مجاز، تکنسین قفل می‌شود تا ادمین شمارنده
         // را صفر کند. (پاک‌کردن هم شمارنده را نگه می‌دارد تا دور زده نشود.)
-        $hasScheduledBefore = $order->visit_scheduled_at !== null
-            || (int) $order->visit_reschedule_count > 0;
-        $newRescheduleCount = (int) $order->visit_reschedule_count;
+        // فقط وقتی ستونِ شمارنده در DB موجود باشد اعمال می‌شود — تا در پنجرهٔ
+        // دیپلوی (کد پیش از migrate) این مسیر ۵۰۰ ندهد.
+        $tracksReschedule = Order::supportsVisitRescheduleCount();
+        $newRescheduleCount = (int) ($order->visit_reschedule_count ?? 0);
 
-        if ($hasScheduledBefore) {
-            if ($newRescheduleCount >= Order::VISIT_RESCHEDULE_LIMIT) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'زمانِ مراجعه حداکثر '.Order::VISIT_RESCHEDULE_LIMIT
-                        .' بار قابلِ تغییر است. برای تغییرِ بیشتر با پشتیبانی/ادمین هماهنگ کنید.',
-                ], 423);
+        if ($tracksReschedule) {
+            $hasScheduledBefore = $order->visit_scheduled_at !== null || $newRescheduleCount > 0;
+            if ($hasScheduledBefore) {
+                if ($newRescheduleCount >= Order::VISIT_RESCHEDULE_LIMIT) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'زمانِ مراجعه حداکثر '.Order::VISIT_RESCHEDULE_LIMIT
+                            .' بار قابلِ تغییر است. برای تغییرِ بیشتر با پشتیبانی/ادمین هماهنگ کنید.',
+                    ], 423);
+                }
+                $newRescheduleCount++;
             }
-            $newRescheduleCount++;
         }
 
         $previous = $order->status;
         $autoCoordinated = $previous !== OrderStatus::Coordinated
             && in_array(OrderStatus::Coordinated, $previous->technicianTransitions(), true);
 
-        $updates = [
-            'visit_scheduled_at' => $datetime,
-            'visit_reschedule_count' => $newRescheduleCount,
-        ];
+        $updates = ['visit_scheduled_at' => $datetime];
+        if ($tracksReschedule) {
+            $updates['visit_reschedule_count'] = $newRescheduleCount;
+        }
         if ($autoCoordinated) {
             $updates['status'] = OrderStatus::Coordinated->value;
         }
