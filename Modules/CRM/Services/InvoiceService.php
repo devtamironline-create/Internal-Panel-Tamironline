@@ -73,10 +73,18 @@ class InvoiceService
      * سفارشِ بازگشتیِ جمع‌شونده) شرحِ مستقلِ خودش را داشته باشد و به فیلدِ
      * زندهٔ سفارش (که با تکمیلِ بعدی بازنویسی می‌شود) وابسته نباشد.
      *
-     * @return array{description: ?string, items_snapshot: ?array}
+     * اگر ستون‌های snapshot هنوز روی DB نباشند (پنجرهٔ دیپلوی/مهاجرتِ
+     * ناتمام)، آرایهٔ خالی برمی‌گرداند تا Invoice::create روی ستونِ ناموجود
+     * ننویسد و صدورِ فاکتور ۵۰۰ ندهد.
+     *
+     * @return array{description?: ?string, items_snapshot?: ?array}
      */
     private function snapshotFor(Order $order): array
     {
+        if (! Invoice::supportsSnapshot()) {
+            return [];
+        }
+
         $desc = trim((string) ($order->invoice_descripotion ?? ''));
 
         $rows = [];
@@ -153,8 +161,7 @@ class InvoiceService
                 'customer_id' => $order->customer_id,
                 'technician_id' => $order->technician_id,
                 'total_amount' => $totals['total'],
-                'description' => $snapshot['description'],
-                'items_snapshot' => $snapshot['items_snapshot'],
+                ...$snapshot,
                 'tech_share' => $totals['tech_share'],
                 'company_share' => $totals['company_share'],
                 'calc_type' => $totals['calc_type'],
@@ -258,8 +265,13 @@ class InvoiceService
             }
 
             // اصلاحِ مبلغ = همان کار با عددِ درست؛ شرح/اقلام از فاکتورِ قبلی
-            // به ارث می‌رسد (اگر snapshot داشت)، وگرنه از سفارش.
+            // به ارث می‌رسد (اگر snapshot داشت)، وگرنه از سفارش. اگر ستون‌ها
+            // هنوز نباشند، snap خالی است و چیزی نوشته نمی‌شود.
             $fallback = $this->snapshotFor($order);
+            $snap = Invoice::supportsSnapshot() ? [
+                'description' => $old->description ?? ($fallback['description'] ?? null),
+                'items_snapshot' => $old->items_snapshot ?? ($fallback['items_snapshot'] ?? null),
+            ] : [];
 
             $invoice = Invoice::create([
                 'invoice_code' => Invoice::generateInvoiceCode(),
@@ -267,8 +279,7 @@ class InvoiceService
                 'customer_id' => $order->customer_id,
                 'technician_id' => $order->technician_id,
                 'total_amount' => $totals['total'],
-                'description' => $old->description ?? $fallback['description'],
-                'items_snapshot' => $old->items_snapshot ?? $fallback['items_snapshot'],
+                ...$snap,
                 'tech_share' => $totals['tech_share'],
                 'company_share' => $totals['company_share'],
                 'calc_type' => $totals['calc_type'],
