@@ -48,6 +48,31 @@ class Order extends Model
         'عدم سرویس‌دهی از سمت مجموعه',
     ];
 
+    /**
+     * لیستِ دلایلِ کنسل/رد سفارش — قابلِ مدیریت توسطِ ادمین در تنظیمات
+     * (کلیدِ crm_settings: order_cancel_reasons). اگر چیزی ذخیره نشده باشد،
+     * به لیستِ پیش‌فرضِ CANCEL_REASONS برمی‌گردد.
+     *
+     * @return list<string>
+     */
+    public static function cancelReasons(): array
+    {
+        $stored = CrmSetting::getJson('order_cancel_reasons', null);
+
+        if (is_array($stored)) {
+            $clean = array_values(array_filter(
+                array_map(fn ($r) => trim((string) $r), $stored),
+                fn ($r) => $r !== ''
+            ));
+
+            if ($clean !== []) {
+                return $clean;
+            }
+        }
+
+        return self::CANCEL_REASONS;
+    }
+
     protected $fillable = [
         // پایه
         'order_code', 'wp_id',

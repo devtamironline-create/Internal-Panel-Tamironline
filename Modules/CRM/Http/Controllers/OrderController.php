@@ -1067,7 +1067,7 @@ class OrderController extends Controller
 
         // برای کنسل/رد، دلیل اجباری و فقط از لیستِ ثابتِ دلایل (انتخابی).
         if ($isCancelling) {
-            $rules['note'] = ['required', 'string', Rule::in(Order::CANCEL_REASONS)];
+            $rules['note'] = ['required', 'string', Rule::in(Order::cancelReasons())];
         }
 
         // برای تکمیل، فیلدهای فاکتور — هم‌سو با Tech/DashboardController

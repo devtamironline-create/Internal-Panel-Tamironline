@@ -1528,7 +1528,7 @@
                         <select name="note" x-bind:required="isCancelled()" x-bind:disabled="!isCancelled()"
                                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                             <option value="">— انتخاب دلیل —</option>
-                            @foreach(\Modules\CRM\Models\Order::CANCEL_REASONS as $reason)
+                            @foreach(\Modules\CRM\Models\Order::cancelReasons() as $reason)
                             <option value="{{ $reason }}" @selected(old('note') === $reason)>{{ $reason }}</option>
                             @endforeach
                         </select>
