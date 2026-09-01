@@ -270,7 +270,7 @@ class FinancialReportController extends Controller
                 COALESCE(SUM(crm_invoices.tech_share), 0) AS tech_share
             ")
             ->groupBy(\Illuminate\Support\Facades\DB::raw($groupCol))
-            ->orderByDesc('total_amount')
+            ->orderByDesc('company_share')
             ->get();
 
         return $this->foldBreakdown($grouped, $nullLabel);
@@ -296,7 +296,7 @@ class FinancialReportController extends Controller
                 COALESCE(SUM(crm_invoices.tech_share), 0) AS tech_share
             ")
             ->groupBy('crm_invoices.technician_id')
-            ->orderByDesc('total_amount')
+            ->orderByDesc('company_share')
             ->get();
 
         return $this->foldBreakdown($grouped, 'بدون تکنسین');
@@ -346,10 +346,9 @@ class FinancialReportController extends Controller
             'rows' => $top,
             'chart' => [
                 'labels' => $top->pluck('name')->all(),
-                'totals' => $top->pluck('total')->all(),
                 'company' => $top->pluck('company_share')->all(),
             ],
-            'grand_total' => (int) $rows->sum('total'),
+            'grand_company' => (int) $rows->sum('company_share'),
             'dim_count' => $rows->count(),
         ];
     }
