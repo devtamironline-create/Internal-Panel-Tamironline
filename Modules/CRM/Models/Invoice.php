@@ -54,6 +54,17 @@ class Invoice extends Model
      * در لیست‌ها/گزارش‌ها/محاسبه‌های مالی (مثل invoice_debt) نیایند.
      * برای دیدن همه از withSuperseded()/withoutGlobalScope استفاده کنید.
      */
+    /**
+     * آیا ستون‌های snapshotِ شرح/اقلام روی DB موجودند؟ (سازگاری با پنجرهٔ
+     * دیپلوی یا مهاجرتِ ناتمام — تا نوشتن روی ستونِ ناموجود ۵۰۰ ندهد.)
+     */
+    public static function supportsSnapshot(): bool
+    {
+        // بدونِ کشِ استاتیک: صدورِ فاکتور پرتکرار نیست و کشِ استاتیک بین
+        // تست‌ها/مهاجرت آلوده می‌شود.
+        return \Illuminate\Support\Facades\Schema::hasColumn('crm_invoices', 'description');
+    }
+
     protected static function booted(): void
     {
         static::addGlobalScope('active', function (Builder $q) {

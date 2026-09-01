@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\CRM;
 
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Services\InvoiceService;
 use Tests\TestCase;
@@ -13,6 +15,22 @@ use Tests\TestCase;
  */
 class InvoiceDescriptionSnapshotTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // snapshotFor فقط وقتی داده می‌سازد که ستون‌های snapshot روی DB باشند
+        // (Invoice::supportsSnapshot). یک crm_invoices کمینه با همان ستون‌ها
+        // می‌سازیم تا hasColumn درست برگرداند.
+        if (! Schema::hasTable('crm_invoices')) {
+            Schema::create('crm_invoices', function (Blueprint $t) {
+                $t->id();
+                $t->text('description')->nullable();
+                $t->json('items_snapshot')->nullable();
+            });
+        }
+    }
+
     private function snapshotFor(Order $order): array
     {
         $svc = app(InvoiceService::class);
