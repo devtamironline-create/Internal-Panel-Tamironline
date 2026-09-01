@@ -31,9 +31,9 @@ class TransferReceiptController extends Controller
         $status = $order->status instanceof OrderStatus
             ? $order->status
             : OrderStatus::tryFrom((string) $order->status);
-        if (! in_array($status, [OrderStatus::Open, OrderStatus::RepairStarted], true)) {
+        if (! in_array($status, [OrderStatus::Open], true)) {
             throw ValidationException::withMessages([
-                'status' => 'ثبتِ رسیدِ انتقال فقط در وضعیتِ «انتقال به تعمیرگاه» یا «شروع تعمیر» ممکن است.',
+                'status' => 'ثبتِ رسیدِ انتقال فقط در وضعیتِ «انتقال به تعمیرگاه» ممکن است.',
             ]);
         }
 

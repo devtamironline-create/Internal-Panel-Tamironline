@@ -49,7 +49,6 @@ final class OrderStatusMapper
             // برچسبِ دقیقِ فارسی همیشه در status_label می‌آید.
             OrderStatus::AwaitingCoordination => 'pending',
             OrderStatus::NoAnswer => 'pending',
-            OrderStatus::RepairStarted => 'in_progress',
             OrderStatus::AwaitingPart => 'suspended',
             OrderStatus::AwaitingCustomerApproval => 'suspended',
         };
@@ -70,7 +69,6 @@ final class OrderStatusMapper
             // وضعیت‌های جدید — هم‌ارزِ عددیِ همان نگاشتِ بالا.
             OrderStatus::AwaitingCoordination => 0,
             OrderStatus::NoAnswer => 0,
-            OrderStatus::RepairStarted => 6,
             OrderStatus::AwaitingPart => 3,
             OrderStatus::AwaitingCustomerApproval => 3,
         };

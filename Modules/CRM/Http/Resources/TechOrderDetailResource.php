@@ -19,7 +19,6 @@ class TechOrderDetailResource extends JsonResource
     /** برچسبِ اکشنِ هر وضعیت (رادیوهای تغییرِ وضعیت). */
     private const ACTION_LABELS = [
         'coordinated' => 'هماهنگ کردن سفارش',
-        'repair_started' => 'شروع تعمیر',
         'open' => 'انتقال به تعمیرگاه',
         'awaiting_part' => 'در انتظار قطعه',
         'awaiting_customer_approval' => 'در انتظار تأیید مشتری',

@@ -136,11 +136,11 @@
             </div>
             @endif
 
-            {{-- رسیدِ انتقال — فقط در وضعیتِ «انتقال به تعمیرگاه» یا «شروع تعمیر» --}}
+            {{-- رسیدِ انتقال — فقط در وضعیتِ «انتقال به تعمیرگاه» --}}
             @php
                 $canTransfer = \Modules\CRM\Services\TransferReceiptService::enabled()
                     && $order->status instanceof \Modules\CRM\Enums\OrderStatus
-                    && in_array($order->status, [\Modules\CRM\Enums\OrderStatus::Open, \Modules\CRM\Enums\OrderStatus::RepairStarted], true);
+                    && in_array($order->status, [\Modules\CRM\Enums\OrderStatus::Open], true);
                 $trReceipts = $order->transferReceipts;
             @endphp
             @if($canTransfer || $trReceipts->isNotEmpty())

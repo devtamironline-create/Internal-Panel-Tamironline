@@ -53,11 +53,6 @@ class NotifyTemplates
                 'title' => '👨‍🔧 تکنسین شما انتخاب شد',
                 'body' => 'هماهنگی سفارش {order_code} انجام شد و تکنسین {technician} برای خدمت‌رسانی به شما تعیین شد.',
             ],
-            'status_repair_started' => [
-                'enabled' => true,
-                'title' => '🔧 تعمیر آغاز شد',
-                'body' => 'تعمیر {device} {brand} شما آغاز شد. روندِ کار را از همین‌جا دنبال کنید. (سفارش {order_code})',
-            ],
             'status_open' => [
                 'enabled' => true,
                 'title' => '🏭 انتقال به تعمیرگاه',

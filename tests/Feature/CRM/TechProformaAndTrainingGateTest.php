@@ -158,7 +158,7 @@ class TechProformaAndTrainingGateTest extends TestCase
         }
 
         // فازِ کار — بله.
-        foreach ([OrderStatus::RepairStarted, OrderStatus::Open, OrderStatus::AwaitingPart, OrderStatus::AwaitingCustomerApproval, OrderStatus::Suspended] as $s) {
+        foreach ([OrderStatus::Open, OrderStatus::AwaitingPart, OrderStatus::AwaitingCustomerApproval, OrderStatus::Suspended] as $s) {
             $this->assertTrue($s->allowsProforma(), $s->value.' باید پیش‌فاکتور بدهد.');
         }
 
@@ -173,7 +173,7 @@ class TechProformaAndTrainingGateTest extends TestCase
     public function test_creating_from_an_order_fills_customer_and_device_from_the_order(): void
     {
         $tech = $this->tech();
-        $order = $this->order($tech, OrderStatus::RepairStarted);
+        $order = $this->order($tech, OrderStatus::Open);
 
         $response = $this->callStore($tech, ['order_id' => $order->id, 'items' => $this->items()]);
 
@@ -235,7 +235,7 @@ class TechProformaAndTrainingGateTest extends TestCase
             'first_name' => 'دیگری', 'mobile' => '09129999999',
             'status' => 'active', 'training_completed_at' => now(),
         ]);
-        $order = $this->order($other, OrderStatus::RepairStarted);
+        $order = $this->order($other, OrderStatus::Open);
 
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
         $this->callStore($mine, ['order_id' => $order->id, 'items' => $this->items()]);
@@ -248,7 +248,7 @@ class TechProformaAndTrainingGateTest extends TestCase
         $tech = $this->tech();
         $request = Request::create('/v1/technician/orders');
 
-        $open = new TechOrderListResource($this->order($tech, OrderStatus::RepairStarted));
+        $open = new TechOrderListResource($this->order($tech, OrderStatus::Open));
         $this->assertTrue($open->toArray($request)['can_create_proforma']);
 
         $coordinating = new TechOrderListResource($this->order($tech, OrderStatus::Coordinated));
@@ -263,7 +263,7 @@ class TechProformaAndTrainingGateTest extends TestCase
         CrmSetting::set('tech_proforma_enabled', '0');
         $tech = $this->tech();
 
-        $resource = new TechOrderListResource($this->order($tech, OrderStatus::RepairStarted));
+        $resource = new TechOrderListResource($this->order($tech, OrderStatus::Open));
 
         $this->assertFalse($resource->toArray(Request::create('/v1/technician/orders'))['can_create_proforma']);
     }

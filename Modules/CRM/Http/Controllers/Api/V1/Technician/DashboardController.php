@@ -25,7 +25,7 @@ class DashboardController extends Controller
         $active = [
             OrderStatus::New->value, OrderStatus::Coordinated->value,
             OrderStatus::Open->value, OrderStatus::Suspended->value,
-            OrderStatus::RepairStarted->value, OrderStatus::AwaitingPart->value,
+            OrderStatus::AwaitingPart->value,
             OrderStatus::AwaitingCustomerApproval->value,
         ];
 

@@ -113,7 +113,6 @@ class OrderSlaTest extends TestCase
             'معلق — ۳ روز' => ['suspended', 72],
             'در انتظار قطعه — ۷ روز' => ['awaiting_part', 168],
             'در انتظار تأیید مشتری — ۲۴ ساعت' => ['awaiting_customer_approval', 24],
-            'شروع تعمیر — ۵ روز' => ['repair_started', 120],
             'باز شده (انتقال به تعمیرگاه) — ۱۴ روز' => ['open', 336],
         ];
     }
@@ -209,12 +208,12 @@ class OrderSlaTest extends TestCase
 
     public function test_absurd_hour_values_are_clamped(): void
     {
-        SlaPolicy::saveHours(['suspended' => 0, 'repair_started' => 99999] + SlaPolicy::DEFAULT_HOURS);
+        SlaPolicy::saveHours(['suspended' => 0, 'open' => 99999] + SlaPolicy::DEFAULT_HOURS);
         SlaPolicy::flush();
 
         $hours = SlaPolicy::hours();
         $this->assertSame(1, $hours['suspended']);
-        $this->assertSame(720, $hours['repair_started']);
+        $this->assertSame(720, $hours['open']);
     }
 
     public function test_messages_merge_key_by_key(): void

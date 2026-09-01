@@ -387,7 +387,7 @@ class CustomerOnlinePaymentTest extends TestCase
     {
         $tech = $this->technician();
         $invoice = $this->invoiceFor($tech, 500_000, ['public_token' => str_repeat('q', 40)]);
-        $invoice->order->forceFill(['status' => 'repair_started'])->save();
+        $invoice->order->forceFill(['status' => 'open'])->save();
 
         $this->assertTrue($invoice->refresh()->load('order')->isPayableOnline());
     }

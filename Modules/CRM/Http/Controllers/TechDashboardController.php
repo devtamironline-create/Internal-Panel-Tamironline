@@ -195,7 +195,7 @@ class TechDashboardController extends Controller
 
     /**
      * ثبتِ رسیدِ انتقال توسطِ تکنسین — فقط روی سفارشِ خودش و فقط در وضعیتِ
-     * «انتقال به تعمیرگاه» (Open) یا «شروع تعمیر» (RepairStarted). تکنسین صرفاً
+     * «انتقال به تعمیرگاه» (Open). تکنسین صرفاً
      * یک متنِ توضیح می‌نویسد؛ قالبِ رسید از دادهٔ همان سفارش ساخته می‌شود.
      */
     public function storeTransferReceipt(Request $request, Order $order)
@@ -212,8 +212,8 @@ class TechDashboardController extends Controller
         $status = $order->status instanceof OrderStatus
             ? $order->status
             : OrderStatus::tryFrom((string) $order->status);
-        if (! in_array($status, [OrderStatus::Open, OrderStatus::RepairStarted], true)) {
-            return back()->with('error', 'ثبتِ رسیدِ انتقال فقط در وضعیتِ «انتقال به تعمیرگاه» یا «شروع تعمیر» ممکن است.');
+        if (! in_array($status, [OrderStatus::Open], true)) {
+            return back()->with('error', 'ثبتِ رسیدِ انتقال فقط در وضعیتِ «انتقال به تعمیرگاه» ممکن است.');
         }
 
         $data = $request->validate([

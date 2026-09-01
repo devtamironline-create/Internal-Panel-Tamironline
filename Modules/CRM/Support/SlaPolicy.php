@@ -38,7 +38,6 @@ final class SlaPolicy
         'suspended' => 72,
         'awaiting_part' => 168,
         'awaiting_customer_approval' => 24,
-        'repair_started' => 120,
         'open' => 336,
         // «هماهنگ‌شده» که زمانِ مراجعه ثبت نشده — نباید بی‌مهلت بماند.
         'coordinated_no_visit' => 24,
@@ -52,7 +51,6 @@ final class SlaPolicy
         'suspended' => 'معلق / نامشخص',
         'awaiting_part' => 'در انتظار قطعه',
         'awaiting_customer_approval' => 'در انتظار تأیید مشتری',
-        'repair_started' => 'شروع تعمیر',
         'open' => 'باز شده (انتقال به تعمیرگاه)',
         'coordinated_no_visit' => 'هماهنگ‌شده بدون زمانِ مراجعهٔ ثبت‌شده',
     ];
@@ -138,7 +136,6 @@ final class SlaPolicy
             OrderStatus::AwaitingCustomerApproval => self::offset(
                 $order->status_changed_at, $hours['awaiting_customer_approval']
             ),
-            OrderStatus::RepairStarted => self::offset($order->status_changed_at, $hours['repair_started']),
 
             // قاعدهٔ عملیاتی جدید: «باز شده» (انتقال به تعمیرگاه) ۱۴ روز از
             // ورود به وضعیت مهلت دارد — قبلاً بی‌مهلت بود.

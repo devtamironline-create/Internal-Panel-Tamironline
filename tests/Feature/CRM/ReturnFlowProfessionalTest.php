@@ -656,11 +656,11 @@ class ReturnFlowProfessionalTest extends TestCase
         $order = $this->pendingReturnedOrder($tech);
 
         $response = $this->callUpdateStatus($order, $tech, [
-            'status' => OrderStatus::RepairStarted->value,
+            'status' => OrderStatus::Open->value,
         ]);
 
         $this->assertTrue($response->getData(true)['success']);
-        $this->assertSame(OrderStatus::RepairStarted, $order->fresh()->status);
+        $this->assertSame(OrderStatus::Open, $order->fresh()->status);
     }
 
     // ───────────────────────── ۳) تأیید → تکمیلِ رایگان، فاکتورِ قبلی فعال می‌ماند
