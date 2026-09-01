@@ -18,22 +18,23 @@ namespace Modules\CRM\Enums;
  */
 enum OrderStatus: string
 {
+    // ترتیبِ اعلانِ case‌ها = ترتیبِ نمایشِ options()/dropdown؛ به‌صورتِ
+    // منطقیِ روندِ سفارش چیده شده — «در انتظار قطعه/تأیید مشتری» پیش از
+    // «باز شده» می‌آیند (تصمیمِ ۱۴۰۵/۰۶/۱۰). وضعیت‌های جدیدِ پنل کدِ
+    // اختصاصیِ WP ندارند و wpCode امنِ نزدیک می‌گیرند.
     case New = 'new';                 // WP 0   — جدید
+    case AwaitingCoordination = 'awaiting_coordination'; // در انتظار هماهنگی با مشتری
+    case NoAnswer = 'no_answer';      // مشتری پاسخگو نیست
     case Coordinated = 'coordinated'; // WP 1   — هماهنگ شده
-    case Open = 'open';               // WP 2   — باز شده (انتقال به تعمیرگاه)
-    case Suspended = 'suspended';     // WP 3   — معلق
-    case Cancelled = 'cancelled';     // WP 4   — لغو شده (فقط ادمین)
-    case Completed = 'completed';     // WP 5   — انجام کار
-    case Transit = 'transit';         // WP 10  — ایاب و ذهاب
-    case Returned = 'returned';       // WP 11  — برگشتی گارانتی (لاراول‌اِسپِسیفیک)
-    case Declined = 'declined';       // WP 100 — رد شده (توسط تکنسین)
-
-    // ─── وضعیت‌های جدیدِ پنل (WP این‌ها را ندارد؛ wpCode امنِ نزدیک می‌گیرند) ───
-    case AwaitingCoordination = 'awaiting_coordination';       // در انتظار هماهنگی با مشتری
-    case NoAnswer = 'no_answer';                               // مشتری پاسخگو نیست
-    case RepairStarted = 'repair_started';                     // شروع تعمیر (گروهِ «در حال انجام»)
     case AwaitingPart = 'awaiting_part';                       // در انتظار قطعه
     case AwaitingCustomerApproval = 'awaiting_customer_approval'; // در انتظار تأیید مشتری
+    case Open = 'open';               // WP 2   — باز شده (انتقال به تعمیرگاه)
+    case Suspended = 'suspended';     // WP 3   — معلق
+    case Transit = 'transit';         // WP 10  — ایاب و ذهاب
+    case Completed = 'completed';     // WP 5   — انجام کار
+    case Cancelled = 'cancelled';     // WP 4   — لغو شده (فقط ادمین)
+    case Declined = 'declined';       // WP 100 — رد شده (توسط تکنسین)
+    case Returned = 'returned';       // WP 11  — برگشتی گارانتی (لاراول‌اِسپِسیفیک)
 
     public function label(): string
     {
@@ -49,7 +50,6 @@ enum OrderStatus: string
             self::Declined => 'رد شده',
             self::AwaitingCoordination => 'در انتظار هماهنگی',
             self::NoAnswer => 'مشتری پاسخگو نیست',
-            self::RepairStarted => 'شروع تعمیر',
             self::AwaitingPart => 'در انتظار قطعه',
             self::AwaitingCustomerApproval => 'در انتظار تأیید مشتری',
         };
@@ -69,7 +69,6 @@ enum OrderStatus: string
             self::Declined => 'bg-red-200 text-red-900',
             self::AwaitingCoordination => 'bg-cyan-100 text-cyan-800',
             self::NoAnswer => 'bg-rose-100 text-rose-800',
-            self::RepairStarted => 'bg-purple-100 text-purple-800',
             self::AwaitingPart => 'bg-teal-100 text-teal-800',
             self::AwaitingCustomerApproval => 'bg-lime-100 text-lime-800',
         };
@@ -92,7 +91,6 @@ enum OrderStatus: string
             // نگاشت می‌شوند تا پوش به WP هرگز کرش نکند (WP فعلاً اولویت نیست).
             self::AwaitingCoordination => 0,   // مثلِ «جدید»
             self::NoAnswer => 3,               // مثلِ «معلق»
-            self::RepairStarted => 2,          // مثلِ «باز شده / در حال انجام»
             self::AwaitingPart => 3,           // مثلِ «معلق»
             self::AwaitingCustomerApproval => 3, // مثلِ «معلق»
         };
@@ -169,37 +167,30 @@ enum OrderStatus: string
             // مقصدهای نهایی (Completed/Transit/Cancelled/Declined) و NoAnswer
             // به این خوشه اضافه می‌شوند اما خودشان نهایی/فازِ تماس‌اند.
             self::Coordinated => [
-                self::RepairStarted, self::Open, self::AwaitingPart,
-                self::AwaitingCustomerApproval, self::Suspended, self::NoAnswer,
-                self::Transit, self::Completed, self::Cancelled, self::Declined,
-            ],
-
-            // شروع تعمیر (در حال انجام) — می‌تواند به هماهنگی/انتظار هم برگردد.
-            self::RepairStarted => [
-                self::Coordinated, self::Open, self::AwaitingPart,
-                self::AwaitingCustomerApproval, self::Suspended,
+                self::AwaitingPart, self::AwaitingCustomerApproval, self::Open,
+                self::Suspended, self::NoAnswer,
                 self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
             // انتقال به تعمیرگاه — برگشت به هماهنگی/انتظار مجاز است.
             self::Open => [
-                self::Coordinated, self::RepairStarted, self::AwaitingPart,
+                self::Coordinated, self::AwaitingPart,
                 self::AwaitingCustomerApproval, self::Suspended,
                 self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
             // معلق: خوشهٔ کاری + امکانِ ردِ سفارش توسط تکنسین.
             self::Suspended => [
-                self::Coordinated, self::RepairStarted, self::Open,
-                self::AwaitingPart, self::AwaitingCustomerApproval,
+                self::Coordinated, self::AwaitingPart,
+                self::AwaitingCustomerApproval, self::Open,
                 self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
             // حالت‌های انتظار: خوشهٔ کاری + ایاب و ذهاب و ردِ سفارش.
             self::AwaitingPart,
             self::AwaitingCustomerApproval => [
-                self::Coordinated, self::RepairStarted, self::Open,
-                self::AwaitingPart, self::AwaitingCustomerApproval, self::Suspended,
+                self::Coordinated, self::AwaitingPart, self::AwaitingCustomerApproval,
+                self::Open, self::Suspended,
                 self::Transit, self::Completed, self::Cancelled, self::Declined,
             ],
 
@@ -228,7 +219,7 @@ enum OrderStatus: string
     public function technicianTransitions(): array
     {
         $whitelist = [
-            self::Coordinated, self::RepairStarted, self::Open,
+            self::Coordinated, self::Open,
             self::AwaitingPart, self::AwaitingCustomerApproval,
             self::Suspended, self::Completed, self::Declined, self::Transit,
         ];
@@ -280,7 +271,7 @@ enum OrderStatus: string
             // کار هم زمانِ مراجعه را دوباره تنظیم کند و «دوباره هماهنگ» شود
             // (تصمیمِ ۱۴۰۵/۰۵/۲۸). وضعیت‌های نهایی همچنان قفل‌اند.
             self::New, self::AwaitingCoordination, self::NoAnswer, self::Coordinated,
-            self::RepairStarted, self::Open, self::AwaitingPart,
+            self::Open, self::AwaitingPart,
             self::AwaitingCustomerApproval, self::Suspended => true,
             default => false,
         };
@@ -322,7 +313,7 @@ enum OrderStatus: string
     public function group(): string
     {
         return match ($this) {
-            self::Coordinated, self::RepairStarted => 'in_progress',
+            self::Coordinated => 'in_progress',
 
             self::New, self::AwaitingCoordination, self::NoAnswer,
             self::Suspended, self::Open, self::AwaitingPart,

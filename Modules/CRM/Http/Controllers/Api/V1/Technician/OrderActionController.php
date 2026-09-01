@@ -35,6 +35,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         $request->merge(['description' => trim((string) $request->input('description', ''))]);
 
@@ -80,7 +81,7 @@ class OrderActionController extends Controller
             'description.required' => 'برای ثبت تغییر این وضعیت، توضیحات الزامی است.',
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد.',
             'estimated_ready_at.after_or_equal' => 'تاریخ تخمینی نمی‌تواند در گذشته باشد.',
-            'estimated_ready_at.before_or_equal' => 'تاریخ تخمینی حداکثر می‌تواند ۱۴ روز آینده باشد.',
+            'estimated_ready_at.before_or_equal' => 'برای رفعِ مشکل حداکثر '.\Modules\CRM\Support\SlaPolicy::MAX_ESTIMATE_DAYS.' روز می‌توانید انتخاب کنید.',
             'device_img1.max' => \Modules\CRM\Support\UploadLimits::tooLargeMessage(),
             'device_img1.uploaded' => \Modules\CRM\Support\UploadLimits::failedMessage(),
             'device_img1.image' => 'فایل انتخابی عکس نیست. یک عکس (JPG یا PNG) انتخاب کنید.',
@@ -241,6 +242,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         // در همهٔ وضعیت‌های غیرنهایی مجاز است — پس از بستنِ سفارش قفل می‌شود.
         if (! $order->status->allowsVisitScheduling()) {
@@ -262,23 +264,59 @@ class OrderActionController extends Controller
             return response()->json(['success' => true, 'message' => 'زمان مراجعه پاک شد.']);
         }
 
+        // سقفِ انتخابِ روز: سفارشِ بازگشتی ۳ روز، عادی ۵ روز.
+        $isReturn = (bool) $order->return_review_pending || $order->return_type !== null;
+        $maxVisit = \Modules\CRM\Support\SlaPolicy::maxVisitDate($isReturn);
+        $maxDays = $isReturn
+            ? \Modules\CRM\Support\SlaPolicy::MAX_RETURN_VISIT_DAYS
+            : \Modules\CRM\Support\SlaPolicy::MAX_VISIT_DAYS;
+
         $validated = $request->validate([
-            'visit_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today'],
+            'visit_date' => ['required', 'date_format:Y-m-d', 'after_or_equal:today', 'before_or_equal:'.$maxVisit->format('Y-m-d')],
             'visit_slot' => ['required', 'integer', 'in:1,2,3,4'],
+        ], [
+            'visit_date.after_or_equal' => 'زمانِ مراجعه نمی‌تواند در گذشته باشد.',
+            'visit_date.before_or_equal' => 'زمانِ مراجعه حداکثر می‌تواند تا '.$maxDays.' روزِ آینده باشد.',
+            'visit_date.date_format' => 'قالبِ تاریخِ مراجعه نامعتبر است.',
+            'visit_slot.required' => 'بازهٔ ساعتِ مراجعه را انتخاب کنید.',
+            'visit_slot.in' => 'بازهٔ ساعتِ مراجعه نامعتبر است.',
         ]);
 
         $slot = OrderWizard::VISIT_SLOTS[$validated['visit_slot']];
         $datetime = $validated['visit_date'].' '.$slot['start'];
 
         $order->refresh();
+
+        // محدودیتِ تغییرِ زمانِ مراجعه: بارِ اولِ ثبت شمرده نمی‌شود؛ هر تغییرِ
+        // بعدی +۱ می‌شود و پس از سقفِ مجاز، تکنسین قفل می‌شود تا ادمین شمارنده
+        // را صفر کند. (پاک‌کردن هم شمارنده را نگه می‌دارد تا دور زده نشود.)
+        $hasScheduledBefore = $order->visit_scheduled_at !== null
+            || (int) $order->visit_reschedule_count > 0;
+        $newRescheduleCount = (int) $order->visit_reschedule_count;
+
+        if ($hasScheduledBefore) {
+            if ($newRescheduleCount >= Order::VISIT_RESCHEDULE_LIMIT) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'زمانِ مراجعه حداکثر '.Order::VISIT_RESCHEDULE_LIMIT
+                        .' بار قابلِ تغییر است. برای تغییرِ بیشتر با پشتیبانی/ادمین هماهنگ کنید.',
+                ], 423);
+            }
+            $newRescheduleCount++;
+        }
+
         $previous = $order->status;
         $autoCoordinated = $previous !== OrderStatus::Coordinated
             && in_array(OrderStatus::Coordinated, $previous->technicianTransitions(), true);
 
-        $order->update(array_filter([
+        $updates = [
             'visit_scheduled_at' => $datetime,
-            'status' => $autoCoordinated ? OrderStatus::Coordinated->value : null,
-        ]));
+            'visit_reschedule_count' => $newRescheduleCount,
+        ];
+        if ($autoCoordinated) {
+            $updates['status'] = OrderStatus::Coordinated->value;
+        }
+        $order->update($updates);
 
         $jalali = \Morilog\Jalali\Jalalian::fromDateTime($datetime)->format('Y/m/d');
         OrderStatusLog::create([
@@ -308,6 +346,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         if ($order->status->isFinal()) {
             throw ValidationException::withMessages(['note' => 'ثبت یادداشت روی سفارش‌های نهایی مجاز نیست.']);
@@ -337,6 +376,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         $validated = $request->validate([
             'result' => 'required|in:coordinated,no_answer',
@@ -404,6 +444,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         if (! $tech->ready_for_delivery) {
             abort(403, 'شما مجاز به ارسال پیامک آماده تحویل نیستید.');
@@ -432,6 +473,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         // قبلاً بررسی شده → پاسخِ تمیزِ idempotent، بدونِ دست‌زدن به چیزی.
         if (! $order->return_review_pending && $order->return_reviewed_at !== null) {
@@ -455,13 +497,13 @@ class OrderActionController extends Controller
 
         $validated = $request->validate([
             'approved' => 'required|boolean',
-            // تخمینِ انجامِ کار فقط برای تأیید معنا دارد — سقف همان قاعدهٔ ۱۴ روز.
+            // تخمینِ انجامِ کار فقط برای تأیید معنا دارد — سقف همان قاعدهٔ رفعِ مشکل.
             'days' => 'required_if:approved,1,true|nullable|integer|min:1|max:'.\Modules\CRM\Support\SlaPolicy::MAX_ESTIMATE_DAYS,
             'note' => 'nullable|string|max:1000',
         ], [
             'approved.required' => 'نتیجهٔ بررسی (تأیید یا رد) را مشخص کنید.',
             'days.required_if' => 'برای تأییدِ برگشتی، زمان تخمینی انجام کار (روز) الزامی است.',
-            'days.max' => 'تخمین حداکثر می‌تواند ۱۴ روز باشد.',
+            'days.max' => 'تخمین حداکثر می‌تواند '.\Modules\CRM\Support\SlaPolicy::MAX_ESTIMATE_DAYS.' روز باشد.',
         ]);
 
         $approved = filter_var($validated['approved'], FILTER_VALIDATE_BOOLEAN);
@@ -522,8 +564,14 @@ class OrderActionController extends Controller
         $hasExistingImage = ! empty($order->device_img1);
 
         $errors = [];
-        if (! $isDraft && ! $isReturned && ! $hasNewImage && ! $hasExistingImage) {
-            $errors['device_img1'] = 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.';
+        // عکسِ دستگاه برای بستنِ فاکتور همیشه اجباری است. سفارشِ بازگشتی
+        // باید عکسِ *جدید* داشته باشد (عکسِ سرویسِ قبلی کافی نیست)؛ سفارشِ
+        // عادی با عکسِ موجود هم بسته می‌شود (تصمیمِ ۱۴۰۵/۰۶/۱۰).
+        $photoOk = $isReturned ? $hasNewImage : ($hasNewImage || $hasExistingImage);
+        if (! $isDraft && ! $photoOk) {
+            $errors['device_img1'] = $isReturned
+                ? 'برای بستنِ سفارشِ بازگشتی، آپلودِ عکسِ جدیدِ دستگاه اجباری است.'
+                : 'برای بستن سفارش، آپلود عکس دستگاه پس از تعمیر اجباری است.';
         }
         // توضیحاتِ فاکتور برای «بستنِ» سفارش همیشه اجباری است — حتی
         // برگشتیِ رایگان (تصمیمِ ۱۴۰۵/۰۵/۲۷): این متن سندِ کارِ انجام‌شده است.
@@ -625,5 +673,18 @@ class OrderActionController extends Controller
     private function authorizeOwnership(Order $order, $tech): void
     {
         abort_unless((int) $order->technician_id === (int) $tech->id, 403, 'این سفارش به شما تخصیص داده نشده است.');
+    }
+
+    /**
+     * اگر سفارش توسطِ ادمین «فریز/قفل» شده باشد، هر تغییرِ سمتِ تکنسین با
+     * ۴۲۳ مسدود می‌شود (خواندن آزاد است). ادمین باید قفل را باز کند.
+     */
+    private function guardNotFrozen(Order $order): void
+    {
+        abort_if(
+            (bool) $order->is_locked,
+            423,
+            'این سفارش توسطِ پشتیبانی قفل شده است و فعلاً قابلِ تغییر نیست. لطفاً با دفتر هماهنگ کنید.'
+        );
     }
 }

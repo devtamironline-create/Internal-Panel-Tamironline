@@ -48,6 +48,34 @@ class Order extends Model
         'عدم سرویس‌دهی از سمت مجموعه',
     ];
 
+    /** حداکثر دفعاتِ تغییرِ «زمانِ مراجعه» توسطِ تکنسین پیش از قفل‌شدن. */
+    public const VISIT_RESCHEDULE_LIMIT = 2;
+
+    /**
+     * لیستِ دلایلِ کنسل/رد سفارش — قابلِ مدیریت توسطِ ادمین در تنظیمات
+     * (کلیدِ crm_settings: order_cancel_reasons). اگر چیزی ذخیره نشده باشد،
+     * به لیستِ پیش‌فرضِ CANCEL_REASONS برمی‌گردد.
+     *
+     * @return list<string>
+     */
+    public static function cancelReasons(): array
+    {
+        $stored = CrmSetting::getJson('order_cancel_reasons', null);
+
+        if (is_array($stored)) {
+            $clean = array_values(array_filter(
+                array_map(fn ($r) => trim((string) $r), $stored),
+                fn ($r) => $r !== ''
+            ));
+
+            if ($clean !== []) {
+                return $clean;
+            }
+        }
+
+        return self::CANCEL_REASONS;
+    }
+
     protected $fillable = [
         // پایه
         'order_code', 'wp_id',
@@ -57,7 +85,7 @@ class Order extends Model
         'customer_name', 'customer_mobile', 'customer_phone',
         'province_id', 'city_id', 'district_id', 'address', 'postal_code', 'address_id',
         'problem_title', 'problem_description',
-        'visit_scheduled_at', 'visit_scheduled_slot',
+        'visit_scheduled_at', 'visit_scheduled_slot', 'visit_reschedule_count',
 
         // وضعیت
         'status', 'status_changed_at', 'cancel_reason', 'cancel_reason_id',

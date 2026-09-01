@@ -21,11 +21,14 @@ class TransferReceiptController extends Controller
         abort_unless(TransferReceiptService::enabled(), 404);
 
         $data = $request->validate([
-            'description' => ['nullable', 'string', 'max:2000'],
+            'description' => ['required', 'string', 'min:3', 'max:2000'],
+        ], [
+            'description.required' => 'ثبتِ رسیدِ انتقال بدونِ توضیحات ممکن نیست.',
+            'description.min' => 'توضیحاتِ رسیدِ انتقال بسیار کوتاه است.',
         ]);
 
         $receipt = app(TransferReceiptService::class)
-            ->createAndNotify($order, $data['description'] ?? null, auth()->id());
+            ->createAndNotify($order, $data['description'], auth()->id());
 
         return redirect()
             ->route('crm.orders.show', $order)
@@ -38,10 +41,13 @@ class TransferReceiptController extends Controller
         abort_unless((int) $transferReceipt->order_id === (int) $order->id, 404);
 
         $data = $request->validate([
-            'description' => ['nullable', 'string', 'max:2000'],
+            'description' => ['required', 'string', 'min:3', 'max:2000'],
+        ], [
+            'description.required' => 'توضیحاتِ رسیدِ انتقال نمی‌تواند خالی باشد.',
+            'description.min' => 'توضیحاتِ رسیدِ انتقال بسیار کوتاه است.',
         ]);
 
-        $transferReceipt->update(['description' => $data['description'] ?? null]);
+        $transferReceipt->update(['description' => $data['description']]);
 
         return redirect()
             ->route('crm.orders.show', $order)

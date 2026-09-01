@@ -236,9 +236,9 @@
                                 {{-- ویرایش توضیح --}}
                                 <form method="POST" action="{{ route('crm.orders.transfer-receipt.update', [$order, $tr]) }}" class="space-y-2 mb-2">
                                     @csrf @method('PUT')
-                                    <textarea name="description" rows="2" maxlength="2000"
+                                    <textarea name="description" rows="2" required minlength="3" maxlength="2000"
                                               class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm"
-                                              placeholder="توضیح رسید...">{{ $tr->description }}</textarea>
+                                              placeholder="توضیح رسید (الزامی)...">{{ $tr->description }}</textarea>
                                     <button type="submit" class="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold">ذخیره توضیح</button>
                                 </form>
 
@@ -473,6 +473,29 @@
                         <div class="flex items-start">
                             <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">زمان مراجعه:</span>
                             <span class="text-gray-900 dark:text-gray-100 font-bold" dir="ltr">@jdatetime($order->visit_scheduled_at)</span>
+                        </div>
+                        @endif
+                        @php $rescheduleLimit = \Modules\CRM\Models\Order::VISIT_RESCHEDULE_LIMIT; @endphp
+                        @if((int) $order->visit_reschedule_count > 0)
+                        <div class="flex items-start">
+                            <span class="text-gray-400 dark:text-gray-500 w-24 shrink-0">تغییرِ زمان:</span>
+                            <span class="flex items-center gap-2 flex-wrap">
+                                <span class="{{ (int) $order->visit_reschedule_count >= $rescheduleLimit ? 'text-rose-600 font-bold' : 'text-gray-900 dark:text-gray-100' }}">
+                                    {{ $order->visit_reschedule_count }} از {{ $rescheduleLimit }} بار
+                                    @if((int) $order->visit_reschedule_count >= $rescheduleLimit)
+                                        <span class="text-[11px]">(قفل برای تکنسین)</span>
+                                    @endif
+                                </span>
+                                @can('change-crm-order-status')
+                                @if((int) $order->visit_reschedule_count >= $rescheduleLimit)
+                                <form action="{{ route('crm.orders.reset-visit-reschedule', $order) }}" method="POST"
+                                      onsubmit="return confirm('اجازهٔ تغییرِ بیشترِ زمانِ مراجعه به تکنسین داده شود؟');">
+                                    @csrf
+                                    <button class="text-[11px] px-2 py-0.5 bg-brand-600 text-white rounded hover:bg-brand-700">آزادسازی تغییر</button>
+                                </form>
+                                @endif
+                                @endcan
+                            </span>
                         </div>
                         @endif
                         <div class="flex items-start">
@@ -1481,6 +1504,14 @@
                 $allowedTransitions = $order->status instanceof \Modules\CRM\Enums\OrderStatus
                     ? $order->status->allowedTransitions()
                     : [];
+                // سفارشِ بازگشتی وضعیتِ «رد» ندارد — تصمیمِ گارانتی/غیرگارانتی
+                // با تکنسین است و سفارش نباید رد شود.
+                if ($order->return_type !== null) {
+                    $allowedTransitions = array_values(array_filter(
+                        $allowedTransitions,
+                        fn ($s) => $s !== \Modules\CRM\Enums\OrderStatus::Declined
+                    ));
+                }
                 $isFinal = $order->status instanceof \Modules\CRM\Enums\OrderStatus
                     ? $order->status->isFinal()
                     : false;
@@ -1528,7 +1559,7 @@
                         <select name="note" x-bind:required="isCancelled()" x-bind:disabled="!isCancelled()"
                                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">
                             <option value="">— انتخاب دلیل —</option>
-                            @foreach(\Modules\CRM\Models\Order::CANCEL_REASONS as $reason)
+                            @foreach(\Modules\CRM\Models\Order::cancelReasons() as $reason)
                             <option value="{{ $reason }}" @selected(old('note') === $reason)>{{ $reason }}</option>
                             @endforeach
                         </select>
@@ -1646,9 +1677,10 @@
                 @if($transferReceiptEnabled)
                 <form action="{{ route('crm.orders.transfer-receipt.store', $order) }}" method="POST" class="space-y-2 border-t border-gray-100 dark:border-gray-700 pt-3">
                     @csrf
-                    <textarea name="description" rows="2" placeholder="توضیحاتِ انتقال (اختیاری)..."
+                    <textarea name="description" rows="2" required minlength="3" placeholder="توضیحاتِ انتقال (الزامی)..."
                               class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description') }}</textarea>
-                    <p class="text-[11px] text-gray-400">با ثبت، لینکِ رسید برای مشتری پیامک می‌شود.</p>
+                    @error('description')<p class="text-[11px] text-rose-600">{{ $message }}</p>@enderror
+                    <p class="text-[11px] text-gray-400">توضیحات الزامی است. با ثبت، لینکِ رسید برای مشتری پیامک می‌شود.</p>
                     <button class="px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-bold">ثبتِ رسیدِ انتقال</button>
                 </form>
                 @endif
@@ -1754,32 +1786,22 @@
                 </div>
                 @if($order->return_type)
                 <div class="bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 rounded-lg p-3 mb-3 text-sm">
-                    <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">
-                        وضعیت بازگشت:
-                        {{ (string) $order->return_type === '1' ? 'برگشت انجام شده' : 'برگشت کنسل شده' }}
-                    </div>
+                    <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">این سفارش قبلاً بازگشت داده شده است.</div>
                     @if($order->return_description)
                     <p class="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{{ $order->return_description }}</p>
                     @endif
                 </div>
                 @endif
                 <p class="text-xs text-amber-800 dark:text-amber-200 mb-3">
-                    برای بازگرداندن سفارش، نوع بازگشت را انتخاب و دلیل را بنویسید. وضعیت سفارش به «جدید» تغییر می‌کند.
+                    برای بازگرداندن سفارش، دلیل را بنویسید. وضعیت به «جدید» تغییر می‌کند و تصمیمِ گارانتی/غیرگارانتی با تکنسین است («بررسیِ برگشتی»).
                 </p>
                 <form action="{{ route('crm.orders.return', $order) }}" method="POST"
                       class="space-y-2"
                       onsubmit="return confirm('این کار وضعیت سفارش را به «جدید» برمی‌گرداند. ادامه دهم؟');">
                     @csrf
-                    <select name="return_type" required
-                            class="w-full px-3 py-2 border border-amber-300 dark:border-amber-700 dark:bg-gray-700 rounded-lg text-sm">
-                        <option value="">— نوع بازگشت سفارش —</option>
-                        <option value="1" @selected(old('return_type') === '1')>برگشت انجام شده</option>
-                        <option value="2" @selected(old('return_type') === '2')>برگشت کنسل شده</option>
-                    </select>
                     <textarea name="return_description" rows="3" required
-                              placeholder="دلیل/توضیح بازگشت..."
+                              placeholder="دلیل/توضیح بازگشت... (الزامی)"
                               class="w-full px-3 py-2 border border-amber-300 dark:border-amber-700 dark:bg-gray-700 rounded-lg text-sm">{{ old('return_description') }}</textarea>
-                    @error('return_type') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
                     @error('return_description') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
                     <button class="w-full px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-bold">
                         بازگشت سفارش

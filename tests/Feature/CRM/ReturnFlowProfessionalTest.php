@@ -43,6 +43,8 @@ class ReturnFlowProfessionalTest extends TestCase
     {
         parent::setUp();
 
+        \Illuminate\Support\Facades\Storage::fake('public');
+
         Schema::create('crm_technicians', function ($t) {
             $t->id();
             $t->unsignedBigInteger('user_id')->nullable();
@@ -217,7 +219,26 @@ class ReturnFlowProfessionalTest extends TestCase
 
     private function callUpdateStatus(Order $order, Technician $tech, array $payload): \Illuminate\Http\JsonResponse
     {
-        $request = Request::create('/v1/technician/orders/'.$order->id.'/status', 'POST', $payload);
+        // فایل‌های آپلودی (مثلاً device_img1) از payload جدا و به‌عنوان files
+        // به Request داده می‌شوند.
+        $files = [];
+        foreach ($payload as $k => $v) {
+            if ($v instanceof \Illuminate\Http\UploadedFile) {
+                $files[$k] = $v;
+                unset($payload[$k]);
+            }
+        }
+
+        // راحتیِ تست: بستنِ سفارشِ بازگشتی به عکسِ جدید نیاز دارد (قاعدهٔ #22).
+        // این تست‌ها روی رفتارِ مالی تمرکز دارند، پس اگر عکسی داده نشده یک
+        // عکسِ ساختگی می‌گذاریم. الزامِ واقعی در تستِ اختصاصیِ آن بررسی می‌شود.
+        if (($payload['status'] ?? null) === OrderStatus::Completed->value
+            && ! isset($files['device_img1'])
+            && ($order->return_type !== null || $order->return_review_pending)) {
+            $files['device_img1'] = \Illuminate\Http\UploadedFile::fake()->image('after.jpg');
+        }
+
+        $request = Request::create('/v1/technician/orders/'.$order->id.'/status', 'POST', $payload, [], $files);
         $request->setUserResolver(fn () => $tech);
 
         return app(OrderActionController::class)->updateStatus($request, $order->id);
@@ -512,7 +533,7 @@ class ReturnFlowProfessionalTest extends TestCase
         ]);
 
         $request = Request::create('/admin/crm/orders/'.$order->id.'/return', 'POST', [
-            'return_type' => '1', 'return_description' => 'مشتری می‌گوید همان ایراد برگشته است.',
+            'return_description' => 'مشتری می‌گوید همان ایراد برگشته است.',
         ]);
         app(AdminOrderController::class)->returnOrder($request, $order);
 
@@ -539,8 +560,11 @@ class ReturnFlowProfessionalTest extends TestCase
         }
     }
 
-    public function test_legacy_return_of_cancelled_work_skips_the_review_round(): void
+    public function test_return_always_opens_the_technician_review_round(): void
     {
+        // تصمیمِ ۱۴۰۵/۰۶/۱۰: بازگشت تنها یک حالتِ ادمین دارد (با توضیحِ
+        // الزامی) و همیشه دورِ «بررسیِ برگشتی» تکنسین را باز می‌کند — حتی
+        // برای سفارشِ کنسل‌شده. تصمیمِ گارانتی/غیرگارانتی با تکنسین است.
         $tech = $this->technician();
         $order = Order::forceCreate([
             'order_code' => 'RF-LEGACY2', 'technician_id' => $tech->id,
@@ -548,12 +572,13 @@ class ReturnFlowProfessionalTest extends TestCase
         ]);
 
         $request = Request::create('/admin/crm/orders/'.$order->id.'/return', 'POST', [
-            'return_type' => '2', 'return_description' => 'مشتری دوباره درخواست سرویس داده است.',
+            'return_description' => 'مشتری دوباره درخواست سرویس داده است.',
         ]);
         app(AdminOrderController::class)->returnOrder($request, $order);
 
-        // کارِ قبلی انجام نشده — سؤالِ «ایراد از تعمیرِ قبل؟» بی‌معناست.
-        $this->assertFalse((bool) $order->fresh()->return_review_pending);
+        $order->refresh();
+        $this->assertTrue((bool) $order->return_review_pending);
+        $this->assertSame(1, (int) $order->return_type);
     }
 
     public function test_a_second_return_reopens_the_review_round(): void
@@ -568,7 +593,7 @@ class ReturnFlowProfessionalTest extends TestCase
         ]);
 
         $request = Request::create('/admin/crm/orders/'.$order->id.'/return', 'POST', [
-            'return_type' => '1', 'return_description' => 'برای بار دوم برگشت خورد.',
+            'return_description' => 'برای بار دوم برگشت خورد.',
         ]);
         app(AdminOrderController::class)->returnOrder($request, $order);
 
@@ -656,14 +681,47 @@ class ReturnFlowProfessionalTest extends TestCase
         $order = $this->pendingReturnedOrder($tech);
 
         $response = $this->callUpdateStatus($order, $tech, [
-            'status' => OrderStatus::RepairStarted->value,
+            'status' => OrderStatus::Open->value,
         ]);
 
         $this->assertTrue($response->getData(true)['success']);
-        $this->assertSame(OrderStatus::RepairStarted, $order->fresh()->status);
+        $this->assertSame(OrderStatus::Open, $order->fresh()->status);
     }
 
     // ───────────────────────── ۳) تأیید → تکمیلِ رایگان، فاکتورِ قبلی فعال می‌ماند
+
+    public function test_returned_order_completion_requires_a_fresh_photo(): void
+    {
+        // قاعدهٔ #22: بستنِ سفارشِ بازگشتی بدونِ آپلودِ عکسِ جدید مجاز نیست،
+        // حتی اگر عکسِ سرویسِ قبلی روی سفارش مانده باشد.
+        $tech = $this->technician();
+        $order = $this->pendingReturnedOrder($tech); // device_img1ِ قبلی دارد
+        $this->callReturnReview($order, $tech, ['approved' => '1', 'days' => 3]);
+
+        // درخواستِ دستی بدونِ فایل — helper عکسِ ساختگی نمی‌گذارد.
+        $request = Request::create('/v1/technician/orders/'.$order->id.'/status', 'POST', [
+            'status' => OrderStatus::Completed->value,
+            'price_customer' => 0,
+            'invoice_descripotion' => 'رفع مجدد ایراد — بدون عکس جدید',
+        ]);
+        $request->setUserResolver(fn () => $tech);
+
+        try {
+            app(OrderActionController::class)->updateStatus($request, $order->id);
+            $this->fail('بستنِ بازگشتی بدونِ عکسِ جدید نباید ممکن باشد.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('device_img1', $e->errors());
+        }
+
+        // با عکسِ جدید، بستن موفق است.
+        $ok = $this->callUpdateStatus($order->fresh(), $tech, [
+            'status' => OrderStatus::Completed->value,
+            'price_customer' => 0,
+            'invoice_descripotion' => 'رفع مجدد ایراد — با عکس جدید',
+            'device_img1' => \Illuminate\Http\UploadedFile::fake()->image('fresh.jpg'),
+        ]);
+        $this->assertTrue($ok->getData(true)['success']);
+    }
 
     public function test_free_redo_completion_keeps_the_original_invoice_active(): void
     {

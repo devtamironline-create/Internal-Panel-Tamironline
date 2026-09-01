@@ -23,6 +23,7 @@ class TransferReceiptController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         abort_unless((int) $order->technician_id === (int) $tech->id, 403, 'این سفارش به شما تخصیص داده نشده است.');
+        abort_if((bool) $order->is_locked, 423, 'این سفارش توسطِ پشتیبانی قفل شده است و فعلاً قابلِ تغییر نیست.');
 
         if (! TransferReceiptService::enabled()) {
             throw ValidationException::withMessages(['receipt' => 'قابلیتِ رسیدِ انتقال غیرفعال است.']);
@@ -31,20 +32,29 @@ class TransferReceiptController extends Controller
         $status = $order->status instanceof OrderStatus
             ? $order->status
             : OrderStatus::tryFrom((string) $order->status);
-        if (! in_array($status, [OrderStatus::Open, OrderStatus::RepairStarted], true)) {
+        if (! in_array($status, [OrderStatus::Open], true)) {
             throw ValidationException::withMessages([
-                'status' => 'ثبتِ رسیدِ انتقال فقط در وضعیتِ «انتقال به تعمیرگاه» یا «شروع تعمیر» ممکن است.',
+                'status' => 'ثبتِ رسیدِ انتقال فقط در وضعیتِ «انتقال به تعمیرگاه» ممکن است.',
             ]);
         }
 
-        $data = $request->validate(['description' => ['nullable', 'string', 'max:2000']]);
+        // «ارسال رسید انتقال» دیگر از تکنسین توضیح نمی‌پرسد (تصمیمِ ۱۴۰۵/۰۶/۱۰):
+        // توضیح هنگامِ ثبتِ وضعیتِ «باز شده» گرفته شده و رسید همان‌جا خودکار
+        // ساخته شده است. این اکشن فقط پیامک را برای مشتری می‌فرستد؛ اگر به هر
+        // دلیل رسیدی نبود، همان‌جا با توضیحِ وضعیتِ «باز شده» ساخته می‌شود.
+        $service = app(TransferReceiptService::class);
+        $receipt = $order->transferReceipts()->latest('id')->first();
 
-        $receipt = app(TransferReceiptService::class)
-            ->createAndNotify($order, $data['description'] ?? null, $tech->user_id, $tech->id);
+        if ($receipt) {
+            $service->sendSms($order, $receipt, $tech->user_id, true);
+        } else {
+            $fallbackDesc = $order->description_tech2 ?: $order->description_tech ?: null;
+            $receipt = $service->createAndNotify($order, $fallbackDesc, $tech->user_id, $tech->id);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'رسیدِ انتقال ثبت شد و لینکش برای مشتری پیامک شد.',
+            'message' => 'رسیدِ انتقال برای مشتری پیامک شد.',
             'data' => [
                 'code' => $receipt->code,
                 'description' => $receipt->description,

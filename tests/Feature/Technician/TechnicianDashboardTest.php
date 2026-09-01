@@ -106,7 +106,7 @@ class TechnicianDashboardTest extends TestCase
 
         $this->orders($veteran, OrderStatus::Completed, 20);
         $this->orders($busyNow, OrderStatus::AwaitingPart, 3);   // waiting
-        $this->orders($busyNow, OrderStatus::RepairStarted, 2);  // in_progress
+        $this->orders($busyNow, OrderStatus::Coordinated, 2);  // in_progress
 
         $rows = app(TechnicianDashboardService::class)->build()['rows'];
 
@@ -122,7 +122,7 @@ class TechnicianDashboardTest extends TestCase
 
         $this->orders($waiting, OrderStatus::AwaitingPart, 4);
         $this->orders($working, OrderStatus::AwaitingPart, 1);
-        $this->orders($working, OrderStatus::RepairStarted, 3);
+        $this->orders($working, OrderStatus::Coordinated, 3);
 
         $rows = app(TechnicianDashboardService::class)->build()['rows'];
 
@@ -135,7 +135,7 @@ class TechnicianDashboardTest extends TestCase
     {
         $tech = $this->technician('تفکیک', '09120000104');
 
-        $this->orders($tech, OrderStatus::RepairStarted, 2);   // in_progress
+        $this->orders($tech, OrderStatus::Coordinated, 2);   // in_progress
         $this->orders($tech, OrderStatus::Coordinated, 1);     // in_progress
         $this->orders($tech, OrderStatus::AwaitingPart, 3);    // waiting
         $this->orders($tech, OrderStatus::Completed, 4);       // finished
@@ -197,7 +197,7 @@ class TechnicianDashboardTest extends TestCase
         $this->technician('غیرفعال', '09120000108', ['status' => 'inactive']);
 
         $this->orders($active, OrderStatus::Completed, 3);
-        $this->orders($active, OrderStatus::RepairStarted, 1);
+        $this->orders($active, OrderStatus::Coordinated, 1);
 
         // سفارش بدون تکنسین
         DB::table('crm_orders')->insert([
@@ -279,7 +279,7 @@ class TechnicianDashboardTest extends TestCase
         Permission::firstOrCreate(['name' => 'manage-technicians', 'guard_name' => 'web']);
 
         $tech = $this->technician('نمایشی', '09120000114');
-        $this->orders($tech, OrderStatus::RepairStarted, 2);
+        $this->orders($tech, OrderStatus::Coordinated, 2);
 
         $this->get('/admin/technician')->assertRedirect();
 

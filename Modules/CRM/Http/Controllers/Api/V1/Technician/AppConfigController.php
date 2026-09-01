@@ -26,6 +26,9 @@ class AppConfigController extends Controller
             'data' => [
                 'sla_hours' => SlaPolicy::hours(),
                 'max_estimate_days' => SlaPolicy::MAX_ESTIMATE_DAYS,
+                // سقفِ انتخابِ «زمانِ مراجعه» — عادی ۵ روز، بازگشتی ۳ روز.
+                'max_visit_days' => SlaPolicy::MAX_VISIT_DAYS,
+                'max_return_visit_days' => SlaPolicy::MAX_RETURN_VISIT_DAYS,
                 'messages' => AppMessages::all(),
                 // سقفِ واقعیِ آپلود تا اپ بتواند *پیش از* ارسال فشرده کند.
                 // بدونِ این، عکسِ بزرگ به سرور می‌رود و آن‌جا رد می‌شود —

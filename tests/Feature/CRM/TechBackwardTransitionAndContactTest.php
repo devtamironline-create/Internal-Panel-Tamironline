@@ -29,7 +29,6 @@ class TechBackwardTransitionAndContactTest extends TestCase
     public function test_all_working_states_can_return_to_coordinated(): void
     {
         foreach ([
-            OrderStatus::RepairStarted,
             OrderStatus::Open,
             OrderStatus::AwaitingPart,
             OrderStatus::AwaitingCustomerApproval,
@@ -46,7 +45,7 @@ class TechBackwardTransitionAndContactTest extends TestCase
     public function test_the_working_cluster_is_fully_connected(): void
     {
         $cluster = [
-            OrderStatus::Coordinated, OrderStatus::RepairStarted, OrderStatus::Open,
+            OrderStatus::Coordinated, OrderStatus::Open,
             OrderStatus::AwaitingPart, OrderStatus::AwaitingCustomerApproval, OrderStatus::Suspended,
         ];
 
@@ -73,7 +72,7 @@ class TechBackwardTransitionAndContactTest extends TestCase
     {
         foreach ([
             OrderStatus::New, OrderStatus::AwaitingCoordination, OrderStatus::NoAnswer,
-            OrderStatus::Coordinated, OrderStatus::RepairStarted, OrderStatus::Open,
+            OrderStatus::Coordinated, OrderStatus::Open,
             OrderStatus::AwaitingPart, OrderStatus::AwaitingCustomerApproval, OrderStatus::Suspended,
         ] as $s) {
             $this->assertTrue($s->allowsVisitScheduling(), $s->value.' باید بتواند زمان مراجعه بگذارد (re-coordinate).');

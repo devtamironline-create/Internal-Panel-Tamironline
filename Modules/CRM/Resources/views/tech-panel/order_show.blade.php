@@ -27,7 +27,6 @@
     // برچسب رادیو هر وضعیت برای پنل تکنسین — هم‌سو با tech_show_order.php پنل WP.
     $statusActionLabels = [
         OrderStatus::Coordinated->value => 'هماهنگ کردن سفارش',
-        OrderStatus::RepairStarted->value => 'شروع تعمیر',
         OrderStatus::Open->value        => 'انتقال به تعمیرگاه',
         OrderStatus::AwaitingPart->value => 'در انتظار قطعه',
         OrderStatus::AwaitingCustomerApproval->value => 'در انتظار تأیید مشتری',
@@ -42,7 +41,6 @@
         // نمایش داده می‌شود (پایین، فرمِ schedule-visit).
         OrderStatus::Suspended->value   => 'دلیل نامشخص بودن وضعیت را شرح دهید',
         OrderStatus::Open->value        => 'لیست اقلام تحویل‌گرفته‌شده (اختیاری — رسید رسمی از «رسید انتقال» صادر می‌شود)',
-        OrderStatus::RepairStarted->value => 'توضیح شروع تعمیر (اختیاری)',
         OrderStatus::AwaitingPart->value => 'کدام قطعه؟ زمان تقریبی تأمین؟ (اختیاری)',
         OrderStatus::AwaitingCustomerApproval->value => 'منتظر تأیید چه چیزی هستید؟ مبلغ/قطعه (اختیاری)',
         OrderStatus::Declined->value    => 'دلیل رد سفارش را بنویسید',
@@ -51,7 +49,6 @@
     // توضیح فقط برای این‌ها الزامی است (هم‌سو با کنترلر)؛ بقیه اختیاری.
     $statusDescRequired = array_values(array_diff(array_keys($statusDescPrompts), [
         OrderStatus::Open->value,
-        OrderStatus::RepairStarted->value,
         OrderStatus::AwaitingPart->value,
         OrderStatus::AwaitingCustomerApproval->value,
     ]));

@@ -77,7 +77,7 @@ class OrderSlaTest extends TestCase
             'status_changed_at' => $assigned->addHours(30),
         ]);
 
-        $this->assertTrue($assigned->addHours(48)->equalTo(SlaPolicy::deadlineFor($order)));
+        $this->assertTrue($assigned->addHours(24)->equalTo(SlaPolicy::deadlineFor($order)));
     }
 
     public function test_coordinated_deadline_is_the_agreed_visit_time(): void
@@ -111,10 +111,9 @@ class OrderSlaTest extends TestCase
     {
         return [
             'معلق — ۳ روز' => ['suspended', 72],
-            'در انتظار قطعه — ۷ روز' => ['awaiting_part', 168],
+            'در انتظار قطعه — ۵ روز' => ['awaiting_part', 120],
             'در انتظار تأیید مشتری — ۲۴ ساعت' => ['awaiting_customer_approval', 24],
-            'شروع تعمیر — ۵ روز' => ['repair_started', 120],
-            'باز شده (انتقال به تعمیرگاه) — ۱۴ روز' => ['open', 336],
+            'باز شده (انتقال به تعمیرگاه) — ۱۰ روز' => ['open', 240],
         ];
     }
 
@@ -209,12 +208,12 @@ class OrderSlaTest extends TestCase
 
     public function test_absurd_hour_values_are_clamped(): void
     {
-        SlaPolicy::saveHours(['suspended' => 0, 'repair_started' => 99999] + SlaPolicy::DEFAULT_HOURS);
+        SlaPolicy::saveHours(['suspended' => 0, 'open' => 99999] + SlaPolicy::DEFAULT_HOURS);
         SlaPolicy::flush();
 
         $hours = SlaPolicy::hours();
         $this->assertSame(1, $hours['suspended']);
-        $this->assertSame(720, $hours['repair_started']);
+        $this->assertSame(720, $hours['open']);
     }
 
     public function test_messages_merge_key_by_key(): void
@@ -236,11 +235,12 @@ class OrderSlaTest extends TestCase
         $this->assertSame(AppMessages::DEFAULTS['lock_title'], AppMessages::all()['lock_title']);
     }
 
-    public function test_max_estimate_is_fourteen_days_out(): void
+    public function test_max_estimate_is_six_days_out(): void
     {
         $this->assertSame(
-            now()->addDays(14)->format('Y-m-d'),
+            now()->addDays(SlaPolicy::MAX_ESTIMATE_DAYS)->format('Y-m-d'),
             SlaPolicy::maxEstimateDate()->format('Y-m-d')
         );
+        $this->assertSame(6, SlaPolicy::MAX_ESTIMATE_DAYS);
     }
 }

@@ -12,14 +12,12 @@ use Modules\CRM\Models\Order;
  *
  * قواعد عملیاتی مصوب (ساعت):
  *   جدید / در انتظار هماهنگی   ۱ ساعت از تخصیص
- *   پاسخگو نیست                ۴۸ ساعت از تخصیص (نه از ورود به وضعیت)
+ *   پاسخگو نیست                ۲۴ ساعت از تخصیص (نه از ورود به وضعیت)
  *   هماهنگ شده                 خودِ زمان مراجعهٔ توافق‌شده
- *   انتقال به تعمیرگاه         تخمین خود تکنسین، سقف ۱۴ روز
  *   معلق                       ۷۲ ساعت از ورود به وضعیت
- *   در انتظار قطعه             ۱۶۸ ساعت (۷ روز)
+ *   در انتظار قطعه             ۱۲۰ ساعت (۵ روز)
  *   در انتظار تأیید مشتری      ۲۴ ساعت
- *   شروع تعمیر                 ۱۲۰ ساعت (۵ روز)
- *   باز شده (انتقال تعمیرگاه)  ۳۳۶ ساعت (۱۴ روز) از ورود به وضعیت
+ *   باز شده (انتقال تعمیرگاه)  ۲۴۰ ساعت (۱۰ روز) از ورود به وضعیت
  *
  * همهٔ اعداد از پنل ادمین قابل تغییرند (کلید crm_settings: app_sla_hours).
  * اگر مبنای زمانیِ لازم روی سفارش نباشد (مثلاً assigned_at خالی)، مهلت
@@ -27,19 +25,24 @@ use Modules\CRM\Models\Order;
  */
 final class SlaPolicy
 {
-    /** سقف تخمین تکنسین برای آماده‌شدن دستگاه (روز). */
-    public const MAX_ESTIMATE_DAYS = 14;
+    /** سقف تخمین تکنسین برای «چند روز برای رفع مشکل» (روز). */
+    public const MAX_ESTIMATE_DAYS = 6;
+
+    /** سقف انتخابِ «زمانِ مراجعه» در سفارشِ عادی (روز). */
+    public const MAX_VISIT_DAYS = 5;
+
+    /** سقف انتخابِ «زمانِ مراجعه» در سفارشِ بازگشتی (روز). */
+    public const MAX_RETURN_VISIT_DAYS = 3;
 
     /** پیش‌فرضِ ساعت‌ها — کلیدها همان مقادیر OrderStatus هستند. */
     public const DEFAULT_HOURS = [
         'new' => 1,
         'awaiting_coordination' => 1,
-        'no_answer' => 48,
+        'no_answer' => 24,   // ۱ روز (قبلاً ۴۸)
         'suspended' => 72,
-        'awaiting_part' => 168,
+        'awaiting_part' => 120, // ۵ روز (قبلاً ۷)
         'awaiting_customer_approval' => 24,
-        'repair_started' => 120,
-        'open' => 336,
+        'open' => 240,       // ۱۰ روز (قبلاً ۱۴)
         // «هماهنگ‌شده» که زمانِ مراجعه ثبت نشده — نباید بی‌مهلت بماند.
         'coordinated_no_visit' => 24,
     ];
@@ -52,7 +55,6 @@ final class SlaPolicy
         'suspended' => 'معلق / نامشخص',
         'awaiting_part' => 'در انتظار قطعه',
         'awaiting_customer_approval' => 'در انتظار تأیید مشتری',
-        'repair_started' => 'شروع تعمیر',
         'open' => 'باز شده (انتقال به تعمیرگاه)',
         'coordinated_no_visit' => 'هماهنگ‌شده بدون زمانِ مراجعهٔ ثبت‌شده',
     ];
@@ -138,7 +140,6 @@ final class SlaPolicy
             OrderStatus::AwaitingCustomerApproval => self::offset(
                 $order->status_changed_at, $hours['awaiting_customer_approval']
             ),
-            OrderStatus::RepairStarted => self::offset($order->status_changed_at, $hours['repair_started']),
 
             // قاعدهٔ عملیاتی جدید: «باز شده» (انتقال به تعمیرگاه) ۱۴ روز از
             // ورود به وضعیت مهلت دارد — قبلاً بی‌مهلت بود.
@@ -160,6 +161,17 @@ final class SlaPolicy
     public static function maxEstimateDate(): CarbonImmutable
     {
         return CarbonImmutable::now()->addDays(self::MAX_ESTIMATE_DAYS)->endOfDay();
+    }
+
+    /**
+     * بیشترین تاریخی که تکنسین می‌تواند به‌عنوان «زمانِ مراجعه» انتخاب کند —
+     * سفارشِ بازگشتی سقفِ کوتاه‌تری دارد.
+     */
+    public static function maxVisitDate(bool $isReturn = false): CarbonImmutable
+    {
+        $days = $isReturn ? self::MAX_RETURN_VISIT_DAYS : self::MAX_VISIT_DAYS;
+
+        return CarbonImmutable::now()->addDays($days)->endOfDay();
     }
 
     private static function offset(mixed $base, int $hours): ?CarbonImmutable

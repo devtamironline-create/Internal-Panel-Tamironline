@@ -437,6 +437,8 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:change-crm-order-status')->group(function () {
         Route::post('orders/{order}/status', [OrderController::class, 'changeStatus'])->name('orders.status.change');
         Route::post('orders/{order}/return', [OrderController::class, 'returnOrder'])->name('orders.return');
+        // صفر کردنِ شمارندهٔ تغییرِ زمانِ مراجعه (اجازهٔ تغییرِ بیشتر به تکنسین)
+        Route::post('orders/{order}/reset-visit-reschedule', [OrderController::class, 'resetVisitReschedule'])->name('orders.reset-visit-reschedule');
         // کارشناسیِ برگشتیِ گارانتی (روی سفارش‌های وضعیتِ «برگشتی گارانتی»)
         Route::post('orders/{order}/return/approve', [OrderController::class, 'approveReturn'])->name('orders.return.approve');
         Route::post('orders/{order}/return/reject', [OrderController::class, 'rejectReturn'])->name('orders.return.reject');
@@ -577,6 +579,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         // تنظیماتِ عمومی (فلگ‌های امن)
         Route::get('feature-flags', [\Modules\CRM\Http\Controllers\FeatureFlagsController::class, 'index'])->name('feature-flags.index');
         Route::post('feature-flags', [\Modules\CRM\Http\Controllers\FeatureFlagsController::class, 'update'])->name('feature-flags.update');
+        // تنظیماتِ عملیاتیِ سفارش (دلایلِ کنسل/رد و …)
+        Route::get('order-settings', [\Modules\CRM\Http\Controllers\OrderOpsSettingsController::class, 'index'])->name('order-settings.index');
+        Route::post('order-settings', [\Modules\CRM\Http\Controllers\OrderOpsSettingsController::class, 'update'])->name('order-settings.update');
     });
     Route::middleware('can:manage-crm-financial')->group(function () {
         Route::post('orders/{order}/invoice', [InvoiceController::class, 'generate'])->name('orders.invoice.generate');

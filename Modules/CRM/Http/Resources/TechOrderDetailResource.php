@@ -19,7 +19,6 @@ class TechOrderDetailResource extends JsonResource
     /** برچسبِ اکشنِ هر وضعیت (رادیوهای تغییرِ وضعیت). */
     private const ACTION_LABELS = [
         'coordinated' => 'هماهنگ کردن سفارش',
-        'repair_started' => 'شروع تعمیر',
         'open' => 'انتقال به تعمیرگاه',
         'awaiting_part' => 'در انتظار قطعه',
         'awaiting_customer_approval' => 'در انتظار تأیید مشتری',
@@ -50,6 +49,11 @@ class TechOrderDetailResource extends JsonResource
             'status_badge' => $status?->badgeClass(),
             'status_group' => $status?->group(),
             'is_final' => $isFinal,
+            // فریز/قفلِ ادمین — تا باز نشود، هیچ تغییرِ سمتِ تکنسین ممکن نیست
+            // (سرور با ۴۲۳ enforce می‌کند). اپ باید بنرِ «قفل» و غیرفعال‌کردنِ
+            // دکمه‌ها را نشان دهد.
+            'is_locked' => (bool) $this->is_locked,
+            'lock_reason' => $this->is_locked ? $this->lock_reason : null,
             'is_returned' => ! is_null($this->return_type),
             'return_type' => $this->return_type ? (int) $this->return_type : null,
 
@@ -71,10 +75,22 @@ class TechOrderDetailResource extends JsonResource
                 'approved' => $this->return_reviewed_at !== null ? (bool) $this->return_review_approved : null,
                 'days' => $this->return_review_days !== null ? (int) $this->return_review_days : null,
             ],
+            // توضیحاتی که ادمین موقعِ بازگشتی‌کردنِ سفارش نوشته — تکنسین باید
+            // آن را در مودالِ «ثبت بررسی» ببیند (فقط برای سفارشِ بازگشتی).
+            'return_description' => $this->return_type !== null ? $this->return_description : null,
             'max_estimate_date' => \Modules\CRM\Support\SlaPolicy::maxEstimateDate()->format('Y-m-d'),
+            // شمارندهٔ تغییرِ زمانِ مراجعه — تکنسین حداکثر VISIT_RESCHEDULE_LIMIT
+            // بار می‌تواند زمان را تغییر دهد؛ پس از آن تا ریستِ ادمین قفل است.
+            'visit_reschedule_count' => (int) $this->visit_reschedule_count,
+            'visit_reschedule_limit' => \Modules\CRM\Models\Order::VISIT_RESCHEDULE_LIMIT,
+            'visit_reschedule_locked' => $rescheduleLocked = (
+                ($this->visit_scheduled_at !== null || (int) $this->visit_reschedule_count > 0)
+                && (int) $this->visit_reschedule_count >= \Modules\CRM\Models\Order::VISIT_RESCHEDULE_LIMIT
+            ),
             // آیا تکنسین همین حالا مجاز است زمانِ مراجعه را تنظیم/تغییر/پاک کند؟
-            // (سرور enforce می‌کند — فرانت نباید حدس بزند.)
-            'can_schedule' => (bool) $status?->allowsVisitScheduling(),
+            // (سرور enforce می‌کند — فرانت نباید حدس بزند.) پس از رسیدن به سقفِ
+            // تغییر، تنظیمِ مجدد قفل است تا ادمین شمارنده را صفر کند.
+            'can_schedule' => (bool) $status?->allowsVisitScheduling() && ! $rescheduleLocked,
             // آیا همین حالا می‌توان برای این سفارش پیش‌فاکتور صادر کرد؟
             // (پس از هماهنگی و پیش از بسته‌شدن، و مشروط به روشن‌بودنِ فلگِ
             // پیش‌فاکتورِ تکنسین.) سرور همین قاعده را با ۴۲۲ enforce می‌کند.

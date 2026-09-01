@@ -341,7 +341,15 @@
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                 @forelse($orders as $order)
-                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                @php
+                    // هشدارِ زمانِ غیرمنطقی: مهلتِ SLAی وضعیت گذشته است
+                    // (مثلاً سفارشی که بیش از حدِ مجاز «باز» مانده). وضعیت‌های
+                    // نهایی مهلت ندارند و رنگی نمی‌شوند.
+                    $slaDeadline = \Modules\CRM\Support\SlaPolicy::deadlineFor($order);
+                    $isOverdue = $slaDeadline !== null && $slaDeadline->isPast();
+                    $overdueFor = $isOverdue ? $slaDeadline->diffForHumans(null, true) : null;
+                @endphp
+                <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 {{ $isOverdue ? 'bg-rose-50/70 dark:bg-rose-900/10 border-r-4 border-r-rose-400 dark:border-r-rose-500' : '' }}">
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-1.5">
                             <a href="{{ route('crm.orders.show', $order) }}" class="font-medium text-gray-900 dark:text-gray-100 hover:text-brand-600" dir="ltr">
@@ -378,9 +386,14 @@
                     <td class="px-6 py-4">
                         <div class="flex flex-col items-start gap-1">
                             <span class="px-2.5 py-1 text-xs font-medium rounded-full {{ $order->status->badgeClass() }}">{{ $order->status->label() }}</span>
+                            @if($isOverdue)
+                            <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 whitespace-nowrap" title="مهلتِ این وضعیت گذشته است">
+                                ⏰ تأخیر {{ $overdueFor }}
+                            </span>
+                            @endif
                             @if($order->return_type)
                             <span class="px-2 py-0.5 text-[10px] font-medium rounded-full bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 whitespace-nowrap" title="{{ $order->return_description }}">
-                                ↩ {{ (string) $order->return_type === '1' ? 'برگشت انجام شده' : 'برگشت کنسل شده' }}
+                                ↩ برگشتی
                             </span>
                             @endif
                         </div>
