@@ -236,9 +236,9 @@
                                 {{-- ویرایش توضیح --}}
                                 <form method="POST" action="{{ route('crm.orders.transfer-receipt.update', [$order, $tr]) }}" class="space-y-2 mb-2">
                                     @csrf @method('PUT')
-                                    <textarea name="description" rows="2" maxlength="2000"
+                                    <textarea name="description" rows="2" required minlength="3" maxlength="2000"
                                               class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm"
-                                              placeholder="توضیح رسید...">{{ $tr->description }}</textarea>
+                                              placeholder="توضیح رسید (الزامی)...">{{ $tr->description }}</textarea>
                                     <button type="submit" class="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold">ذخیره توضیح</button>
                                 </form>
 
@@ -1669,9 +1669,10 @@
                 @if($transferReceiptEnabled)
                 <form action="{{ route('crm.orders.transfer-receipt.store', $order) }}" method="POST" class="space-y-2 border-t border-gray-100 dark:border-gray-700 pt-3">
                     @csrf
-                    <textarea name="description" rows="2" placeholder="توضیحاتِ انتقال (اختیاری)..."
+                    <textarea name="description" rows="2" required minlength="3" placeholder="توضیحاتِ انتقال (الزامی)..."
                               class="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 rounded-lg text-sm">{{ old('description') }}</textarea>
-                    <p class="text-[11px] text-gray-400">با ثبت، لینکِ رسید برای مشتری پیامک می‌شود.</p>
+                    @error('description')<p class="text-[11px] text-rose-600">{{ $message }}</p>@enderror
+                    <p class="text-[11px] text-gray-400">توضیحات الزامی است. با ثبت، لینکِ رسید برای مشتری پیامک می‌شود.</p>
                     <button class="px-3 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700 text-sm font-bold">ثبتِ رسیدِ انتقال</button>
                 </form>
                 @endif
