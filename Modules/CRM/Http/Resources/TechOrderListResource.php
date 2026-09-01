@@ -31,6 +31,7 @@ class TechOrderListResource extends JsonResource
             'status_badge' => $status?->badgeClass(),
             'status_group' => $status?->group(),
             'is_final' => $status?->isFinal() ?? false,
+            'is_locked' => (bool) $this->is_locked,
             'is_returned' => ! is_null($this->return_type),
             'device_name' => $this->device?->name,
             'brand_name' => $this->brand?->name,

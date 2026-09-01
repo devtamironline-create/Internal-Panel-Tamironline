@@ -49,6 +49,11 @@ class TechOrderDetailResource extends JsonResource
             'status_badge' => $status?->badgeClass(),
             'status_group' => $status?->group(),
             'is_final' => $isFinal,
+            // فریز/قفلِ ادمین — تا باز نشود، هیچ تغییرِ سمتِ تکنسین ممکن نیست
+            // (سرور با ۴۲۳ enforce می‌کند). اپ باید بنرِ «قفل» و غیرفعال‌کردنِ
+            // دکمه‌ها را نشان دهد.
+            'is_locked' => (bool) $this->is_locked,
+            'lock_reason' => $this->is_locked ? $this->lock_reason : null,
             'is_returned' => ! is_null($this->return_type),
             'return_type' => $this->return_type ? (int) $this->return_type : null,
 

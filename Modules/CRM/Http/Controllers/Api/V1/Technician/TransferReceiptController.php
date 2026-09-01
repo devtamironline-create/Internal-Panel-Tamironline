@@ -23,6 +23,7 @@ class TransferReceiptController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         abort_unless((int) $order->technician_id === (int) $tech->id, 403, 'این سفارش به شما تخصیص داده نشده است.');
+        abort_if((bool) $order->is_locked, 423, 'این سفارش توسطِ پشتیبانی قفل شده است و فعلاً قابلِ تغییر نیست.');
 
         if (! TransferReceiptService::enabled()) {
             throw ValidationException::withMessages(['receipt' => 'قابلیتِ رسیدِ انتقال غیرفعال است.']);

@@ -35,6 +35,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         $request->merge(['description' => trim((string) $request->input('description', ''))]);
 
@@ -241,6 +242,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         // در همهٔ وضعیت‌های غیرنهایی مجاز است — پس از بستنِ سفارش قفل می‌شود.
         if (! $order->status->allowsVisitScheduling()) {
@@ -331,6 +333,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         if ($order->status->isFinal()) {
             throw ValidationException::withMessages(['note' => 'ثبت یادداشت روی سفارش‌های نهایی مجاز نیست.']);
@@ -360,6 +363,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         $validated = $request->validate([
             'result' => 'required|in:coordinated,no_answer',
@@ -427,6 +431,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         if (! $tech->ready_for_delivery) {
             abort(403, 'شما مجاز به ارسال پیامک آماده تحویل نیستید.');
@@ -455,6 +460,7 @@ class OrderActionController extends Controller
         $tech = $request->user();
         $order = Order::query()->whereKey($id)->firstOrFail();
         $this->authorizeOwnership($order, $tech);
+        $this->guardNotFrozen($order);
 
         // قبلاً بررسی شده → پاسخِ تمیزِ idempotent، بدونِ دست‌زدن به چیزی.
         if (! $order->return_review_pending && $order->return_reviewed_at !== null) {
@@ -648,5 +654,18 @@ class OrderActionController extends Controller
     private function authorizeOwnership(Order $order, $tech): void
     {
         abort_unless((int) $order->technician_id === (int) $tech->id, 403, 'این سفارش به شما تخصیص داده نشده است.');
+    }
+
+    /**
+     * اگر سفارش توسطِ ادمین «فریز/قفل» شده باشد، هر تغییرِ سمتِ تکنسین با
+     * ۴۲۳ مسدود می‌شود (خواندن آزاد است). ادمین باید قفل را باز کند.
+     */
+    private function guardNotFrozen(Order $order): void
+    {
+        abort_if(
+            (bool) $order->is_locked,
+            423,
+            'این سفارش توسطِ پشتیبانی قفل شده است و فعلاً قابلِ تغییر نیست. لطفاً با دفتر هماهنگ کنید.'
+        );
     }
 }
