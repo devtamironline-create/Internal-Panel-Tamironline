@@ -6,7 +6,11 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Modules\CRM\Concerns\ExportsListToFile;
 use Modules\CRM\Enums\WalletTxType;
+use Modules\CRM\Models\Brand;
+use Modules\CRM\Models\City;
+use Modules\CRM\Models\Device;
 use Modules\CRM\Models\Invoice;
+use Modules\CRM\Models\Province;
 use Modules\CRM\Models\Technician;
 use Modules\CRM\Models\WalletTransaction;
 use Morilog\Jalali\Jalalian;
@@ -29,6 +33,7 @@ class FinancialReportController extends Controller
 
         $summary = $this->buildSummary($filters);
         $rows = $this->buildRows($filters, paginate: true);
+        $breakdowns = $this->buildBreakdowns($filters);
 
         $technicians = Technician::query()
             ->orderBy('first_name')
@@ -38,7 +43,12 @@ class FinancialReportController extends Controller
             'filters' => $filters,
             'summary' => $summary,
             'rows' => $rows,
+            'breakdowns' => $breakdowns,
             'technicians' => $technicians,
+            'provinces' => Province::query()->orderBy('name')->get(['id', 'name']),
+            'cities' => City::query()->whereNull('parent_city_id')->orderBy('name')->get(['id', 'name']),
+            'devices' => Device::query()->orderBy('name')->get(['id', 'name']),
+            'brands' => Brand::query()->orderBy('name')->get(['id', 'name']),
             'docTypes' => $this->docTypeOptions(),
             'profitOps' => ['gte' => '≥', 'lte' => '≤'],
         ]);
@@ -82,7 +92,8 @@ class FinancialReportController extends Controller
 
     /**
      * @return array{from_j:?string, to_j:?string, from_g:?string, to_g:?string,
-     *               technician_id:?int, doc_type:string, doc_no:?string,
+     *               technician_id:?int, province_id:?int, city_id:?int,
+     *               device_id:?int, brand_id:?int, doc_type:string, doc_no:?string,
      *               mobile:?string, profit_op:?string, profit_val:?int}
      */
     protected function parseFilters(Request $request): array
@@ -103,6 +114,10 @@ class FinancialReportController extends Controller
             'from_g' => $this->jalaliToGregorian($fromJ),
             'to_g' => $this->jalaliToGregorian($toJ),
             'technician_id' => (int) $request->query('technician_id') ?: null,
+            'province_id' => (int) $request->query('province_id') ?: null,
+            'city_id' => (int) $request->query('city_id') ?: null,
+            'device_id' => (int) $request->query('device_id') ?: null,
+            'brand_id' => (int) $request->query('brand_id') ?: null,
             'doc_type' => (string) $request->query('doc_type', ''),
             'doc_no' => trim((string) $request->query('doc_no', '')) ?: null,
             'mobile' => trim((string) $request->query('mobile', '')) ?: null,
@@ -149,21 +164,26 @@ class FinancialReportController extends Controller
             ->join('crm_orders', 'crm_orders.id', '=', 'crm_invoices.order_id')
             ->sum('crm_orders.cost_price');
 
-        // تراکنش‌های کیف‌پول
-        $txQ = WalletTransaction::query();
-        $this->applyTxFilters($txQ, $f);
+        // تراکنش‌های کیف‌پول — به سفارش/شهر/دستگاه گره نمی‌خورند؛ پس وقتی
+        // فیلترِ سفارش‌محور فعال است کنار گذاشته می‌شوند تا جمع‌ها گمراه‌کننده
+        // نشوند (فقط فاکتورها معنا دارند).
+        $rewardSum = $penaltySum = $adjPos = $adjNeg = $onlinePaymentSum = $chargeSum = 0;
+        if (! $this->hasOrderScopedFilter($f)) {
+            $txQ = WalletTransaction::query();
+            $this->applyTxFilters($txQ, $f);
 
-        $rewardSum = (int) (clone $txQ)->where('type', WalletTxType::Reward->value)->sum('amount');
-        $penaltySum = (int) (clone $txQ)->where('type', WalletTxType::Penalty->value)->sum('amount');
-        // adjustment+ → بستانکاری، adjustment− → بدهکاری
-        $adjPos = (int) (clone $txQ)->where('type', WalletTxType::Adjustment->value)->where('amount', '>', 0)->sum('amount');
-        $adjNeg = (int) (clone $txQ)->where('type', WalletTxType::Adjustment->value)->where('amount', '<', 0)->sum('amount');
-        // پرداختِ آنلاینِ مشتری هم ورودیِ کیف‌پولِ تکنسین است؛ پس هم به‌صورتِ
-        // جدا گزارش می‌شود و هم داخلِ «شارژ کیف‌پول انجام شده» جمع می‌شود.
-        $onlinePaymentSum = (int) (clone $txQ)->where('type', WalletTxType::OnlinePayment->value)->sum('amount');
-        $chargeSum = (int) (clone $txQ)
-            ->whereIn('type', [WalletTxType::WalletCharge->value, WalletTxType::OnlinePayment->value])
-            ->sum('amount');
+            $rewardSum = (int) (clone $txQ)->where('type', WalletTxType::Reward->value)->sum('amount');
+            $penaltySum = (int) (clone $txQ)->where('type', WalletTxType::Penalty->value)->sum('amount');
+            // adjustment+ → بستانکاری، adjustment− → بدهکاری
+            $adjPos = (int) (clone $txQ)->where('type', WalletTxType::Adjustment->value)->where('amount', '>', 0)->sum('amount');
+            $adjNeg = (int) (clone $txQ)->where('type', WalletTxType::Adjustment->value)->where('amount', '<', 0)->sum('amount');
+            // پرداختِ آنلاینِ مشتری هم ورودیِ کیف‌پولِ تکنسین است؛ پس هم به‌صورتِ
+            // جدا گزارش می‌شود و هم داخلِ «شارژ کیف‌پول انجام شده» جمع می‌شود.
+            $onlinePaymentSum = (int) (clone $txQ)->where('type', WalletTxType::OnlinePayment->value)->sum('amount');
+            $chargeSum = (int) (clone $txQ)
+                ->whereIn('type', [WalletTxType::WalletCharge->value, WalletTxType::OnlinePayment->value])
+                ->sum('amount');
+        }
 
         $totalInvoice = (int) $invAgg->total_amount;
         $companyShare = (int) $invAgg->company_share;
@@ -207,6 +227,130 @@ class FinancialReportController extends Controller
             'tech_status' => $techStatusLabel,
             'tech_status_val' => $techStatusValue,
             'invoice_count' => (int) $invAgg->cnt,
+        ];
+    }
+
+    // ─── Breakdowns (نمودار/مقایسه بر اساس شهر/تکنسین/دستگاه) ─────
+
+    /**
+     * تجمیعِ فاکتورهای بازه بر اساس سه بُعد (شهر، تکنسین، دستگاه) برای
+     * نمودارهای مقایسه‌ای. هر بُعد Top ۱۵ + «سایر» را برمی‌گرداند به‌همراه
+     * جدولِ جزئیات (تعداد/جمع/سهم شرکت/سهم تکنسین/درصد سود).
+     *
+     * @return array{by_city:array, by_technician:array, by_device:array}
+     */
+    protected function buildBreakdowns(array $f): array
+    {
+        return [
+            'by_city' => $this->breakdownBy($f, 'crm_orders.city_id', 'crm_cities', 'شهرِ نامشخص'),
+            'by_technician' => $this->breakdownByTechnician($f),
+            'by_device' => $this->breakdownBy($f, 'crm_orders.device_id', 'crm_devices', 'دستگاهِ نامشخص'),
+        ];
+    }
+
+    /**
+     * تجمیعِ فاکتورهای بازه بر اساس یک ستونِ سفارش (city_id/device_id) با
+     * join به جدولِ نامِ آن بُعد.
+     */
+    protected function breakdownBy(array $f, string $groupCol, string $nameTable, string $nullLabel): array
+    {
+        $alias = 'dim';
+
+        $q = Invoice::query()
+            ->join('crm_orders', 'crm_orders.id', '=', 'crm_invoices.order_id')
+            ->leftJoin("$nameTable as $alias", "$alias.id", '=', $groupCol);
+        $this->applyInvoiceFilters($q, $f);
+
+        $grouped = $q->selectRaw("
+                $groupCol AS dim_id,
+                MAX($alias.name) AS dim_name,
+                COUNT(*) AS cnt,
+                COALESCE(SUM(crm_invoices.total_amount), 0) AS total_amount,
+                COALESCE(SUM(crm_invoices.company_share), 0) AS company_share,
+                COALESCE(SUM(crm_invoices.tech_share), 0) AS tech_share
+            ")
+            ->groupBy(\Illuminate\Support\Facades\DB::raw($groupCol))
+            ->orderByDesc('total_amount')
+            ->get();
+
+        return $this->foldBreakdown($grouped, $nullLabel);
+    }
+
+    /** تجمیع بر اساس تکنسین — نامِ تکنسین از full_name (concat) ساخته می‌شود. */
+    protected function breakdownByTechnician(array $f): array
+    {
+        $q = Invoice::query()
+            ->leftJoin('crm_technicians as t', 't.id', '=', 'crm_invoices.technician_id');
+        $this->applyInvoiceFilters($q, $f);
+
+        $grouped = $q->selectRaw("
+                crm_invoices.technician_id AS dim_id,
+                MAX(COALESCE(
+                    NULLIF(TRIM(t.firstname_tech),''),
+                    NULLIF(TRIM(CONCAT(COALESCE(t.first_name,''),' ',COALESCE(t.last_name,''))),''),
+                    t.mobile
+                )) AS dim_name,
+                COUNT(*) AS cnt,
+                COALESCE(SUM(crm_invoices.total_amount), 0) AS total_amount,
+                COALESCE(SUM(crm_invoices.company_share), 0) AS company_share,
+                COALESCE(SUM(crm_invoices.tech_share), 0) AS tech_share
+            ")
+            ->groupBy('crm_invoices.technician_id')
+            ->orderByDesc('total_amount')
+            ->get();
+
+        return $this->foldBreakdown($grouped, 'بدون تکنسین');
+    }
+
+    /**
+     * Top ۱۵ را نگه می‌دارد و بقیه را در ردیفِ «سایر» جمع می‌کند؛ خروجی برای
+     * نمودار (labels/totals/company) و جدول آماده است.
+     */
+    protected function foldBreakdown(\Illuminate\Support\Collection $grouped, string $nullLabel): array
+    {
+        $limit = 15;
+
+        $rows = $grouped->map(function ($r) use ($nullLabel) {
+            $total = (int) $r->total_amount;
+            $company = (int) $r->company_share;
+
+            return [
+                'name' => trim((string) ($r->dim_name ?? '')) ?: $nullLabel,
+                'count' => (int) $r->cnt,
+                'total' => $total,
+                'company_share' => $company,
+                'tech_share' => (int) $r->tech_share,
+                'profit_pct' => $total > 0 ? round(($company / $total) * 100, 1) : 0,
+            ];
+        })->values();
+
+        $top = $rows->take($limit);
+        $rest = $rows->slice($limit);
+
+        if ($rest->isNotEmpty()) {
+            $total = (int) $rest->sum('total');
+            $company = (int) $rest->sum('company_share');
+            $top = $top->push([
+                'name' => 'سایر ('.number_format($rest->count()).' مورد)',
+                'count' => (int) $rest->sum('count'),
+                'total' => $total,
+                'company_share' => $company,
+                'tech_share' => (int) $rest->sum('tech_share'),
+                'profit_pct' => $total > 0 ? round(($company / $total) * 100, 1) : 0,
+            ]);
+        }
+
+        $top = $top->values();
+
+        return [
+            'rows' => $top,
+            'chart' => [
+                'labels' => $top->pluck('name')->all(),
+                'totals' => $top->pluck('total')->all(),
+                'company' => $top->pluck('company_share')->all(),
+            ],
+            'grand_total' => (int) $rows->sum('total'),
+            'dim_count' => $rows->count(),
         ];
     }
 
@@ -275,8 +419,9 @@ class FinancialReportController extends Controller
             }
         }
 
-        // تراکنش‌های کیف‌پول
-        $allowedTxTypes = $this->txTypesForDocFilter($f['doc_type']);
+        // تراکنش‌های کیف‌پول — با فیلترِ سفارش‌محور کنار گذاشته می‌شوند (به
+        // سفارش گره نمی‌خورند).
+        $allowedTxTypes = $this->hasOrderScopedFilter($f) ? [] : $this->txTypesForDocFilter($f['doc_type']);
         if (! empty($allowedTxTypes)) {
             $txQ = WalletTransaction::query()
                 ->with(['technician:id,first_name,last_name,firstname_tech'])
@@ -327,6 +472,32 @@ class FinancialReportController extends Controller
         if ($f['mobile']) {
             $q->whereHas('customer', fn ($c) => $c->where('mobile', 'like', '%'.$f['mobile'].'%'));
         }
+
+        // فیلترهای سفارش‌محور (شهر/استان/دستگاه/برند) با whereHas روی سفارش —
+        // subquery است تا با join‌های بعدیِ همین builder (مثلاً هزینه‌ها) تداخل
+        // نکند.
+        if ($this->hasOrderScopedFilter($f)) {
+            $q->whereHas('order', function ($o) use ($f) {
+                if ($f['province_id']) {
+                    $o->where('province_id', $f['province_id']);
+                }
+                if ($f['city_id']) {
+                    $o->where('city_id', $f['city_id']);
+                }
+                if ($f['device_id']) {
+                    $o->where('device_id', $f['device_id']);
+                }
+                if ($f['brand_id']) {
+                    $o->where('brand_id', $f['brand_id']);
+                }
+            });
+        }
+    }
+
+    /** آیا فیلترِ سفارش‌محور (شهر/استان/دستگاه/برند) فعال است؟ */
+    protected function hasOrderScopedFilter(array $f): bool
+    {
+        return (bool) ($f['province_id'] || $f['city_id'] || $f['device_id'] || $f['brand_id']);
     }
 
     protected function applyTxFilters($q, array $f): void
