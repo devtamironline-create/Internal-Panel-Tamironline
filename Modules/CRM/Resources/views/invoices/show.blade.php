@@ -93,7 +93,10 @@
     <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 text-sm">{{ session('success') }}</div>
     @endif
 
-    @if($invoice->status === 'issued')
+    {{-- لینکِ پرداختِ آنلاین فقط وقتی نشان داده می‌شود که فاکتور واقعاً قابلِ
+         پرداختِ آنلاین باشد (مرجعِ واحد: isPayableOnline). فاکتورِ ۰ تومانیِ
+         گارانتی، نقدی، باطل‌شده و بسته‌شده لینکِ پرداخت ندارند. --}}
+    @if($invoice->isPayableOnline())
     <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
         <div class="flex items-center justify-between flex-wrap gap-3">
             <div>
@@ -107,6 +110,10 @@
                 <a href="{{ url('/crm/pay/'.$invoice->public_token) }}" target="_blank" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs">باز کردن</a>
             </div>
         </div>
+    </div>
+    @elseif($invoice->status === 'issued' && $invoice->notPayableReason())
+    <div class="bg-gray-50 dark:bg-gray-900/40 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-sm text-gray-600 dark:text-gray-300">
+        این فاکتور لینکِ پرداختِ آنلاین ندارد: {{ $invoice->notPayableReason() }}
     </div>
     @endif
 
