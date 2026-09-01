@@ -18,21 +18,23 @@ namespace Modules\CRM\Enums;
  */
 enum OrderStatus: string
 {
+    // ترتیبِ اعلانِ case‌ها = ترتیبِ نمایشِ options()/dropdown؛ به‌صورتِ
+    // منطقیِ روندِ سفارش چیده شده — «در انتظار قطعه/تأیید مشتری» پیش از
+    // «باز شده» می‌آیند (تصمیمِ ۱۴۰۵/۰۶/۱۰). وضعیت‌های جدیدِ پنل کدِ
+    // اختصاصیِ WP ندارند و wpCode امنِ نزدیک می‌گیرند.
     case New = 'new';                 // WP 0   — جدید
+    case AwaitingCoordination = 'awaiting_coordination'; // در انتظار هماهنگی با مشتری
+    case NoAnswer = 'no_answer';      // مشتری پاسخگو نیست
     case Coordinated = 'coordinated'; // WP 1   — هماهنگ شده
-    case Open = 'open';               // WP 2   — باز شده (انتقال به تعمیرگاه)
-    case Suspended = 'suspended';     // WP 3   — معلق
-    case Cancelled = 'cancelled';     // WP 4   — لغو شده (فقط ادمین)
-    case Completed = 'completed';     // WP 5   — انجام کار
-    case Transit = 'transit';         // WP 10  — ایاب و ذهاب
-    case Returned = 'returned';       // WP 11  — برگشتی گارانتی (لاراول‌اِسپِسیفیک)
-    case Declined = 'declined';       // WP 100 — رد شده (توسط تکنسین)
-
-    // ─── وضعیت‌های جدیدِ پنل (WP این‌ها را ندارد؛ wpCode امنِ نزدیک می‌گیرند) ───
-    case AwaitingCoordination = 'awaiting_coordination';       // در انتظار هماهنگی با مشتری
-    case NoAnswer = 'no_answer';                               // مشتری پاسخگو نیست
     case AwaitingPart = 'awaiting_part';                       // در انتظار قطعه
     case AwaitingCustomerApproval = 'awaiting_customer_approval'; // در انتظار تأیید مشتری
+    case Open = 'open';               // WP 2   — باز شده (انتقال به تعمیرگاه)
+    case Suspended = 'suspended';     // WP 3   — معلق
+    case Transit = 'transit';         // WP 10  — ایاب و ذهاب
+    case Completed = 'completed';     // WP 5   — انجام کار
+    case Cancelled = 'cancelled';     // WP 4   — لغو شده (فقط ادمین)
+    case Declined = 'declined';       // WP 100 — رد شده (توسط تکنسین)
+    case Returned = 'returned';       // WP 11  — برگشتی گارانتی (لاراول‌اِسپِسیفیک)
 
     public function label(): string
     {
