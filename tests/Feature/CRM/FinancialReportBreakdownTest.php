@@ -47,9 +47,9 @@ class FinancialReportBreakdownTest extends TestCase
         $this->assertStringContainsString('سایر', $out['rows'][15]['name']);
         $this->assertSame(2, $out['rows'][15]['count']); // دو مورد در «سایر»
         $this->assertSame(17, $out['dim_count']);
-        // نمودار همان ۱۶ برچسب دارد
+        // نمودار همان ۱۶ برچسب + ۱۶ مقدارِ سهم شرکت دارد
         $this->assertCount(16, $out['chart']['labels']);
-        $this->assertCount(16, $out['chart']['totals']);
+        $this->assertCount(16, $out['chart']['company']);
     }
 
     public function test_fold_computes_profit_percent_and_uses_null_label(): void
@@ -75,7 +75,7 @@ class FinancialReportBreakdownTest extends TestCase
         $out = $this->invoke('foldBreakdown', new Collection, 'x');
         $this->assertSame([], $out['rows']->all());
         $this->assertSame([], $out['chart']['labels']);
-        $this->assertSame(0, $out['grand_total']);
+        $this->assertSame(0, $out['grand_company']);
     }
 
     public function test_order_scoped_filter_detection(): void

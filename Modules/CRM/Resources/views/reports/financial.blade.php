@@ -233,7 +233,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 flex flex-col">
                 <div class="flex items-center justify-between mb-2">
                     <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">{{ $meta['title'] }}</h2>
-                    <span class="text-[11px] text-gray-500">{{ number_format($bd['dim_count']) }} مورد · جمع {{ number_format($bd['grand_total']) }}</span>
+                    <span class="text-[11px] text-gray-500">{{ number_format($bd['dim_count']) }} مورد · سهم شرکت {{ number_format($bd['grand_company']) }}</span>
                 </div>
 
                 @if(empty($bd['chart']['labels']))
@@ -249,7 +249,6 @@
                                 <tr>
                                     <th class="px-2 py-1 text-right font-medium">{{ $meta['col'] }}</th>
                                     <th class="px-2 py-1 text-center font-medium">تعداد</th>
-                                    <th class="px-2 py-1 text-left font-medium">جمع فاکتور</th>
                                     <th class="px-2 py-1 text-left font-medium">سهم شرکت</th>
                                     <th class="px-2 py-1 text-center font-medium">سود٪</th>
                                 </tr>
@@ -259,8 +258,7 @@
                                     <tr>
                                         <td class="px-2 py-1 text-gray-700 dark:text-gray-300">{{ $r['name'] }}</td>
                                         <td class="px-2 py-1 text-center text-gray-500" dir="ltr">{{ number_format($r['count']) }}</td>
-                                        <td class="px-2 py-1 text-left font-medium text-gray-800 dark:text-gray-200" dir="ltr">{{ number_format($r['total']) }}</td>
-                                        <td class="px-2 py-1 text-left text-emerald-600" dir="ltr">{{ number_format($r['company_share']) }}</td>
+                                        <td class="px-2 py-1 text-left font-medium text-emerald-600" dir="ltr">{{ number_format($r['company_share']) }}</td>
                                         <td class="px-2 py-1 text-center text-amber-600" dir="ltr">{{ $r['profit_pct'] }}%</td>
                                     </tr>
                                 @endforeach
@@ -359,14 +357,13 @@ document.addEventListener('DOMContentLoaded', function () {
                      toolbar: { show: false }, fontFamily: 'inherit' },
             plotOptions: { bar: { horizontal: true, borderRadius: 4, barHeight: '70%' } },
             series: [
-                { name: 'جمع فاکتور', data: data.totals, color: el.dataset.color || '#6366f1' },
-                { name: 'سهم شرکت', data: data.company, color: '#10b981' },
+                { name: 'سهم شرکت', data: data.company, color: el.dataset.color || '#10b981' },
             ],
             xaxis: { categories: data.labels,
                      labels: { style: { fontSize: '10px' }, formatter: v => Intl.NumberFormat('en-US', { notation: 'compact' }).format(v) } },
             yaxis: { labels: { style: { fontSize: '10px' } } },
             dataLabels: { enabled: false },
-            legend: { position: 'top', fontSize: '11px' },
+            legend: { show: false },
             grid: { borderColor: isDark ? '#374151' : '#e5e7eb' },
             theme: { mode: isDark ? 'dark' : 'light' },
             tooltip: { y: { formatter: v => Intl.NumberFormat('en-US').format(v) + ' تومان' } },
