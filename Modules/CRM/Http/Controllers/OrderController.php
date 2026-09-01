@@ -1435,19 +1435,20 @@ class OrderController extends Controller
         }
 
         $validated = $request->validate([
-            'return_type' => ['required', 'in:1,2'],
             'return_description' => ['required', 'string', 'max:2000'],
         ], [
-            'return_type.required' => 'لطفاً نوع بازگشت را انتخاب کنید.',
-            'return_type.in' => 'نوع بازگشت معتبر نیست.',
             'return_description.required' => 'لطفاً دلیل/توضیح بازگشت را وارد کنید.',
         ]);
 
         $previousStatus = $currentStatus->value;
 
-        $returnType = (string) $validated['return_type'];
+        // بازگشتِ سفارش تنها یک حالت دارد: ادمین با توضیحِ الزامی، سفارش را
+        // برمی‌گرداند و تصمیمِ گارانتی/غیرگارانتی همیشه با تکنسین است
+        // («بررسیِ برگشتی»). return_type = 1 تا دورِ بررسی باز شود و بستنِ
+        // سفارش تا زمانِ تصمیمِ تکنسین بلاک بماند.
+        $returnType = '1';
         $returnDesc = $validated['return_description'];
-        $returnTypeLabel = $returnType === '1' ? 'برگشت انجام شده' : 'برگشت کنسل شده';
+        $returnTypeLabel = 'بازگشت سفارش';
         $jalaliNow = \Morilog\Jalali\Jalalian::now()->format('Y/m/d H:i');
 
         $order->update([
@@ -1457,13 +1458,10 @@ class OrderController extends Controller
             'status_internal_order' => null,
             'qc_status' => null,
             // ── دورِ «بررسیِ برگشتی» تکنسین ──
-            // «برگشت انجام شده» (type 1) یعنی کارِ قبلی انجام شده و حالا
-            // مشتری معترض است — تصمیمِ رایگان/عادی با تکنسین است که بعد از
-            // هماهنگی و مراجعه در محل ثبت می‌کند؛ تا آن موقع بستنِ سفارش
-            // سمتِ سرور بلاک است. «برگشت کنسل شده» (type 2) کارِ قبلی
-            // نداشته و سؤالِ «ایراد از تعمیرِ قبل؟» برایش بی‌معناست.
-            // برگشتِ مجدد روی همان سفارش هم دورِ تازه باز می‌کند.
-            'return_review_pending' => $returnType === '1',
+            // ادمین فقط برگشت را ثبت می‌کند؛ تکنسین سرِ کار تصمیم می‌گیرد:
+            // گارانتی (فاکتورِ ۰ و قابلِ تغییر) یا غیرگارانتی (فاکتورِ کامل).
+            // تا زمانِ آن تصمیم، بستنِ سفارش سمتِ سرور بلاک است.
+            'return_review_pending' => true,
             'return_reviewed_at' => null,
             'return_review_approved' => null,
             'return_review_days' => null,

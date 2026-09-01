@@ -512,7 +512,7 @@ class ReturnFlowProfessionalTest extends TestCase
         ]);
 
         $request = Request::create('/admin/crm/orders/'.$order->id.'/return', 'POST', [
-            'return_type' => '1', 'return_description' => 'مشتری می‌گوید همان ایراد برگشته است.',
+            'return_description' => 'مشتری می‌گوید همان ایراد برگشته است.',
         ]);
         app(AdminOrderController::class)->returnOrder($request, $order);
 
@@ -539,8 +539,11 @@ class ReturnFlowProfessionalTest extends TestCase
         }
     }
 
-    public function test_legacy_return_of_cancelled_work_skips_the_review_round(): void
+    public function test_return_always_opens_the_technician_review_round(): void
     {
+        // تصمیمِ ۱۴۰۵/۰۶/۱۰: بازگشت تنها یک حالتِ ادمین دارد (با توضیحِ
+        // الزامی) و همیشه دورِ «بررسیِ برگشتی» تکنسین را باز می‌کند — حتی
+        // برای سفارشِ کنسل‌شده. تصمیمِ گارانتی/غیرگارانتی با تکنسین است.
         $tech = $this->technician();
         $order = Order::forceCreate([
             'order_code' => 'RF-LEGACY2', 'technician_id' => $tech->id,
@@ -548,12 +551,13 @@ class ReturnFlowProfessionalTest extends TestCase
         ]);
 
         $request = Request::create('/admin/crm/orders/'.$order->id.'/return', 'POST', [
-            'return_type' => '2', 'return_description' => 'مشتری دوباره درخواست سرویس داده است.',
+            'return_description' => 'مشتری دوباره درخواست سرویس داده است.',
         ]);
         app(AdminOrderController::class)->returnOrder($request, $order);
 
-        // کارِ قبلی انجام نشده — سؤالِ «ایراد از تعمیرِ قبل؟» بی‌معناست.
-        $this->assertFalse((bool) $order->fresh()->return_review_pending);
+        $order->refresh();
+        $this->assertTrue((bool) $order->return_review_pending);
+        $this->assertSame(1, (int) $order->return_type);
     }
 
     public function test_a_second_return_reopens_the_review_round(): void
@@ -568,7 +572,7 @@ class ReturnFlowProfessionalTest extends TestCase
         ]);
 
         $request = Request::create('/admin/crm/orders/'.$order->id.'/return', 'POST', [
-            'return_type' => '1', 'return_description' => 'برای بار دوم برگشت خورد.',
+            'return_description' => 'برای بار دوم برگشت خورد.',
         ]);
         app(AdminOrderController::class)->returnOrder($request, $order);
 

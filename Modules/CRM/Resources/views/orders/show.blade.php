@@ -1754,32 +1754,22 @@
                 </div>
                 @if($order->return_type)
                 <div class="bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-700 rounded-lg p-3 mb-3 text-sm">
-                    <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">
-                        وضعیت بازگشت:
-                        {{ (string) $order->return_type === '1' ? 'برگشت انجام شده' : 'برگشت کنسل شده' }}
-                    </div>
+                    <div class="font-bold text-amber-800 dark:text-amber-200 mb-1">این سفارش قبلاً بازگشت داده شده است.</div>
                     @if($order->return_description)
                     <p class="text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{{ $order->return_description }}</p>
                     @endif
                 </div>
                 @endif
                 <p class="text-xs text-amber-800 dark:text-amber-200 mb-3">
-                    برای بازگرداندن سفارش، نوع بازگشت را انتخاب و دلیل را بنویسید. وضعیت سفارش به «جدید» تغییر می‌کند.
+                    برای بازگرداندن سفارش، دلیل را بنویسید. وضعیت به «جدید» تغییر می‌کند و تصمیمِ گارانتی/غیرگارانتی با تکنسین است («بررسیِ برگشتی»).
                 </p>
                 <form action="{{ route('crm.orders.return', $order) }}" method="POST"
                       class="space-y-2"
                       onsubmit="return confirm('این کار وضعیت سفارش را به «جدید» برمی‌گرداند. ادامه دهم؟');">
                     @csrf
-                    <select name="return_type" required
-                            class="w-full px-3 py-2 border border-amber-300 dark:border-amber-700 dark:bg-gray-700 rounded-lg text-sm">
-                        <option value="">— نوع بازگشت سفارش —</option>
-                        <option value="1" @selected(old('return_type') === '1')>برگشت انجام شده</option>
-                        <option value="2" @selected(old('return_type') === '2')>برگشت کنسل شده</option>
-                    </select>
                     <textarea name="return_description" rows="3" required
-                              placeholder="دلیل/توضیح بازگشت..."
+                              placeholder="دلیل/توضیح بازگشت... (الزامی)"
                               class="w-full px-3 py-2 border border-amber-300 dark:border-amber-700 dark:bg-gray-700 rounded-lg text-sm">{{ old('return_description') }}</textarea>
-                    @error('return_type') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
                     @error('return_description') <p class="text-xs text-red-600">{{ $message }}</p> @enderror
                     <button class="w-full px-3 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 text-sm font-bold">
                         بازگشت سفارش
