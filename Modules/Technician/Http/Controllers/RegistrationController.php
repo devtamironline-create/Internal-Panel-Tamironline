@@ -773,45 +773,70 @@ class RegistrationController extends Controller
     /**
      * آپلود مدارک (کارت ملی، شناسنامه، سوپیشینه، عکس ۳×۴، اجاره‌نامه، قبض)
      */
+    /** post_max_size سرور را به مگابایت برمی‌گرداند (برای پیامِ خطای گویا)؛ 0 اگر نامشخص. */
+    private function serverPostMaxSizeMb(): int
+    {
+        $raw = trim((string) ini_get('post_max_size'));
+        if ($raw === '' || $raw === '0') {
+            return 0;
+        }
+        $unit = strtolower(substr($raw, -1));
+        $value = (int) $raw;
+        $bytes = match ($unit) {
+            'g' => $value * 1024 * 1024 * 1024,
+            'm' => $value * 1024 * 1024,
+            'k' => $value * 1024,
+            default => (int) $raw,
+        };
+
+        return (int) floor($bytes / (1024 * 1024));
+    }
+
     public function uploadDocuments(Request $request)
     {
-        $request->validate([
-            'mobile' => ['required', 'regex:/^09[0-9]{9}$/'],
-            'national_card_front' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'national_card_back' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'birth_certificate_p1' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'birth_certificate_p2' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'criminal_record' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'photo_3x4' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'lease_agreement' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'utility_bill' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-        ], [
-            'mobile.required' => 'شماره موبایل الزامی است.',
-            'national_card_front.required' => 'تصویر روی کارت ملی الزامی است.',
-            'national_card_front.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'national_card_front.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'national_card_back.required' => 'تصویر پشت کارت ملی الزامی است.',
-            'national_card_back.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'national_card_back.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'birth_certificate_p1.required' => 'تصویر صفحه اول شناسنامه الزامی است.',
-            'birth_certificate_p1.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'birth_certificate_p1.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'birth_certificate_p2.required' => 'تصویر صفحه دوم شناسنامه الزامی است.',
-            'birth_certificate_p2.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'birth_certificate_p2.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'criminal_record.required' => 'تصویر گواهی سوپیشینه الزامی است.',
-            'criminal_record.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'criminal_record.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'photo_3x4.required' => 'عکس ۳×۴ الزامی است.',
-            'photo_3x4.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'photo_3x4.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'lease_agreement.required' => 'تصویر اجاره‌نامه الزامی است.',
-            'lease_agreement.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'lease_agreement.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-            'utility_bill.required' => 'تصویر قبض آب یا برق الزامی است.',
-            'utility_bill.mimes' => 'فایل باید تصویر (JPG، PNG، WEBP) باشد.',
-            'utility_bill.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
-        ]);
+        // اگر مجموعِ حجمِ فایل‌ها از post_max_size سرور بیشتر باشد، PHP کلِ بدنهٔ
+        // درخواست (فایل‌ها + توکن) را دور می‌ریزد؛ آن‌وقت اعتبارسنجی می‌گفت
+        // «شماره موبایل الزامی است» که گمراه‌کننده بود. این را صریح می‌گیریم.
+        $contentLength = (int) $request->server('CONTENT_LENGTH', 0);
+        if ($contentLength > 0 && count($request->all()) === 0 && count($request->allFiles()) === 0) {
+            $maxMb = $this->serverPostMaxSizeMb();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'حجم مجموعِ فایل‌های ارسالی بیش از حد مجاز سرور است'
+                    .($maxMb ? " (حداکثر حدود {$maxMb} مگابایت برای کلِ مدارک)" : '')
+                    .'. لطفاً تصاویر را با حجم کمتر بارگذاری کنید.',
+            ], 413);
+        }
+
+        // برچسبِ فارسیِ هر مدرک برای پیام‌های خطای گویا.
+        $docLabels = [
+            'national_card_front' => 'تصویر روی کارت ملی',
+            'national_card_back' => 'تصویر پشت کارت ملی',
+            'birth_certificate_p1' => 'تصویر صفحه اول شناسنامه',
+            'birth_certificate_p2' => 'تصویر صفحه دوم شناسنامه',
+            'criminal_record' => 'تصویر گواهی عدم سوءپیشینه',
+            'photo_3x4' => 'عکس ۳×۴',
+            'lease_agreement' => 'تصویر اجاره‌نامه',
+            'utility_bill' => 'تصویر قبض آب یا برق',
+        ];
+
+        // حداکثر ۲۰ مگابایت برای هر فایل (۲۰۴۸۰ کیلوبایت).
+        $maxKb = 20480;
+        $rules = ['mobile' => ['required', 'regex:/^09[0-9]{9}$/']];
+        $messages = ['mobile.required' => 'شماره موبایل الزامی است.'];
+
+        foreach ($docLabels as $field => $label) {
+            $rules[$field] = ['required', 'file', 'mimes:jpg,jpeg,png,webp', "max:{$maxKb}"];
+            $messages["{$field}.required"] = "{$label} الزامی است.";
+            $messages["{$field}.mimes"] = "{$label} باید فایل تصویری (JPG، PNG یا WEBP) باشد.";
+            $messages["{$field}.max"] = "حجم «{$label}» نباید بیشتر از ۲۰ مگابایت باشد.";
+            // وقتی فایل به‌خاطرِ محدودیتِ php.ini (upload_max_filesize) ناقص برسد،
+            // قانونِ ضمنیِ uploaded فعال می‌شود — پیامِ گویا به‌جای «خطا در آپلود».
+            $messages["{$field}.uploaded"] = "بارگذاری «{$label}» ناموفق بود؛ احتمالاً حجم فایل بیش از حد مجاز سرور است. فایل کوچک‌تری انتخاب کنید.";
+        }
+
+        $request->validate($rules, $messages);
 
         $registration = TechnicianRegistration::where('mobile', $request->mobile)
             ->where('status', 'approved')
