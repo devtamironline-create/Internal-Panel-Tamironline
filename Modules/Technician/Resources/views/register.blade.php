@@ -1995,9 +1995,9 @@
                 input.value = '';
                 return;
             }
-            // بررسی حجم (5MB)
-            if (file.size > 5 * 1024 * 1024) {
-                showFieldError('docError_' + fieldName, 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.');
+            // بررسی حجم (20MB)
+            if (file.size > 20 * 1024 * 1024) {
+                showFieldError('docError_' + fieldName, 'حجم تصویر نباید بیشتر از ۲۰ مگابایت باشد.');
                 input.value = '';
                 return;
             }
@@ -2078,11 +2078,22 @@
                 error: function(xhr) {
                     const res = xhr.responseJSON;
                     if (res?.errors) {
+                        // خطاهای اعتبارسنجیِ هر فیلد + خلاصه‌ی اولین خطا در بالای دکمه
+                        let firstMsg = null;
                         Object.keys(res.errors).forEach(function(key) {
-                            showFieldError('docError_' + key, res.errors[key][0]);
+                            const msg = res.errors[key][0];
+                            if (!firstMsg) firstMsg = msg;
+                            showFieldError('docError_' + key, msg);
                         });
+                        showFieldError('docGeneralError', firstMsg || 'برخی مدارک نامعتبر هستند؛ موارد قرمز را اصلاح کنید.');
+                    } else if (xhr.status === 413) {
+                        showFieldError('docGeneralError', 'حجم فایل‌های ارسالی بیش از حد مجاز سرور است. لطفاً تصاویر را با حجم کمتر (زیر ۲۰ مگابایت برای هر فایل) بارگذاری کنید.');
+                    } else if (xhr.status === 419) {
+                        showFieldError('docGeneralError', 'نشست شما منقضی شده است. لطفاً صفحه را رفرش کنید و مدارک را دوباره بارگذاری کنید.');
+                    } else if (xhr.status === 0) {
+                        showFieldError('docGeneralError', 'ارتباط با سرور برقرار نشد یا آپلود نیمه‌کاره ماند. اتصال اینترنت و حجم فایل‌ها را بررسی کنید و دوباره تلاش کنید.');
                     } else {
-                        showFieldError('docGeneralError', res?.message || 'خطا در آپلود مدارک');
+                        showFieldError('docGeneralError', (res?.message || 'خطا در آپلود مدارک') + ' (کد ' + (xhr.status || '؟') + ')');
                     }
                 },
                 complete: function() {
