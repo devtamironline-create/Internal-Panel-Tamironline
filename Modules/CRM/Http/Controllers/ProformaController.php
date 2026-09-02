@@ -21,8 +21,14 @@ class ProformaController extends Controller
     {
         $status = $request->string('status')->toString();
         $search = $request->string('q')->toString();
+        $orderId = (int) $request->query('order_id') ?: null;
+
+        // وقتی از دکمهٔ «مشاهده پیش‌فاکتورها»ی صفحهٔ سفارش می‌آییم، لیست به
+        // همان سفارش محدود می‌شود و بنرِ زمینه در بالای صفحه نمایش داده می‌شود.
+        $order = $orderId ? Order::find($orderId) : null;
 
         $proformas = Proforma::query()
+            ->when($orderId, fn ($q) => $q->where('order_id', $orderId))
             ->when($status, fn ($q) => $q->where('status', $status))
             ->when($search, fn ($q, $s) => $q->where(function ($sub) use ($s) {
                 $sub->where('proforma_code', 'like', "%{$s}%")
@@ -33,7 +39,7 @@ class ProformaController extends Controller
             ->paginate(25)
             ->withQueryString();
 
-        return view('crm::proformas.index', compact('proformas', 'status', 'search'));
+        return view('crm::proformas.index', compact('proformas', 'status', 'search', 'order'));
     }
 
     public function create(Request $request)

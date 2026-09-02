@@ -16,6 +16,15 @@
         </a>
     </div>
 
+    @isset($order)
+        @if($order)
+        <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-3 text-sm text-indigo-800 dark:text-indigo-200 flex items-center justify-between gap-3 flex-wrap">
+            <span>پیش‌فاکتورهای سفارش <b dir="ltr">{{ $order->order_code }}</b></span>
+            <a href="{{ route('crm.orders.show', $order) }}" class="text-indigo-700 dark:text-indigo-300 hover:underline font-medium">← بازگشت به سفارش</a>
+        </div>
+        @endif
+    @endisset
+
     @if(session('success'))<div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-3 text-sm">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="bg-red-50 border border-red-200 text-red-800 rounded-lg p-3 text-sm">{{ session('error') }}</div>@endif
 
