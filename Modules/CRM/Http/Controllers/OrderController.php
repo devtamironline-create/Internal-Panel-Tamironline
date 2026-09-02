@@ -509,6 +509,9 @@ class OrderController extends Controller
             ->where('note', 'like', '[بازسازی]%')
             ->count();
 
+        // تعدادِ پیش‌فاکتورهای این سفارش — برای دکمهٔ «مشاهده پیش‌فاکتورها».
+        $proformaCount = \Modules\CRM\Models\Proforma::where('order_id', $order->id)->count();
+
         // سفارش‌های قبلی همین مشتری — برای دکمهٔ سریع «سوابق مشتری» در صفحهٔ
         // جزئیات. حداکثر ۳۰ سفارش اخیر، خود سفارش جاری حذف می‌شود.
         $customerOrders = collect();
@@ -537,6 +540,7 @@ class OrderController extends Controller
             'supersededInvoices' => $supersededInvoices,
             'affectedInvoiceIds' => $affectedInvoiceIds,
             'restoredCount' => $restoredCount,
+            'proformaCount' => $proformaCount,
         ]);
     }
 
