@@ -684,6 +684,57 @@
                 @endcan
             </div>
 
+            {{-- ─── پیش‌فاکتورهای این سفارش ─── --}}
+            @can('view-crm-invoices')
+            @if(($proformas ?? collect())->isNotEmpty())
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border-r-4 border-indigo-400">
+                <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+                    <h2 class="text-base font-bold text-gray-900 dark:text-gray-100">پیش‌فاکتورهای این سفارش</h2>
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs text-gray-500">{{ $proformas->count() }} پیش‌فاکتور</span>
+                        <a href="{{ route('crm.proformas.index', ['order_id' => $order->id]) }}" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">مشاهده در لیست کامل ←</a>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30">
+                                <th class="py-2 px-3 text-right">کد</th>
+                                <th class="py-2 px-3 text-right">صدور</th>
+                                <th class="py-2 px-3 text-right">مبلغ کل</th>
+                                <th class="py-2 px-3 text-right">اعتبار تا</th>
+                                <th class="py-2 px-3 text-right">صادرکننده</th>
+                                <th class="py-2 px-3 text-right">وضعیت</th>
+                                <th class="py-2 px-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                            @foreach($proformas as $pf)
+                                <tr class="text-xs">
+                                    <td class="py-2 px-3 font-mono" dir="ltr">
+                                        <a href="{{ route('crm.proformas.show', $pf) }}" class="text-indigo-700 dark:text-indigo-400 hover:underline">{{ $pf->proforma_code }}</a>
+                                    </td>
+                                    <td class="py-2 px-3 text-gray-500" dir="ltr">@jdatetime($pf->created_at)</td>
+                                    <td class="py-2 px-3 font-bold">{{ number_format((int) $pf->total) }}</td>
+                                    <td class="py-2 px-3 text-gray-500" dir="ltr">{{ $pf->valid_until ? \Morilog\Jalali\Jalalian::fromCarbon($pf->valid_until)->format('Y/m/d') : '—' }}</td>
+                                    <td class="py-2 px-3 text-gray-600 dark:text-gray-300">{{ $pf->creatorUser?->full_name ?? $pf->creatorTech?->full_name ?? '—' }}</td>
+                                    <td class="py-2 px-3">
+                                        <span class="px-2 py-0.5 rounded-full {{ $pf->statusBadge() }}">{{ $pf->statusLabel() }}</span>
+                                    </td>
+                                    <td class="py-2 px-3 whitespace-nowrap">
+                                        <a href="{{ route('crm.proformas.show', $pf) }}" class="text-brand-700 hover:underline">مشاهده</a>
+                                        <span class="text-gray-300 mx-1">|</span>
+                                        <a href="{{ route('crm.proforma.public', $pf->public_token) }}" target="_blank" class="text-gray-500 hover:underline">رسید</a>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+            @endcan
+
             {{-- ─── فاکتورهای فعال (بیش از یکی = سفارش بازگشتی جمع‌شونده) ─── --}}
             @if(($activeInvoices ?? collect())->count() > 1)
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border-r-4 border-emerald-400">
