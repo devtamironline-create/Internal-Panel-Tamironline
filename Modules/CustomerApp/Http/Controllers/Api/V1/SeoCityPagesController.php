@@ -29,7 +29,7 @@ class SeoCityPagesController extends Controller
     {
         $query = CityPage::query()
             ->published()
-            ->with(['city:id,name,slug,province_id', 'city.province:id,name', 'device:id,name,slug,hero_image', 'brand:id,name,slug,hero_image']);
+            ->with(['city:id,name,slug,province_id', 'city.province:id,name,slug', 'device:id,name,slug,hero_image', 'brand:id,name,slug,hero_image', 'faqs:id,question,answer']);
 
         // واکشیِ یک صفحه با مسیرِ دقیق.
         if ($path = trim((string) $request->query('path'))) {
@@ -70,6 +70,12 @@ class SeoCityPagesController extends Controller
                 'name' => $page->city?->name,
                 'slug' => $page->city?->slug,
             ],
+            // province برای resolveِ توکنِ {province} در محتوای کاتالوگ سمتِ فرانت
+            // (طبق §۲.۳.۵ نامهٔ تیمِ سایت) — نامِ صفحه را خودِ بک‌اند resolve می‌کند
+            // ولی بدنهٔ کاتالوگ توکن‌ها را resolve‌نشده دارد.
+            'province' => $page->city?->province
+                ? ['name' => $page->city->province->name, 'slug' => $page->city->province->slug]
+                : null,
             'device' => $page->device ? ['name' => $page->device->name, 'slug' => $page->device->slug] : null,
             'brand' => $page->brand ? ['name' => $page->brand->name, 'slug' => $page->brand->slug] : null,
             'title' => $this->tokens($page->title, $page),
@@ -88,6 +94,7 @@ class SeoCityPagesController extends Controller
                 'mobile' => $page->steps_image_mobile,
             ],
             'sections_enabled' => $page->sections_enabled,
+            'faq' => $this->faqList($page),
             'breadcrumbs' => $this->breadcrumbs($page),
             'children' => $this->children($page),
             'published_at' => $page->published_at?->toIso8601String(),
@@ -180,6 +187,33 @@ class SeoCityPagesController extends Controller
 
             return $i;
         }, $items);
+    }
+
+    /**
+     * FAQِ صفحاتِ هابِ شهری (city/services/brands) — این صفحات به دستگاه/برندِ
+     * خاصی گره نمی‌خورند، پس فرانت منبعِ FAQ ندارد و باید از همین payload بیاید
+     * (§۲.۳.۶). برای صفحاتِ device/brand/combo فرانت FAQ را از کاتالوگ می‌خواند،
+     * پس این‌جا null می‌ماند تا تکراری نشود. توکن‌ها با contextِ صفحه resolve
+     * می‌شوند. FAQها را ادمین در همان صفحهٔ ویرایشِ صفحهٔ شهری وصل می‌کند.
+     *
+     * @return array<int, array{q:?string, a:?string}>|null
+     */
+    private function faqList(CityPage $page): ?array
+    {
+        $hubTypes = [CityPage::TYPE_CITY, CityPage::TYPE_SERVICES, CityPage::TYPE_BRANDS];
+        if (! in_array($page->type, $hubTypes, true)) {
+            return null;
+        }
+
+        $faqs = $page->faqs;
+        if ($faqs->isEmpty()) {
+            return null;
+        }
+
+        return $faqs->map(fn ($f) => [
+            'q' => $this->tokens($f->question, $page),
+            'a' => $this->tokens($f->answer, $page),
+        ])->values()->all();
     }
 
     /**

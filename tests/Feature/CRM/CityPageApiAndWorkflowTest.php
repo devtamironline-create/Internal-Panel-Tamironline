@@ -20,6 +20,14 @@ class CityPageApiAndWorkflowTest extends TestCase
     {
         parent::setUp();
 
+        Schema::create('crm_provinces', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->string('name'), $x->string('slug')->nullable(),
+            $x->unsignedInteger('sort_order')->default(0), $x->timestamps(),
+        ]));
+        Schema::create('faqs', fn ($t) => tap($t, fn ($x) => [
+            $x->ulid('id')->primary(), $x->string('question'), $x->longText('answer')->nullable(),
+            $x->timestamps(),
+        ]));
         Schema::create('crm_cities', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->unsignedBigInteger('province_id')->nullable(),
             $x->unsignedBigInteger('parent_city_id')->nullable(),
@@ -183,6 +191,46 @@ class CityPageApiAndWorkflowTest extends TestCase
     private function mashhad(): City
     {
         return City::withoutEvents(fn () => City::create(['name' => 'مشهد', 'slug' => 'mashhad']));
+    }
+
+    public function test_payload_exposes_province_object_and_hub_faq_with_tokens(): void
+    {
+        $province = \Modules\CRM\Models\Province::create(['name' => 'خراسان رضوی', 'slug' => 'khorasan-razavi']);
+        $city = City::withoutEvents(fn () => City::create(['name' => 'مشهد', 'slug' => 'mashhad', 'province_id' => $province->id]));
+
+        $page = CityPage::create([
+            'city_id' => $city->id, 'type' => CityPage::TYPE_SERVICES, 'path' => '/mashhad/services',
+            'title' => 'خدمات در {city}', 'status' => CityPage::STATUS_PUBLISHED, 'published_at' => now(),
+        ]);
+
+        $faq = \Modules\Site\Models\Faq::create([
+            'question' => 'در {city} چطور سفارش دهم؟',
+            'answer' => 'در {province} خدمت می‌دهیم.',
+        ]);
+        $page->faqs()->attach($faq->id, ['sort_order' => 1]);
+
+        $this->getJson('/v1/customer/seo/city-pages?path=/mashhad/services')
+            ->assertOk()
+            ->assertJsonPath('data.province.name', 'خراسان رضوی')
+            ->assertJsonPath('data.province.slug', 'khorasan-razavi')
+            ->assertJsonPath('data.faq.0.q', 'در مشهد چطور سفارش دهم؟')
+            ->assertJsonPath('data.faq.0.a', 'در خراسان رضوی خدمت می‌دهیم.');
+    }
+
+    public function test_device_page_has_no_hub_faq(): void
+    {
+        $city = $this->mashhad();
+        $dev = \Modules\CRM\Models\Device::create(['name' => 'لباسشویی', 'slug' => 'washing-machine']);
+        CityPage::create([
+            'city_id' => $city->id, 'type' => CityPage::TYPE_DEVICE, 'device_id' => $dev->id,
+            'path' => '/mashhad/services/washing-machine', 'title' => 't',
+            'status' => CityPage::STATUS_PUBLISHED, 'published_at' => now(),
+        ]);
+
+        // صفحهٔ دستگاه FAQ را از کاتالوگ می‌خواند؛ payloadِ city نباید faq بدهد.
+        $this->getJson('/v1/customer/seo/city-pages?path=/mashhad/services/washing-machine')
+            ->assertOk()
+            ->assertJsonPath('data.faq', null);
     }
 
     private function page(City $city, string $path, string $status = CityPage::STATUS_DRAFT): CityPage
