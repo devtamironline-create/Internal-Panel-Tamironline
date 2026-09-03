@@ -114,7 +114,10 @@ class ReviewController extends Controller
                 'criteria' => $this->sanitizeCriteria($data['criteria'] ?? null),
                 'comment' => $data['comment'] ?? null,
                 'would_recommend' => array_key_exists('would_recommend', $data) ? (bool) $data['would_recommend'] : null,
-                'status' => OrderReview::STATUS_PENDING,
+                // فعلاً نظرها به‌صورتِ خودکار «تأییدشده» ثبت می‌شوند (تصمیمِ
+                // کارفرما)؛ مدیریتِ دستیِ ادمین همچنان از صفحهٔ نظرها ممکن است.
+                'status' => OrderReview::STATUS_APPROVED,
+                'moderated_at' => now(),
                 'ip' => $request->ip(),
                 'user_agent' => substr((string) $request->userAgent(), 0, 255),
             ]);
@@ -125,6 +128,12 @@ class ReviewController extends Controller
 
             return $r;
         });
+
+        // چون خودکار تأیید شد، میانگینِ satisfaction_score تکنسین باید فوراً
+        // به‌روز شود (approvedها در میانگین می‌آیند).
+        if ($review->technician_id) {
+            \Modules\CRM\Services\TechnicianRatingService::recompute((int) $review->technician_id);
+        }
 
         $review->load('tags');
 
