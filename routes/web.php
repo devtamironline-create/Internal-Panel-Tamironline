@@ -237,6 +237,10 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
         Route::post('/signal', [ChatController::class, 'sendSignal'])->name('signal');
         Route::get('/signals/poll', [ChatController::class, 'pollCallSignals'])->name('signals.poll');
         Route::get('/unread-count', [ChatController::class, 'getUnreadCount'])->name('unread-count');
+        // ویرایش/حذفِ پیام
+        Route::put('/messages/{message}', [ChatController::class, 'editMessage'])->name('messages.edit');
+        Route::delete('/messages/{message}', [ChatController::class, 'deleteMessage'])->name('messages.delete');
+
         // Message reactions
         Route::post('/messages/{message}/reaction', [ChatController::class, 'toggleReaction'])->name('messages.reaction');
 

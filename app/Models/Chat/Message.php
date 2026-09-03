@@ -19,6 +19,7 @@ class Message extends Model
         'conversation_id',
         'user_id',
         'body',
+        'edited_at',
         'type',
         'file_path',
         'file_name',
@@ -29,6 +30,7 @@ class Message extends Model
 
     protected $casts = [
         'file_size' => 'integer',
+        'edited_at' => 'datetime',
     ];
 
     // Relations
