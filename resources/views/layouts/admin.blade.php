@@ -346,6 +346,21 @@
                     داشبورد
                 </a>
 
+                <!-- پیام‌رسان -->
+                @canany(['use-messenger', 'manage-permissions'])
+                @php
+                    // شمارشِ اولیه برای رنگِ درستِ بج در همان اولین رندر؛
+                    // بعد از آن نوتیفایرِ سراسری هر ۵ ثانیه به‌روزش می‌کند.
+                    $chatUnread = \App\Models\Chat\Message::unreadCountFor(auth()->id());
+                @endphp
+                <a href="{{ route('admin.messenger') }}" class="sidebar-menu-item mb-2 {{ request()->routeIs('admin.messenger') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    پیام‌رسان
+                    <span id="chat-unread-badge"
+                          style="position:absolute; left:12px; background:#ef4444; color:#fff; border-radius:9999px; font-size:10px; padding:1px 6px; {{ $chatUnread > 0 ? '' : 'display:none;' }}">{{ $chatUnread > 99 ? '99+' : $chatUnread }}</span>
+                </a>
+                @endcanany
+
                 <!-- خدمات تعمیرات (CRM) -->
                 @if(Route::has('crm.dashboard'))
                 @canany(['view-crm-dashboard', 'view-crm-orders', 'view-crm-customers', 'view-crm-technicians', 'view-crm-financial', 'view-crm-reports', 'manage-crm-orphan-orders', 'view-crm-taxonomies', 'manage-crm-settings', 'manage-crm-sync', 'manage-permissions', 'view-tech-dashboard', 'view-own-orders'])
@@ -664,21 +679,6 @@
                 </div>
                 @endcanany
                 @endif
-
-                <!-- پیام‌رسان -->
-                @canany(['use-messenger', 'manage-permissions'])
-                @php
-                    // شمارشِ اولیه برای رنگِ درستِ بج در همان اولین رندر؛
-                    // بعد از آن نوتیفایرِ سراسری هر ۵ ثانیه به‌روزش می‌کند.
-                    $chatUnread = \App\Models\Chat\Message::unreadCountFor(auth()->id());
-                @endphp
-                <a href="{{ route('admin.messenger') }}" class="sidebar-menu-item mb-2 {{ request()->routeIs('admin.messenger') ? 'sidebar-menu-item-active' : '' }}" style="position: relative;">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                    پیام‌رسان
-                    <span id="chat-unread-badge"
-                          style="position:absolute; left:12px; background:#ef4444; color:#fff; border-radius:9999px; font-size:10px; padding:1px 6px; {{ $chatUnread > 0 ? '' : 'display:none;' }}">{{ $chatUnread > 99 ? '99+' : $chatUnread }}</span>
-                </a>
-                @endcanany
 
                 <!-- پرسنل -->
                 @canany(['view-staff', 'manage-staff', 'manage-staff-contracts', 'manage-permissions'])
