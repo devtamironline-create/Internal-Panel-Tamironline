@@ -95,6 +95,9 @@ class SeoCityPagesController extends Controller
             ],
             'sections_enabled' => $page->sections_enabled,
             'faq' => $this->faqList($page),
+            'videos' => $this->hubSections($page)['videos'] ?? null,
+            'forum_questions' => $this->hubSections($page)['forum_questions'] ?? null,
+            'related_articles' => $this->hubSections($page)['related_articles'] ?? null,
             'breadcrumbs' => $this->breadcrumbs($page),
             'children' => $this->children($page),
             'published_at' => $page->published_at?->toIso8601String(),
@@ -187,6 +190,25 @@ class SeoCityPagesController extends Controller
 
             return $i;
         }, $items);
+    }
+
+    /** @var array<string, array<string, mixed>>|null کشِ درخواستی مجموعهٔ عمومی. */
+    private ?array $hubSectionsCache = null;
+
+    /**
+     * سکشن‌های سطحِ شهر (ویدیو/انجمن/مقالات) فقط برای صفحاتِ هابِ شهری. چون
+     * مجموعهٔ عمومی است، یک‌بار محاسبه و برای همهٔ صفحاتِ هاب استفاده می‌شود.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function hubSections(CityPage $page): array
+    {
+        $hubTypes = [CityPage::TYPE_CITY, CityPage::TYPE_SERVICES, CityPage::TYPE_BRANDS];
+        if (! in_array($page->type, $hubTypes, true)) {
+            return [];
+        }
+
+        return $this->hubSectionsCache ??= \Modules\Site\Support\CityHubSections::all();
     }
 
     /**

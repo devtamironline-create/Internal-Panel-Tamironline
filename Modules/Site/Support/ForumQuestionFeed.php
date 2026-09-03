@@ -16,6 +16,27 @@ use Modules\Site\Models\Forum\Question;
 final class ForumQuestionFeed
 {
     /**
+     * جدیدترین سوالاتِ منتشرشده (بدونِ فیلترِ دستگاه/برند) — مجموعهٔ پیش‌فرضِ
+     * عمومی برای صفحاتِ هابِ شهری (SEO-024 §۲.۳.۶).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function latest(int $limit = 5): array
+    {
+        return self::shape(
+            Question::query()
+                ->approved()
+                ->orderByDesc('published_at')
+                ->limit($limit)
+                ->get([
+                    'id', 'slug', 'title', 'device_id', 'brand_id',
+                    'view_count', 'upvotes_count', 'answers_count',
+                    'resolution_status', 'published_at',
+                ])
+        );
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     public static function forDevice(int $deviceId, int $limit = 5): array
