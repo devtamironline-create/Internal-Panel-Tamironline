@@ -34,6 +34,13 @@ final class SlaPolicy
     /** سقف انتخابِ «زمانِ مراجعه» در سفارشِ بازگشتی (روز). */
     public const MAX_RETURN_VISIT_DAYS = 3;
 
+    /**
+     * طولِ بازهٔ زمانیِ مراجعه (ساعت). بازه‌ها همگی ۳ساعته‌اند
+     * (۹–۱۲، ۱۲–۱۵، ۱۵–۱۸، ۱۸–۲۱) و فقط «شروعِ» بازه در visit_scheduled_at
+     * ذخیره می‌شود؛ برای SLA پایانِ بازه ملاک است، پس این را اضافه می‌کنیم.
+     */
+    public const VISIT_WINDOW_HOURS = 3;
+
     /** پیش‌فرضِ ساعت‌ها — کلیدها همان مقادیر OrderStatus هستند. */
     public const DEFAULT_HOURS = [
         'new' => 1,
@@ -137,9 +144,11 @@ final class SlaPolicy
                 $order->assigned_at ?? $order->status_changed_at, $hours['no_answer']
             ),
 
-            // زمانِ توافق‌شده با مشتری خودش مهلت است؛ اگر ثبت نشده،
-            // «هماهنگ‌شده» نباید بی‌مهلت بماند.
-            OrderStatus::Coordinated => self::at($order->visit_scheduled_at)
+            // زمانِ توافق‌شده با مشتری خودش مهلت است — و ملاک، «پایانِ» بازهٔ
+            // مراجعه است نه شروعش (بازهٔ ۱۲–۱۵ یعنی تا ۱۵ فرصت هست، تأخیر از
+            // ۱۵ حساب می‌شود). visit_scheduled_at شروعِ بازه است، پس طولِ بازه
+            // را اضافه می‌کنیم. اگر زمان ثبت نشده، «هماهنگ‌شده» بی‌مهلت نماند.
+            OrderStatus::Coordinated => self::at($order->visit_scheduled_at)?->addHours(self::VISIT_WINDOW_HOURS)
                 ?? self::offset($order->status_changed_at, $hours['coordinated_no_visit']),
 
             OrderStatus::Suspended => self::offset($order->status_changed_at, $hours['suspended']),

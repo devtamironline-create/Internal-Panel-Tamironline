@@ -25,11 +25,11 @@ class SearchController extends Controller
             if ($user->can('view-staff') || $user->can('manage-permissions')) {
                 try {
                     $staff = User::where('is_staff', true)
-                        ->where(function($q) use ($query) {
+                        ->where(function ($q) use ($query) {
                             $q->where('first_name', 'like', "%{$query}%")
-                              ->orWhere('last_name', 'like', "%{$query}%")
-                              ->orWhere('mobile', 'like', "%{$query}%")
-                              ->orWhere('email', 'like', "%{$query}%");
+                                ->orWhere('last_name', 'like', "%{$query}%")
+                                ->orWhere('mobile', 'like', "%{$query}%")
+                                ->orWhere('email', 'like', "%{$query}%");
                         })
                         ->limit(5)
                         ->get();
@@ -44,7 +44,7 @@ class SearchController extends Controller
                         ];
                     }
                 } catch (\Exception $e) {
-                    Log::warning('Search staff error: ' . $e->getMessage());
+                    Log::warning('Search staff error: '.$e->getMessage());
                 }
             }
 
@@ -62,13 +62,13 @@ class SearchController extends Controller
                                 'type' => 'task',
                                 'icon' => 'task',
                                 'title' => $task->title,
-                                'subtitle' => 'تسک - ' . ($task->status_label ?? $task->status),
+                                'subtitle' => 'تسک - '.($task->status_label ?? $task->status),
                                 'url' => route('tasks.show', $task->id),
                             ];
                         }
                     }
                 } catch (\Exception $e) {
-                    Log::warning('Search tasks error: ' . $e->getMessage());
+                    Log::warning('Search tasks error: '.$e->getMessage());
                 }
             }
 
@@ -91,7 +91,96 @@ class SearchController extends Controller
                         }
                     }
                 } catch (\Exception $e) {
-                    Log::warning('Search teams error: ' . $e->getMessage());
+                    Log::warning('Search teams error: '.$e->getMessage());
+                }
+            }
+
+            // Normalized query — ارقامِ فارسی/عربی → انگلیسی تا موبایل/شماره‌ها
+            // با هر نوع رقم پیدا شوند (نام‌ها بدونِ رقم دست‌نخورده می‌مانند).
+            $nq = fa_to_en_digits($query);
+
+            // Search Customers (name + mobile)
+            if ($user->can('view-crm-customers') || $user->can('manage-permissions')) {
+                try {
+                    $customers = \Modules\CRM\Models\Customer::where(function ($q) use ($nq) {
+                        $q->where('first_name', 'like', "%{$nq}%")
+                            ->orWhere('last_name', 'like', "%{$nq}%")
+                            ->orWhere('mobile', 'like', "%{$nq}%");
+                    })->limit(5)->get();
+
+                    foreach ($customers as $c) {
+                        $results[] = [
+                            'type' => 'customer',
+                            'icon' => 'user',
+                            'title' => $c->display_name,
+                            'subtitle' => 'مشتری'.($c->mobile ? ' — '.$c->mobile : ''),
+                            'url' => route('crm.customers.show', $c->id),
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Search customers error: '.$e->getMessage());
+                }
+            }
+
+            // Search Orders (order code / customer)
+            if ($user->can('view-crm-orders') || $user->can('manage-permissions')) {
+                try {
+                    $orders = \Modules\CRM\Models\Order::search($nq)->latest('id')->limit(5)->get();
+                    foreach ($orders as $o) {
+                        $results[] = [
+                            'type' => 'order',
+                            'icon' => 'command',
+                            'title' => $o->order_code,
+                            'subtitle' => 'سفارش'.($o->customer_name ? ' — '.$o->customer_name : ''),
+                            'url' => route('crm.orders.show', $o->id),
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Search orders error: '.$e->getMessage());
+                }
+            }
+
+            // Search Technicians (name + mobile)
+            if ($user->can('view-crm-technicians') || $user->can('manage-permissions')) {
+                try {
+                    $techs = \Modules\CRM\Models\Technician::search($nq)->limit(5)->get();
+                    foreach ($techs as $t) {
+                        $results[] = [
+                            'type' => 'technician',
+                            'icon' => 'user',
+                            'title' => $t->full_name,
+                            'subtitle' => 'تکنسین'.($t->mobile ? ' — '.$t->mobile : ''),
+                            'url' => route('crm.technicians.show', $t->id),
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Search technicians error: '.$e->getMessage());
+                }
+            }
+
+            // Search Invoices (invoice code / order code / customer)
+            if ($user->can('view-crm-invoices') || $user->can('manage-permissions')) {
+                try {
+                    $invoices = \Modules\CRM\Models\Invoice::with('customer')
+                        ->where(function ($q) use ($nq) {
+                            $q->where('invoice_code', 'like', "%{$nq}%")
+                                ->orWhereHas('order', fn ($o) => $o->where('order_code', 'like', "%{$nq}%"))
+                                ->orWhereHas('customer', fn ($c) => $c->where('mobile', 'like', "%{$nq}%")
+                                    ->orWhere('first_name', 'like', "%{$nq}%")
+                                    ->orWhere('last_name', 'like', "%{$nq}%"));
+                        })->latest('id')->limit(5)->get();
+
+                    foreach ($invoices as $inv) {
+                        $results[] = [
+                            'type' => 'invoice',
+                            'icon' => 'command',
+                            'title' => $inv->invoice_code,
+                            'subtitle' => 'فاکتور'.($inv->customer?->display_name ? ' — '.$inv->customer->display_name : ''),
+                            'url' => route('crm.invoices.show', $inv->id),
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Search invoices error: '.$e->getMessage());
                 }
             }
 
@@ -108,7 +197,7 @@ class SearchController extends Controller
 
             foreach ($commands as $cmd) {
                 $matched = mb_stripos($cmd['cmd'], $query) !== false;
-                if (!$matched) {
+                if (! $matched) {
                     foreach ($cmd['keywords'] as $keyword) {
                         if (mb_stripos($keyword, $query) !== false || mb_stripos($query, $keyword) !== false) {
                             $matched = true;
@@ -131,7 +220,8 @@ class SearchController extends Controller
             return response()->json(['results' => $results]);
 
         } catch (\Exception $e) {
-            Log::error('Search error: ' . $e->getMessage());
+            Log::error('Search error: '.$e->getMessage());
+
             return response()->json(['results' => [], 'error' => 'خطا در جستجو']);
         }
     }

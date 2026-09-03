@@ -78,6 +78,36 @@ class FinancialReportBreakdownTest extends TestCase
         $this->assertSame(0, $out['grand_company']);
     }
 
+    public function test_technician_ranking_uses_profit_per_order_and_drops_other(): void
+    {
+        // مثالِ کارفرما: میلاد با سفارشِ کمتر ولی سودآوریِ بیشترِ هر سفارش باید
+        // بالاتر از علیرضا بیاید؛ و ردیفِ «سایر» نباید ساخته شود.
+        $items = collect([
+            $this->row('علیرضا دهنوی', 163_400_000, 49_020_000, 0, 22), // 49.02M / 22 ≈ 2.23M
+            $this->row('میلاد محمودی', 146_750_000, 44_025_000, 0, 15),  // 44.02M / 15 ≈ 2.94M
+        ]);
+
+        $out = $this->invoke('foldBreakdown', $items, 'بدون تکنسین', false, true);
+
+        $this->assertSame('میلاد محمودی', $out['rows'][0]['name']);
+        $this->assertSame('علیرضا دهنوی', $out['rows'][1]['name']);
+        // بدونِ ردیفِ «سایر»
+        $this->assertFalse($out['rows']->contains(fn ($r) => str_contains($r['name'], 'سایر')));
+    }
+
+    public function test_fold_without_other_caps_at_15_without_extra_row(): void
+    {
+        $items = collect();
+        for ($i = 1; $i <= 20; $i++) {
+            $items->push($this->row("ت $i", 1000 * (21 - $i), 500 * (21 - $i)));
+        }
+
+        $out = $this->invoke('foldBreakdown', $items, 'x', false, false);
+
+        $this->assertCount(15, $out['rows']);
+        $this->assertFalse($out['rows']->contains(fn ($r) => str_contains($r['name'], 'سایر')));
+    }
+
     public function test_order_scoped_filter_detection(): void
     {
         $base = ['province_id' => null, 'city_id' => null, 'device_id' => null, 'brand_id' => null];

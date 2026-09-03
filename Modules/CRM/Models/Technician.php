@@ -421,11 +421,14 @@ class Technician extends Authenticatable
             return $query;
         }
 
-        $term = trim($term);
+        // نرمال‌سازیِ ارقام فارسی/عربی → انگلیسی تا موبایل/کدملی با هر نوع رقم
+        // پیدا شوند.
+        $term = trim(fa_to_en_digits($term));
 
         return $query->where(function ($q) use ($term) {
             $q->where('mobile', 'like', "%{$term}%")
                 ->orWhere('first_name', 'like', "%{$term}%")
+                ->orWhere('last_name', 'like', "%{$term}%")
                 ->orWhere('firstname_tech', 'like', "%{$term}%")
                 ->orWhere('technician_id', 'like', "%{$term}%")
                 ->orWhere('national_code', 'like', "%{$term}%")

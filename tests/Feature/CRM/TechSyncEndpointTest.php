@@ -220,8 +220,9 @@ class TechSyncEndpointTest extends TestCase
         $tech = $this->technician();
         // مهلتِ «جدید» یک ساعت از تخصیص ⇒ ۳ ساعت دیگر.
         $this->order($tech, ['status' => 'new', 'assigned_at' => now()->addHours(2)]);
-        // مهلتِ «هماهنگ شده» خودِ زمانِ مراجعه ⇒ ۱ ساعت دیگر.
-        $this->order($tech, ['status' => 'coordinated', 'visit_scheduled_at' => now()->addHour()]);
+        // مهلتِ «هماهنگ شده» = پایانِ بازهٔ مراجعه (شروع + ۳ ساعت). شروع را
+        // now-2h می‌گذاریم تا پایانِ بازه now+1h و «نزدیک‌ترین» باشد.
+        $this->order($tech, ['status' => 'coordinated', 'visit_scheduled_at' => now()->subHours(2)]);
 
         $deadline = $this->sync($tech)['next_deadline_at'];
 

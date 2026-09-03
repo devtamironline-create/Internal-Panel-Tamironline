@@ -329,9 +329,25 @@
                                         </template>
                                     </div>
                                 </template>
-                                <p class="text-sm leading-relaxed whitespace-pre-wrap" x-text="msg.content" x-show="msg.content"></p>
+                                <template x-if="editingMessageId !== msg.id">
+                                    <p class="text-sm leading-relaxed whitespace-pre-wrap" x-text="msg.content" x-show="msg.content"></p>
+                                </template>
+                                <template x-if="editingMessageId === msg.id">
+                                    <div class="mt-1">
+                                        <textarea :id="'edit-input-' + msg.id" x-model="editingText" rows="2"
+                                            class="w-full text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800 rounded-lg p-2 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-400"
+                                            @keydown.enter.prevent="saveEditMessage(msg)" @keydown.escape="cancelEditMessage()"></textarea>
+                                        <div class="flex gap-2 mt-1 justify-end">
+                                            <button @click.stop="cancelEditMessage()" class="text-xs px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200">انصراف</button>
+                                            <button @click.stop="saveEditMessage(msg)" class="text-xs px-2 py-0.5 rounded bg-brand-500 hover:bg-brand-600 text-white">ذخیره</button>
+                                        </div>
+                                    </div>
+                                </template>
                                 <div class="flex items-center justify-between gap-2 mt-1">
-                                    <span class="text-xs opacity-60" x-text="msg.time"></span>
+                                    <span class="flex items-center gap-1">
+                                        <span class="text-xs opacity-60" x-text="msg.time"></span>
+                                        <span x-show="msg.edited" class="text-[10px] opacity-50" title="این پیام ویرایش شده">(ویرایش‌شده)</span>
+                                    </span>
                                     <div class="flex items-center gap-1">
                                         <!-- Inline Actions -->
                                         <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -347,6 +363,18 @@
                                             <button @click="copyMessage(msg.content)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="کپی">
                                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                                             </button>
+                                            <!-- ویرایش (فقط پیامِ متنیِ خودِ کاربر) -->
+                                            <template x-if="msg.is_mine && msg.type === 'text'">
+                                                <button @click.stop="startEditMessage(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20 text-white/70 hover:text-white" title="ویرایش">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                                </button>
+                                            </template>
+                                            <!-- حذف (فقط مدیرِ کل — موردِ امنیتی، به‌ویژه گروه/کانال) -->
+                                            <template x-if="canDeleteMessages">
+                                                <button @click.stop="deleteMessage(msg)" class="p-1 rounded hover:bg-red-500/20" :class="msg.is_mine ? 'text-white/70 hover:text-red-200' : 'text-gray-400 hover:text-red-500'" title="حذف پیام (مدیر)">
+                                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                                </button>
+                                            </template>
                                             <!-- Create Task -->
                                             <template x-if="currentConversation?.type === 'group' || currentConversation?.type === 'channel'">
                                                 <button @click.stop="openCreateTaskModal(msg)" class="p-1 rounded hover:bg-white/20 dark:hover:bg-black/20" :class="msg.is_mine ? 'text-white/70 hover:text-white' : 'text-gray-400 hover:text-gray-600'" title="ایجاد تسک">
@@ -1178,6 +1206,11 @@
 <script>
 function messenger() {
     return {
+        // آیا کاربرِ فعلی مدیرِ کل است؟ (اجازهٔ حذفِ هر پیام — موردِ امنیتی)
+        canDeleteMessages: @json(auth()->user()?->can('manage-permissions') ?? false),
+        // ویرایشِ درجا
+        editingMessageId: null,
+        editingText: '',
         isLoading: true,
         conversations: [],
         users: [],
@@ -2240,6 +2273,62 @@ function messenger() {
             }).catch(err => {
                 console.error('Copy failed:', err);
             });
+        },
+
+        // ── ویرایش/حذفِ پیام ──────────────────────────────────────────
+        startEditMessage(msg) {
+            this.editingMessageId = msg.id;
+            this.editingText = msg.content || '';
+            this.$nextTick(() => {
+                const el = document.getElementById('edit-input-' + msg.id);
+                if (el) { el.focus(); el.select(); }
+            });
+        },
+        cancelEditMessage() {
+            this.editingMessageId = null;
+            this.editingText = '';
+        },
+        async saveEditMessage(msg) {
+            const body = (this.editingText || '').trim();
+            if (!body) { this.cancelEditMessage(); return; }
+            if (body === (msg.content || '')) { this.cancelEditMessage(); return; }
+            try {
+                const res = await fetch('/admin/chat/messages/' + msg.id, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ body })
+                });
+                if (!res.ok) { const j = await res.json().catch(() => ({})); alert(j.message || 'خطا در ویرایش پیام'); return; }
+                const j = await res.json();
+                const m = this.messages.find(x => x.id === msg.id);
+                if (m) { m.content = j.content; m.edited = true; }
+            } catch (e) {
+                console.error('edit failed', e);
+                alert('خطا در ویرایش پیام');
+            } finally {
+                this.cancelEditMessage();
+            }
+        },
+        async deleteMessage(msg) {
+            if (!confirm('این پیام برای همه حذف شود؟')) return;
+            try {
+                const res = await fetch('/admin/chat/messages/' + msg.id, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                if (!res.ok) { const j = await res.json().catch(() => ({})); alert(j.message || 'خطا در حذف پیام'); return; }
+                this.messages = this.messages.filter(x => x.id !== msg.id);
+            } catch (e) {
+                console.error('delete failed', e);
+                alert('خطا در حذف پیام');
+            }
         },
 
         // Reply functions

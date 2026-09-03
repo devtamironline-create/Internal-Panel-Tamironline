@@ -515,6 +515,7 @@ class ChatController extends Controller
                     'is_mine' => (int) $message->user_id === (int) $userId,
                     'is_read' => $isRead,
                     'read_at' => $readAtTime,
+                    'edited' => $message->edited_at !== null,
                     'time' => $message->created_at->format('H:i'),
                     'date' => $message->created_at->format('Y-m-d'),
                     'date_label' => $this->getDateLabel($message->created_at),
@@ -553,6 +554,50 @@ class ChatController extends Controller
             'messages' => $messages->values(),
             'has_more' => $hasMore,
         ]);
+    }
+
+    /**
+     * ویرایشِ پیام — فقط فرستنده می‌تواند پیامِ متنیِ خودش را ویرایش کند.
+     * علامتِ edited_at ثبت می‌شود تا UI «ویرایش‌شده» نشان دهد.
+     */
+    public function editMessage(Message $message, Request $request): JsonResponse
+    {
+        if ((int) $message->user_id !== (int) auth()->id()) {
+            return response()->json(['message' => 'اجازهٔ ویرایش این پیام را ندارید.'], 403);
+        }
+        if ($message->type !== 'text') {
+            return response()->json(['message' => 'فقط پیام متنی قابل ویرایش است.'], 422);
+        }
+
+        $data = $request->validate(
+            ['body' => ['required', 'string', 'max:5000']],
+            ['body.required' => 'متن پیام نمی‌تواند خالی باشد.']
+        );
+
+        $message->update(['body' => $data['body'], 'edited_at' => now()]);
+
+        return response()->json([
+            'success' => true,
+            'id' => $message->id,
+            'content' => $message->body,
+            'edited' => true,
+        ]);
+    }
+
+    /**
+     * حذفِ پیام (soft delete) — فقط ادمینِ کل (manage-permissions). موردِ
+     * امنیتی؛ به‌ویژه برای گروه‌ها و کانال‌ها. کاربرانِ عادی پیام را ویرایش
+     * می‌کنند، حذف نمی‌کنند.
+     */
+    public function deleteMessage(Message $message): JsonResponse
+    {
+        if (! auth()->user()->can('manage-permissions')) {
+            return response()->json(['message' => 'فقط مدیرِ کل می‌تواند پیام‌ها را حذف کند.'], 403);
+        }
+
+        $message->delete();
+
+        return response()->json(['success' => true, 'id' => $message->id]);
     }
 
     /**

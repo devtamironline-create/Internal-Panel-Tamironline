@@ -21,24 +21,7 @@ class CustomerController extends Controller
 
         $customers = Customer::query()
             ->when($trashed, fn ($q) => $q->onlyTrashed())
-            ->when($search !== '', function ($q) use ($search) {
-                // اگر یک عدد ≥ آفست شماره اشتراک بود، آن را شماره اشتراک تلقی کن.
-                // برای مشتریان sync‌شده از WP، subscription = wp_id + 10000.
-                // برای مشتریان جدید لاراولی (بدون wp_id)، subscription = id + 10000.
-                // پس هر دو حالت را OR می‌کنیم.
-                if (ctype_digit($search) && (int) $search >= Customer::SUBSCRIPTION_OFFSET) {
-                    $candidate = (int) $search - Customer::SUBSCRIPTION_OFFSET;
-                    $q->where(function ($qq) use ($candidate) {
-                        $qq->where('wp_id', $candidate)
-                            ->orWhere(function ($qqq) use ($candidate) {
-                                $qqq->whereNull('wp_id')->where('id', $candidate);
-                            });
-                    });
-                } else {
-                    // در غیر این صورت موبایل دقیق (مثل WP)
-                    $q->where('mobile', $search);
-                }
-            })
+            ->when($search !== '', fn ($q) => $this->applyCustomerSearch($q, $search))
             ->latest()
             ->paginate(25)
             ->withQueryString();
@@ -48,24 +31,51 @@ class CustomerController extends Controller
         return view('crm::customers.index', compact('customers', 'search', 'trashed', 'trashedCount'));
     }
 
+    /**
+     * سرچِ مشتری — با نام، موبایل و شمارهٔ اشتراک؛ ارقامِ فارسی/عربی نرمال
+     * می‌شوند تا ۰۹۱۲ و 0912 یکسان جستجو شوند.
+     *
+     * رفعِ باگِ قبلی: شمارهٔ موبایلِ کاملِ انگلیسی (۱۱ رقمی) چون عددِ بزرگ بود
+     * اشتباهاً «شمارهٔ اشتراک» تلقی می‌شد و نتیجه نمی‌داد؛ حالا فقط اعدادِ
+     * کوتاه‌ترِ (< ۱۰ رقم) در بازهٔ اشتراک، شمارهٔ اشتراک در نظر گرفته می‌شوند.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $q
+     */
+    protected function applyCustomerSearch($q, string $search): void
+    {
+        $term = trim(fa_to_en_digits($search));
+        if ($term === '') {
+            return;
+        }
+        $digits = preg_replace('/\D+/', '', $term);
+
+        $q->where(function ($qq) use ($term, $digits) {
+            // نام (first_name/last_name — در دیتای قدیمی کلِ نام گاهی در first است)
+            $qq->where('first_name', 'like', "%{$term}%")
+                ->orWhere('last_name', 'like', "%{$term}%");
+
+            if ($digits !== '') {
+                // موبایل (جزئی یا کامل)
+                $qq->orWhere('mobile', 'like', "%{$digits}%");
+
+                // شمارهٔ اشتراک = id/wp_id + آفست؛ فقط اعدادِ کوتاه (نه موبایلِ ۱۱رقمی)
+                if (strlen($digits) < 10 && (int) $digits >= Customer::SUBSCRIPTION_OFFSET) {
+                    $candidate = (int) $digits - Customer::SUBSCRIPTION_OFFSET;
+                    $qq->orWhere('wp_id', $candidate)
+                        ->orWhere(function ($q3) use ($candidate) {
+                            $q3->whereNull('wp_id')->where('id', $candidate);
+                        });
+                }
+            }
+        });
+    }
+
     public function export(Request $request, string $format)
     {
         $search = trim($request->string('q')->toString());
 
         $query = Customer::query()
-            ->when($search !== '', function ($q) use ($search) {
-                if (ctype_digit($search) && (int) $search >= Customer::SUBSCRIPTION_OFFSET) {
-                    $candidate = (int) $search - Customer::SUBSCRIPTION_OFFSET;
-                    $q->where(function ($qq) use ($candidate) {
-                        $qq->where('wp_id', $candidate)
-                            ->orWhere(function ($qqq) use ($candidate) {
-                                $qqq->whereNull('wp_id')->where('id', $candidate);
-                            });
-                    });
-                } else {
-                    $q->where('mobile', $search);
-                }
-            })
+            ->when($search !== '', fn ($q) => $this->applyCustomerSearch($q, $search))
             ->latest();
 
         $headers = ['شماره اشتراک', 'نام', 'موبایل', 'تلفن', 'یادداشت', 'تاریخ ثبت'];
