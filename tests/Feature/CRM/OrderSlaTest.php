@@ -81,12 +81,16 @@ class OrderSlaTest extends TestCase
         $this->assertTrue($assigned->addHours(24)->equalTo(SlaPolicy::deadlineFor($order)));
     }
 
-    public function test_coordinated_deadline_is_the_agreed_visit_time(): void
+    public function test_coordinated_deadline_is_the_end_of_the_visit_window(): void
     {
-        $visit = CarbonImmutable::parse('2026-07-03 14:00:00');
-        $order = $this->order('coordinated', ['visit_scheduled_at' => $visit]);
+        // visit_scheduled_at شروعِ بازهٔ ۳ساعته است؛ مهلت باید پایانِ بازه باشد
+        // (بازهٔ ۱۲–۱۵ → تأخیر از ۱۵). پس مهلت = شروع + ۳ ساعت.
+        $visitStart = CarbonImmutable::parse('2026-07-03 12:00:00');
+        $order = $this->order('coordinated', ['visit_scheduled_at' => $visitStart]);
 
-        $this->assertTrue($visit->equalTo(SlaPolicy::deadlineFor($order)));
+        $this->assertTrue(
+            $visitStart->addHours(SlaPolicy::VISIT_WINDOW_HOURS)->equalTo(SlaPolicy::deadlineFor($order))
+        );
     }
 
     /**
