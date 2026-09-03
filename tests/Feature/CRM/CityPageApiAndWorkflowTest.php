@@ -217,9 +217,9 @@ class CityPageApiAndWorkflowTest extends TestCase
             ->assertJsonPath('data.faq.0.a', 'در خراسان رضوی خدمت می‌دهیم.')
             // سکشن‌های سطحِ شهر (مجموعهٔ عمومی) روی صفحاتِ هاب حاضرند — عنوان
             // پیش‌فرض دارند حتی اگر داده‌ی سراسری در این تست خالی باشد.
-            ->assertJsonPath('data.videos.title', 'ویدیوهای آموزشی')
-            ->assertJsonPath('data.related_articles.title', 'مقالات مرتبط')
-            ->assertJsonPath('data.forum_questions.title', 'پرسش‌های پرتکرار');
+            ->assertJsonPath('data.videos.title', 'ویدیوهای آموزشیِ تعمیرات در مشهد، خراسان رضوی')
+            ->assertJsonPath('data.forum_questions.title', 'پرسش‌های متداولِ تعمیرات در مشهد، خراسان رضوی')
+            ->assertJsonPath('data.related_articles.title', 'آخرین مقالاتِ آموزشی');
     }
 
     public function test_device_page_has_no_hub_faq(): void

@@ -192,12 +192,13 @@ class SeoCityPagesController extends Controller
         }, $items);
     }
 
-    /** @var array<string, array<string, mixed>>|null کشِ درخواستی مجموعهٔ عمومی. */
-    private ?array $hubSectionsCache = null;
+    /** @var array<string, array<string, array<string, mixed>>> کشِ درخواستی، کلیددارِ شهر. */
+    private array $hubSectionsCache = [];
 
     /**
-     * سکشن‌های سطحِ شهر (ویدیو/انجمن/مقالات) فقط برای صفحاتِ هابِ شهری. چون
-     * مجموعهٔ عمومی است، یک‌بار محاسبه و برای همهٔ صفحاتِ هاب استفاده می‌شود.
+     * سکشن‌های سطحِ شهر (ویدیو/انجمن/مقالات) فقط برای صفحاتِ هابِ شهری. آیتم‌ها
+     * عمومی‌اند (یک‌بار کوئری می‌شوند) ولی عنوان‌ها با شهر/استانِ همان صفحه بومی
+     * می‌شوند؛ پس کش را با نامِ شهر کلید می‌زنیم.
      *
      * @return array<string, array<string, mixed>>
      */
@@ -208,7 +209,12 @@ class SeoCityPagesController extends Controller
             return [];
         }
 
-        return $this->hubSectionsCache ??= \Modules\Site\Support\CityHubSections::all();
+        $cityName = (string) ($page->city?->name ?? '');
+
+        return $this->hubSectionsCache[$cityName] ??= \Modules\Site\Support\CityHubSections::all(
+            $page->city?->name,
+            $page->city?->province?->name,
+        );
     }
 
     /**
