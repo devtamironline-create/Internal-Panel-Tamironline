@@ -1,0 +1,74 @@
+name: CI + Deploy to production
+
+# روی هر push به main (از جمله merge شدنِ PR) اول تست اجرا می‌شود؛
+# فقط اگر تست‌ها سبز بودند، دیپلویِ خودکار روی سرور انجام می‌شود.
+# workflow_dispatch اجرای دستی از تب Actions را هم ممکن می‌کند.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# دو دیپلوی هم‌زمان نگیریم؛ ولی دیپلویِ در حال اجرا را کنسل نکنیم.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Tests (PHPUnit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3, intl, bcmath, gd, zip, exif, gmp
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run test suite
+        run: ./vendor/bin/phpunit
+
+  deploy:
+    name: Deploy over SSH (git pull)
+    needs: test
+    runs-on: ubuntu-latest
+    # فقط روی main و فقط وقتی سوییچِ DEPLOY_ENABLED روشن است دیپلوی می‌کند؛
+    # تا قبل از افزودنِ Secretها هیچ دیپلویِ ناموفقی رخ ندهد. بعد از تنظیمِ
+    # Secretها، یک Variable با نامِ DEPLOY_ENABLED=true بساز تا فعال شود.
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            cd "${{ vars.DEPLOY_PATH || 'public_html' }}"
+
+            # commit فعلی را برای rollback نگه می‌داریم، بعد کد را دقیقاً روی
+            # آخرین main می‌بریم (تمیز و قطعی — بدون احتمالِ merge conflict).
+            export DEPLOY_PREV_COMMIT="$(git rev-parse HEAD)"
+            git fetch --prune origin main
+            git reset --hard origin/main
+
+            export PHP_BIN="${{ vars.PHP_BIN || 'php' }}"
+            export COMPOSER_BIN="${{ vars.COMPOSER_BIN || 'composer' }}"
+            export HEALTH_URL="${{ vars.HEALTH_URL || 'https://panel.tamironline.com/health' }}"
+
+            bash scripts/deploy/remote.sh
