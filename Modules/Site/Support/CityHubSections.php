@@ -7,31 +7,39 @@ use Modules\Site\Services\PageSectionService;
 /**
  * سکشن‌های سطحِ شهر برای صفحاتِ هابِ شهری (city / services / brands) — این
  * صفحات به دستگاه/برندِ خاصی گره نمی‌خورند، پس یک «مجموعهٔ پیش‌فرضِ عمومی»
- * برمی‌گردانیم (SEO-024 §۲.۳.۶): ویدیوها، پرسش‌های انجمن، مقالاتِ مرتبط —
- * دقیقاً در همان شکلِ سکشن‌های صفحاتِ دستگاه تا فرانت با همان کامپوننت‌ها
- * رِندرشان کند.
+ * برمی‌گردانیم (SEO-024 §۲.۳.۶)، ولی عنوان‌ها با نامِ شهر و استان بومی‌سازی
+ * می‌شوند تا صفحه از نظرِ سئو به همان شهر/استان مرتبط بماند.
  *
  * منبع:
  *   - videos           : ویدیوهای پیش‌فرضِ قالبِ «device» (placeholderهای عمومی).
  *   - forum_questions  : جدیدترین سوالاتِ منتشرشدهٔ انجمن.
- *   - related_articles : جدیدترین مقالاتِ منتشرشده.
+ *   - related_articles : جدیدترین مقالاتِ منتشرشده (طبقِ خواستِ کارفرما «عمومی» می‌ماند).
  *
  * همه‌چیز best-effort است؛ هر خطا → آرایهٔ خالی تا صفحه نشکند.
  */
 final class CityHubSections
 {
-    /** @return array<string, array<string, mixed>> */
-    public static function all(): array
+    /**
+     * @param  string|null  $city  نامِ شهرِ صفحه (برای بومی‌سازیِ عنوان).
+     * @param  string|null  $province  نامِ استانِ صفحه (برای بومی‌سازیِ عنوان).
+     * @return array<string, array<string, mixed>>
+     */
+    public static function all(?string $city = null, ?string $province = null): array
     {
+        // پسوندِ «در مشهد، خراسان رضوی» — فقط وقتی شهر موجود است تا متنِ آویزان نماند.
+        $c = trim((string) $city);
+        $p = trim((string) $province);
+        $suffix = $c === '' ? '' : ($p === '' ? " در {$c}" : " در {$c}، {$p}");
+
         return [
-            'videos' => self::videos(),
-            'forum_questions' => self::forumQuestions(),
+            'videos' => self::videos($suffix),
+            'forum_questions' => self::forumQuestions($suffix),
             'related_articles' => self::relatedArticles(),
         ];
     }
 
     /** @return array<string, mixed> */
-    private static function videos(): array
+    private static function videos(string $suffix): array
     {
         $tpl = self::deviceTemplate();
         $items = [];
@@ -51,47 +59,56 @@ final class CityHubSections
         }
 
         return [
-            'title' => $tpl['videos']['title'] ?? 'ویدیوهای آموزشی',
-            'subtitle' => $tpl['videos']['subtitle'] ?? null,
+            'title' => 'ویدیوهای آموزشیِ تعمیرات'.$suffix,
+            'subtitle' => null,
             'items' => $items,
         ];
     }
 
+    /** @var array<int, array<string, mixed>>|null */
+    private static ?array $forumItemsCache = null;
+
+    /** @var array<int, array<string, mixed>>|null */
+    private static ?array $articleItemsCache = null;
+
     /** @return array<string, mixed> */
-    private static function forumQuestions(): array
+    private static function forumQuestions(string $suffix): array
     {
-        $tpl = self::deviceTemplate();
-        $items = [];
-        try {
-            $items = ForumQuestionFeed::latest(5);
-        } catch (\Throwable $e) {
-            $items = [];
+        // آیتم‌ها عمومی‌اند و بین همهٔ شهرها یکسان؛ یک‌بار کوئری می‌شوند تا در
+        // endpointِ فهرست (چند شهر) کوئریِ تکراری نزنیم. فقط عنوان per-city است.
+        if (self::$forumItemsCache === null) {
+            try {
+                self::$forumItemsCache = ForumQuestionFeed::latest(5);
+            } catch (\Throwable $e) {
+                self::$forumItemsCache = [];
+            }
         }
 
         return [
-            'title' => $tpl['forum_questions']['title'] ?? 'پرسش‌های پرتکرار',
-            'subtitle' => $tpl['forum_questions']['subtitle'] ?? null,
-            'see_all_label' => $tpl['forum_questions']['see_all_label'] ?? null,
+            'title' => 'پرسش‌های متداولِ تعمیرات'.$suffix,
+            'subtitle' => null,
+            'see_all_label' => null,
             'see_all_url' => '/forum',
-            'items' => $items,
+            'items' => self::$forumItemsCache,
         ];
     }
 
     /** @return array<string, mixed> */
     private static function relatedArticles(): array
     {
-        $tpl = self::deviceTemplate();
-        $items = [];
-        try {
-            $items = RelatedArticles::latest(6);
-        } catch (\Throwable $e) {
-            $items = [];
+        if (self::$articleItemsCache === null) {
+            try {
+                self::$articleItemsCache = RelatedArticles::latest(6);
+            } catch (\Throwable $e) {
+                self::$articleItemsCache = [];
+            }
         }
 
+        // مقالات طبقِ خواستِ کارفرما «آخرین مقالات» (عمومی) می‌ماند — بدونِ بومی‌سازی.
         return [
-            'title' => $tpl['related_articles']['title'] ?? 'مقالات مرتبط',
-            'subtitle' => $tpl['related_articles']['subtitle'] ?? null,
-            'items' => $items,
+            'title' => 'آخرین مقالاتِ آموزشی',
+            'subtitle' => null,
+            'items' => self::$articleItemsCache,
         ];
     }
 
