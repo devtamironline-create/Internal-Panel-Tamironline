@@ -18,6 +18,17 @@ final class RelatedArticles
 {
     public const LIMIT = 6;
 
+    /**
+     * جدیدترین مقالاتِ منتشرشده — مجموعهٔ پیش‌فرضِ عمومی برای صفحاتِ هابِ شهری
+     * که به دستگاه/برندِ خاصی گره نمی‌خورند (SEO-024 §۲.۳.۶).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function latest(int $limit = self::LIMIT): array
+    {
+        return self::guard(fn () => self::shape(self::baseQuery()->limit($limit)->get()));
+    }
+
     /** @return array<int, array<string, mixed>> */
     public static function forDevice(int $deviceId, int $limit = self::LIMIT): array
     {
