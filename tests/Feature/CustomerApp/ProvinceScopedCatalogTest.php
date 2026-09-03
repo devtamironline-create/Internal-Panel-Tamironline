@@ -62,6 +62,7 @@ class ProvinceScopedCatalogTest extends TestCase
             $x->boolean('is_active')->default(true),
             $x->boolean('is_active_app')->default(true),
             $x->boolean('is_featured')->default(false),
+            $x->json('order_types')->nullable(),
             $x->unsignedInteger('sort_order')->default(0), $x->timestamps(),
         ]));
         Schema::create('crm_brands', fn ($t) => tap($t, fn ($x) => [
@@ -150,6 +151,21 @@ class ProvinceScopedCatalogTest extends TestCase
         // به ترتیبِ استانداردِ نوع‌ها (repair=1, install=3).
         $this->assertSame(['repair', 'install'], $rows['washer']['available_order_types']);
         $this->assertSame(['service'], $rows['fridge']['available_order_types']);
+    }
+
+    public function test_device_order_types_restrict_available_even_if_technician_offers_more(): void
+    {
+        // دستگاه فقط «تعمیر» را می‌پذیرد، ولی تکنسین همه را ارائه می‌دهد →
+        // اشتراک باید فقط ['repair'] باشد.
+        $this->washer->forceFill(['order_types' => ['repair']])->save();
+        $this->tech([$this->mashhad->id], [$this->washer->id], [], ['repair', 'service', 'install']);
+
+        $rows = collect(
+            $this->getJson('/v1/customer/services/categories?city_id='.$this->mashhad->id)
+                ->assertOk()->json('data')
+        )->keyBy('slug');
+
+        $this->assertSame(['repair'], $rows['washer']['available_order_types']);
     }
 
     public function test_technician_without_service_types_offers_all(): void

@@ -66,14 +66,27 @@ class OrderResource extends JsonResource
             // آدرس — اولویت: address (FK) > snapshot
             'address' => $this->resolveAddress(),
 
-            // تکنسین — اگر تخصیص داده شده
-            'technician' => $this->whenLoaded('technician', fn () => $this->technician ? [
-                'id' => (int) $this->technician->id,
-                'name' => $this->technician->display_name,
-                'mobile' => $this->technician->mobile,
-                'rating' => $this->technician->satisfaction_score
-                    ? (float) $this->technician->satisfaction_score : null,
-            ] : null),
+            // زمانِ داخلیِ تخصیصِ تکنسین (برای اطلاع؛ ممکن است در فازِ «ثبت‌شده»
+            // هم پر شود). ملاکِ نمایش به مشتری، وضعیتِ سفارش است، نه این فیلد.
+            'technician_assigned_at' => $this->assigned_at?->utc()->toIso8601String(),
+
+            // تکنسین فقط وقتی به مشتری نشان داده می‌شود که سفارش رسماً از فازِ
+            // «ثبت‌شده» (pending) عبور کرده باشد — تا با stepper و بجِ وضعیت
+            // تناقض نداشته باشد (سفارشِ pending نباید تکنسین نشان دهد، حتی اگر
+            // داخلی تخصیص خورده باشد). درخواستِ تیمِ اپ (order-contract §۳).
+            'technician' => $this->when(
+                $status !== null
+                    && OrderStatusMapper::toMobileString($status) !== 'pending'
+                    && $this->relationLoaded('technician')
+                    && $this->technician,
+                fn () => [
+                    'id' => (int) $this->technician->id,
+                    'name' => $this->technician->display_name,
+                    'mobile' => $this->technician->mobile,
+                    'rating' => $this->technician->satisfaction_score
+                        ? (float) $this->technician->satisfaction_score : null,
+                ]
+            ),
 
             // مالی — تومان
             'pricing' => [
