@@ -52,28 +52,69 @@ class ServiceMatrixTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_update_devices_sets_and_clears(): void
+    public function test_update_devices_sets_and_clears_only_submitted(): void
     {
         $d1 = Device::create(['name' => 'یخچال', 'order_types' => ['repair', 'service']]);
         $d2 = Device::create(['name' => 'لباسشویی', 'order_types' => ['install']]);
 
-        // فقط d1 در ماتریس است؛ d2 (تیک‌نخورده) باید پاک شود.
-        $req = Request::create('/', 'PUT', ['devices' => [$d1->id => ['service', 'bogus']]]);
+        // هر دو دستگاه در فرم بودند (device_ids). d1 تیکِ service دارد،
+        // d2 هیچ تیکی ندارد (تیک‌نخورده) پس باید پاک شود.
+        $req = Request::create('/', 'PUT', [
+            'device_ids' => [$d1->id, $d2->id],
+            'devices' => [$d1->id => ['service', 'bogus']],
+        ]);
         (new ServiceMatrixController)->updateDevices($req);
 
         $this->assertSame(['service'], $d1->refresh()->order_types); // فقط slugِ معتبر
         $this->assertSame([], $d2->refresh()->order_types);          // پاک شد
     }
 
-    public function test_update_technicians_sets_and_clears(): void
+    public function test_update_devices_leaves_unsubmitted_rows_untouched(): void
+    {
+        $shown = Device::create(['name' => 'یخچال', 'order_types' => ['repair']]);
+        $hidden = Device::create(['name' => 'کولر', 'order_types' => ['install']]);
+
+        // فقط $shown در فرم است؛ $hidden نباید دست بخورد.
+        $req = Request::create('/', 'PUT', [
+            'device_ids' => [$shown->id],
+            'devices' => [$shown->id => ['service']],
+        ]);
+        (new ServiceMatrixController)->updateDevices($req);
+
+        $this->assertSame(['service'], $shown->refresh()->order_types);
+        $this->assertSame(['install'], $hidden->refresh()->order_types); // دست‌نخورده
+    }
+
+    public function test_update_technicians_sets_and_clears_only_submitted(): void
     {
         $t1 = Technician::forceCreate(['first_name' => 'الف', 'mobile' => '09120000001', 'service_types' => ['repair']]);
         $t2 = Technician::forceCreate(['first_name' => 'ب', 'mobile' => '09120000002', 'service_types' => ['install']]);
 
-        $req = Request::create('/', 'PUT', ['technicians' => [$t1->id => ['repair', 'install']]]);
+        $req = Request::create('/', 'PUT', [
+            'tech_ids' => [$t1->id, $t2->id],
+            'technicians' => [$t1->id => ['repair', 'install']],
+        ]);
         (new ServiceMatrixController)->updateTechnicians($req);
 
         $this->assertSame(['repair', 'install'], $t1->refresh()->service_types);
         $this->assertSame([], $t2->refresh()->service_types);
+    }
+
+    public function test_update_technicians_leaves_unsubmitted_inactive_untouched(): void
+    {
+        // این مهم‌ترین محافظ است: فقط تکنسین‌های فعال در فرم‌اند؛ تکنسینِ
+        // غیرفعالِ نمایش‌داده‌نشده نباید service_types‌اش پاک شود، وگرنه پخشِ
+        // خودکار برای او می‌شکند اگر بعداً فعال شود.
+        $active = Technician::forceCreate(['first_name' => 'فعال', 'mobile' => '09120000003', 'service_types' => ['repair'], 'status' => 'active']);
+        $inactive = Technician::forceCreate(['first_name' => 'غیرفعال', 'mobile' => '09120000004', 'service_types' => ['repair', 'service', 'install'], 'status' => 'inactive']);
+
+        $req = Request::create('/', 'PUT', [
+            'tech_ids' => [$active->id],
+            'technicians' => [$active->id => ['service']],
+        ]);
+        (new ServiceMatrixController)->updateTechnicians($req);
+
+        $this->assertSame(['service'], $active->refresh()->service_types);
+        $this->assertSame(['repair', 'service', 'install'], $inactive->refresh()->service_types); // دست‌نخورده
     }
 }
