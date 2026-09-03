@@ -299,33 +299,46 @@ class FinancialReportController extends Controller
             ->orderByDesc('company_share')
             ->get();
 
-        return $this->foldBreakdown($grouped, 'بدون تکنسین');
+        // تکنسین‌ها: ۱۵ تکنسینِ برتر، بدونِ ردیفِ «سایر»، و رتبه‌بندی بر اساسِ
+        // «سودآوریِ هر سفارش» (سهم شرکت ÷ تعداد) — تا تکنسینی که با سفارشِ کمتر
+        // سودِ بیشتری ساخته بالاتر بیاید (خواستهٔ کارفرما).
+        return $this->foldBreakdown($grouped, 'بدون تکنسین', withOther: false, rankByProfitPerOrder: true);
     }
 
     /**
      * Top ۱۵ را نگه می‌دارد و بقیه را در ردیفِ «سایر» جمع می‌کند؛ خروجی برای
-     * نمودار (labels/totals/company) و جدول آماده است.
+     * نمودار (labels/company) و جدول آماده است.
+     *
+     * @param  bool  $withOther  افزودنِ ردیفِ «سایر» برای موارد فراتر از ۱۵ تا.
+     * @param  bool  $rankByProfitPerOrder  مرتب‌سازی بر اساسِ سهم‌شرکت‌به‌ازای‌هر
+     *                                      سفارش (به‌جای مجموعِ سهم شرکت).
      */
-    protected function foldBreakdown(\Illuminate\Support\Collection $grouped, string $nullLabel): array
+    protected function foldBreakdown(\Illuminate\Support\Collection $grouped, string $nullLabel, bool $withOther = true, bool $rankByProfitPerOrder = false): array
     {
         $limit = 15;
 
         $rows = $grouped->map(function ($r) use ($nullLabel) {
             $total = (int) $r->total_amount;
             $company = (int) $r->company_share;
+            $count = (int) $r->cnt;
 
             return [
                 'name' => trim((string) ($r->dim_name ?? '')) ?: $nullLabel,
-                'count' => (int) $r->cnt,
+                'count' => $count,
                 'total' => $total,
                 'company_share' => $company,
                 'tech_share' => (int) $r->tech_share,
                 'profit_pct' => $total > 0 ? round(($company / $total) * 100, 1) : 0,
+                'profit_per_order' => $count > 0 ? (int) round($company / $count) : 0,
             ];
         })->values();
 
+        if ($rankByProfitPerOrder) {
+            $rows = $rows->sortByDesc('profit_per_order')->values();
+        }
+
         $top = $rows->take($limit);
-        $rest = $rows->slice($limit);
+        $rest = $withOther ? $rows->slice($limit) : collect();
 
         if ($rest->isNotEmpty()) {
             $total = (int) $rest->sum('total');
@@ -337,6 +350,7 @@ class FinancialReportController extends Controller
                 'company_share' => $company,
                 'tech_share' => (int) $rest->sum('tech_share'),
                 'profit_pct' => $total > 0 ? round(($company / $total) * 100, 1) : 0,
+                'profit_per_order' => 0,
             ]);
         }
 
