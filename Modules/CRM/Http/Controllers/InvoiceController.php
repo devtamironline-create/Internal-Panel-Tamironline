@@ -20,7 +20,8 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         $status = $request->string('status')->toString();
-        $search = $request->string('q')->toString();
+        // نرمال‌سازیِ ارقام فارسی/عربی تا کدِ فاکتور/سفارش و موبایل با هر رقم پیدا شود.
+        $search = trim(fa_to_en_digits($request->string('q')->toString()));
 
         // order.technician و order.invoices را هم لود می‌کنیم چون بجِ
         // «مغایرت با سفارش» روی هر ردیف به هر دو نیاز دارد.
@@ -29,7 +30,9 @@ class InvoiceController extends Controller
             ->when($search, fn ($q, $s) => $q->where(function ($sub) use ($s) {
                 $sub->where('invoice_code', 'like', "%{$s}%")
                     ->orWhereHas('order', fn ($o) => $o->where('order_code', 'like', "%{$s}%"))
-                    ->orWhereHas('customer', fn ($c) => $c->where('mobile', 'like', "%{$s}%"));
+                    ->orWhereHas('customer', fn ($c) => $c->where('mobile', 'like', "%{$s}%")
+                        ->orWhere('first_name', 'like', "%{$s}%")
+                        ->orWhere('last_name', 'like', "%{$s}%"));
             }))
             ->latest()
             ->paginate(25)
@@ -41,7 +44,7 @@ class InvoiceController extends Controller
     public function export(Request $request, string $format)
     {
         $status = $request->string('status')->toString();
-        $search = $request->string('q')->toString();
+        $search = trim(fa_to_en_digits($request->string('q')->toString()));
 
         $query = Invoice::query()
             ->with(['order', 'customer', 'technician'])
@@ -49,7 +52,9 @@ class InvoiceController extends Controller
             ->when($search, fn ($q, $s) => $q->where(function ($sub) use ($s) {
                 $sub->where('invoice_code', 'like', "%{$s}%")
                     ->orWhereHas('order', fn ($o) => $o->where('order_code', 'like', "%{$s}%"))
-                    ->orWhereHas('customer', fn ($c) => $c->where('mobile', 'like', "%{$s}%"));
+                    ->orWhereHas('customer', fn ($c) => $c->where('mobile', 'like', "%{$s}%")
+                        ->orWhere('first_name', 'like', "%{$s}%")
+                        ->orWhere('last_name', 'like', "%{$s}%"));
             }))
             ->latest();
 

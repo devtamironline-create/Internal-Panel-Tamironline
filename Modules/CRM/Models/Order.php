@@ -655,7 +655,9 @@ class Order extends Model
             return $query;
         }
 
-        $term = trim($term);
+        // نرمال‌سازیِ ارقام فارسی/عربی → انگلیسی تا شمارهٔ سفارش/موبایل با هر
+        // نوع رقم پیدا شود.
+        $term = trim(fa_to_en_digits($term));
 
         return $query->where(function ($q) use ($term) {
             $q->where('order_code', 'like', "%{$term}%")
