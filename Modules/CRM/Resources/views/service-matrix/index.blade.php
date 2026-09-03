@@ -10,7 +10,6 @@
         <p class="text-xs text-gray-500 mt-1">
             تعیین کنید هر <b>دستگاه</b> و هر <b>تکنسین</b> چه نوع خدماتی (تعمیر / سرویس / نصب) ارائه می‌دهد.
             نوعی که دستگاه نداشته باشد یا هیچ تکنسینِ آن استان ارائه ندهد، به مشتری نمایش داده نمی‌شود.
-            اگر برای یک ردیف هیچ نوعی تیک نخورد یعنی «همه» (بدون محدودیت).
         </p>
     </div>
 
@@ -31,6 +30,9 @@
         <form method="POST" action="{{ route('crm.service-matrix.devices') }}">
             @csrf
             @method('PUT')
+            @foreach($devices as $d)
+                <input type="hidden" name="device_ids[]" value="{{ $d->id }}">
+            @endforeach
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-700">
@@ -76,6 +78,9 @@
         <form method="POST" action="{{ route('crm.service-matrix.technicians') }}">
             @csrf
             @method('PUT')
+            @foreach($technicians as $t)
+                <input type="hidden" name="tech_ids[]" value="{{ $t->id }}">
+            @endforeach
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50 dark:bg-gray-700">

@@ -31,7 +31,10 @@ class ServiceMatrixController extends Controller
             ->orderByDesc('is_featured')->orderBy('sort_order')->orderBy('name')
             ->get(['id', 'name', 'slug', 'order_types', 'is_active_app']);
 
+        // فقط تکنسین‌های فعال نمایش داده می‌شوند (درخواستِ صریح). تکنسینِ غیرفعال
+        // در پخشِ خودکار هم شرکت نمی‌کند، پس در ماتریسِ مدیریت هم لازم نیست.
         $technicians = Technician::query()
+            ->where('status', 'active')
             ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'firstname_tech', 'mobile', 'service_types', 'status']);
 
@@ -42,16 +45,18 @@ class ServiceMatrixController extends Controller
     public function updateDevices(Request $request)
     {
         $validTypes = array_keys(ServiceTypeOptions::all());
-        $matrix = (array) $request->input('devices', []); // [deviceId => [slug,...]]
+        $matrix = (array) $request->input('devices', []);   // [deviceId => [slug,...]]
+        // فقط ردیف‌هایی که در همین فرم نمایش داده شده‌اند به‌روزرسانی می‌شوند
+        // (id مخفی). چک‌باکسِ خالی ارسال نمی‌شود ولی id در لیست هست، پس
+        // تیک‌نخورده‌ها هم درست پاک می‌شوند — بدونِ دست‌زدن به ردیف‌های خارج از فرم.
+        $ids = array_values(array_unique(array_map('intval', (array) $request->input('device_ids', []))));
 
-        // روی همهٔ دستگاه‌ها می‌رویم تا «تیک‌نخورده‌ها» هم ذخیره شوند (چک‌باکسِ
-        // خالی در فرم ارسال نمی‌شود).
-        Device::query()->select('id')->chunkById(500, function ($chunk) use ($matrix, $validTypes) {
-            foreach ($chunk as $device) {
+        foreach (array_chunk($ids, 500) as $chunk) {
+            Device::query()->whereIn('id', $chunk)->get(['id'])->each(function ($device) use ($matrix, $validTypes) {
                 $slugs = array_values(array_intersect($validTypes, (array) ($matrix[$device->id] ?? [])));
                 $device->forceFill(['order_types' => $slugs])->saveQuietly();
-            }
-        });
+            });
+        }
 
         // کشِ کاتالوگِ اپ (max-age یک‌ساعته) فوراً باطل شود تا تغییر دیده شود.
         \Modules\CustomerApp\Support\AppCacheVersion::bump();
@@ -64,13 +69,17 @@ class ServiceMatrixController extends Controller
     {
         $validTypes = array_keys(ServiceTypeOptions::all());
         $matrix = (array) $request->input('technicians', []); // [techId => [slug,...]]
+        // فقط تکنسین‌هایی که در همین فرم بودند (id مخفی) به‌روزرسانی می‌شوند تا
+        // service_types تکنسین‌های غیرفعال/نمایش‌داده‌نشده پاک نشود — وگرنه پخشِ
+        // خودکار برای آن‌ها می‌شکند.
+        $ids = array_values(array_unique(array_map('intval', (array) $request->input('tech_ids', []))));
 
-        Technician::query()->select('id')->chunkById(500, function ($chunk) use ($matrix, $validTypes) {
-            foreach ($chunk as $tech) {
+        foreach (array_chunk($ids, 500) as $chunk) {
+            Technician::query()->whereIn('id', $chunk)->get(['id'])->each(function ($tech) use ($matrix, $validTypes) {
                 $slugs = array_values(array_intersect($validTypes, (array) ($matrix[$tech->id] ?? [])));
                 $tech->forceFill(['service_types' => $slugs])->saveQuietly();
-            }
-        });
+            });
+        }
 
         \Modules\CustomerApp\Support\AppCacheVersion::bump();
 
