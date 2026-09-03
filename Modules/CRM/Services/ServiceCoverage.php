@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Cache;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\Device;
+use Modules\CRM\Models\ServiceType;
 use Modules\CRM\Models\Technician;
 
 /**
@@ -236,6 +237,122 @@ class ServiceCoverage
         }
 
         return array_values(array_unique($ids));
+    }
+
+    /**
+     * نوعِ خدماتِ فعالِ هر دستگاه در یک استان — اجتماعِ service_typesِ
+     * تکنسین‌های فعالی که در آن استان همان دستگاه را پوشش می‌دهند
+     * (نامهٔ تیمِ اپ: «نصب و سرویس» بدونِ کنترلِ دستگاه/استان).
+     *
+     * خروجی برای مصرفِ آسانِ کنترلر:
+     *   ['by_device' => [deviceId => [slug,...]], 'all_rounder' => [slug,...], 'all' => [slug,...]]
+     * یا null اگر دادهٔ پوشش کامل نیست (یعنی محدود نکن — همهٔ نوع‌ها نمایش داده شود).
+     *
+     * قاعده‌ها:
+     *   - تکنسینِ بدونِ service_types (خالی/legacy) = «همهٔ نوع‌ها را ارائه می‌کند»
+     *     تا به‌اشتباه نوعی حذف نشود.
+     *   - تکنسینِ همه‌کاره (بدونِ تگِ دستگاه) → نوع‌هایش روی همهٔ دستگاه‌ها.
+     *   - والدِ ادغامی و اجزایش (مثلِ گاز=۶+۵) نوع‌ها را دوطرفه به‌اشتراک می‌گذارند.
+     *
+     * @return array{by_device: array<int, array<int, string>>, all_rounder: array<int, string>, all: array<int, string>}|null
+     */
+    public function appOrderTypesForProvince(int $provinceId): ?array
+    {
+        if (! $this->table()['coverage_data_complete']) {
+            return null;
+        }
+
+        $allSlugs = self::activeServiceTypeSlugs();
+
+        try {
+            $techs = Technician::query()
+                ->where('status', 'active')
+                ->whereHas('cities', fn ($q) => $q->where('crm_cities.is_active', true)
+                    ->where('crm_cities.province_id', $provinceId))
+                ->with(['devices:id'])
+                ->get(['id', 'service_types']);
+        } catch (\Throwable $e) {
+            // نبودِ ستون/جدول (پنجرهٔ دیپلوی یا محیطِ ناقص) → محدود نکن.
+            return null;
+        }
+
+        $allRounder = [];
+        $byDevice = [];
+
+        foreach ($techs as $t) {
+            $types = self::normalizeServiceTypes($t->service_types, $allSlugs);
+            $devIds = $t->devices->pluck('id')->all();
+
+            if ($devIds === []) {
+                $allRounder = array_values(array_unique([...$allRounder, ...$types]));
+
+                continue;
+            }
+            foreach ($devIds as $d) {
+                $byDevice[(int) $d] = array_values(array_unique([...($byDevice[(int) $d] ?? []), ...$types]));
+            }
+        }
+
+        // والدِ ادغامی و اجزا نوع‌ها را دوطرفه به ارث می‌برند.
+        foreach (self::deviceAliases() as $composite => $parts) {
+            $union = $byDevice[$composite] ?? [];
+            foreach ($parts as $p) {
+                $union = array_values(array_unique([...$union, ...($byDevice[(int) $p] ?? [])]));
+            }
+            if ($union !== []) {
+                $byDevice[(int) $composite] = $union;
+                foreach ($parts as $p) {
+                    $byDevice[(int) $p] = $union;
+                }
+            }
+        }
+
+        return ['by_device' => $byDevice, 'all_rounder' => $allRounder, 'all' => $allSlugs];
+    }
+
+    /** نوعِ خدماتِ یک دستگاه از خروجیِ appOrderTypesForProvince — با fallbackِ «همه». */
+    public static function resolveOrderTypes(int $deviceId, array $map): array
+    {
+        $set = $map['all_rounder'] ?? [];
+        foreach (self::deviceMatchIds($deviceId) as $id) {
+            $set = array_values(array_unique([...$set, ...($map['by_device'][$id] ?? [])]));
+        }
+        $all = $map['all'] ?? [];
+        if ($set === []) {
+            return $all; // دادهٔ نامشخص → محدود نکن
+        }
+
+        // خروجی را به ترتیبِ استانداردِ نوع‌ها مرتب می‌کنیم.
+        return array_values(array_filter($all, fn ($slug) => in_array($slug, $set, true)));
+    }
+
+    /** slugهای نوعِ خدماتِ فعال (با fallbackِ پیش‌فرض). @return array<int, string> */
+    public static function activeServiceTypeSlugs(): array
+    {
+        try {
+            $slugs = ServiceType::query()->active()->ordered()->pluck('slug')->all();
+        } catch (\Throwable $e) {
+            $slugs = [];
+        }
+
+        return $slugs !== [] ? $slugs : ['repair', 'service', 'install'];
+    }
+
+    /**
+     * نرمال‌سازیِ service_typesِ تکنسین: فقط slugهای معتبر؛ خالی/legacy → همه.
+     *
+     * @param  mixed  $raw
+     * @param  array<int, string>  $allSlugs
+     * @return array<int, string>
+     */
+    private static function normalizeServiceTypes($raw, array $allSlugs): array
+    {
+        if (! is_array($raw) || $raw === []) {
+            return $allSlugs;
+        }
+        $valid = array_values(array_intersect($allSlugs, $raw));
+
+        return $valid !== [] ? $valid : $allSlugs;
     }
 
     /**
