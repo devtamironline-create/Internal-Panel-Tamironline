@@ -240,6 +240,12 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::middleware('can:view-crm-taxonomies')->group(function () {
         Route::get('service-types', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'index'])->name('service-types.index');
     });
+    // مدیریتِ نوع خدمت (تعمیر/سرویس/نصب) برای دستگاه‌ها و تکنسین‌ها
+    Route::middleware('can:manage-crm-taxonomies')->group(function () {
+        Route::get('service-matrix', [\Modules\CRM\Http\Controllers\ServiceMatrixController::class, 'index'])->name('service-matrix.index');
+        Route::put('service-matrix/devices', [\Modules\CRM\Http\Controllers\ServiceMatrixController::class, 'updateDevices'])->name('service-matrix.devices');
+        Route::put('service-matrix/technicians', [\Modules\CRM\Http\Controllers\ServiceMatrixController::class, 'updateTechnicians'])->name('service-matrix.technicians');
+    });
     Route::middleware('can:manage-crm-taxonomies')->group(function () {
         Route::get('service-types/create', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'create'])->name('service-types.create');
         Route::post('service-types', [\Modules\CRM\Http\Controllers\ServiceTypeController::class, 'store'])->name('service-types.store');

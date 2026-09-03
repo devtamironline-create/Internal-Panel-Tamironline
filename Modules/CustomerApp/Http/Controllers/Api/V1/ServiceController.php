@@ -103,32 +103,38 @@ class ServiceController extends Controller
             }
         }
 
-        $rows = $query->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'description', 'sort_order', 'is_featured']);
+        $rows = $query->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'description', 'sort_order', 'is_featured', 'order_types']);
 
-        // نوعِ خدماتِ فعالِ هر دستگاه در همین استان (نامهٔ تیمِ اپ: «نصب و سرویس»
-        // بدونِ کنترلِ دستگاه/استان). اگر استان مشخص نبود یا دادهٔ پوشش کامل نبود،
-        // همهٔ نوع‌ها برمی‌گردند (سازگاریِ عقب‌رو — اپ همه را نشان می‌دهد).
-        $allSlugs = \Modules\CRM\Services\ServiceCoverage::activeServiceTypeSlugs();
+        // نوعِ خدماتِ فعالِ هر دستگاه در همین استان (نامهٔ تیمِ اپ: «نصب و سرویس»).
+        // = اشتراکِ «نوعِ قابلِ ارائهٔ دستگاه» (پیکربندیِ ادمین) و «نوعِ تکنسین‌های
+        // پوشش‌دهنده در آن استان». بدونِ استان/پوششِ ناقص → فقط سطحِ دستگاه اعمال
+        // می‌شود (که خودش با null = همه، عقب‌روسازگار است).
         $orderTypeMap = ($provinceId !== null && $provinceId > 0)
             ? $coverage->appOrderTypesForProvince($provinceId)
             : null;
 
-        $data = $rows->map(fn (Device $d) => [
-            'id' => (int) $d->id,
-            'name' => $d->name,
-            'slug' => $d->slug,
-            'icon' => $d->icon,
-            'image' => MediaUrl::resolve($d->thumbnail),
-            'description' => $d->description ? mb_substr(strip_tags($d->description), 0, 280) : null,
-            'badge' => null,
-            // ترتیب نمایش (پنل). لیست از قبل بر اساس is_featured DESC، سپس
-            // sort_order ASC، سپس name مرتب شده است.
-            'sort_order' => (int) $d->sort_order,
-            'is_featured' => (bool) $d->is_featured,
-            'available_order_types' => $orderTypeMap === null
-                ? $allSlugs
-                : \Modules\CRM\Services\ServiceCoverage::resolveOrderTypes((int) $d->id, $orderTypeMap),
-        ])->values();
+        $data = $rows->map(function (Device $d) use ($orderTypeMap) {
+            $deviceTypes = $d->orderTypeSlugs(); // سطحِ دستگاه (null → همه)
+            $available = $orderTypeMap === null
+                ? $deviceTypes
+                : array_values(array_intersect(
+                    $deviceTypes,
+                    \Modules\CRM\Services\ServiceCoverage::resolveOrderTypes((int) $d->id, $orderTypeMap)
+                ));
+
+            return [
+                'id' => (int) $d->id,
+                'name' => $d->name,
+                'slug' => $d->slug,
+                'icon' => $d->icon,
+                'image' => MediaUrl::resolve($d->thumbnail),
+                'description' => $d->description ? mb_substr(strip_tags($d->description), 0, 280) : null,
+                'badge' => null,
+                'sort_order' => (int) $d->sort_order,
+                'is_featured' => (bool) $d->is_featured,
+                'available_order_types' => $available,
+            ];
+        })->values();
 
         return response()->json([
             'data' => $data,

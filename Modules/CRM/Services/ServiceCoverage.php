@@ -6,7 +6,6 @@ use Illuminate\Support\Facades\Cache;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\Device;
-use Modules\CRM\Models\ServiceType;
 use Modules\CRM\Models\Technician;
 
 /**
@@ -329,13 +328,9 @@ class ServiceCoverage
     /** slugهای نوعِ خدماتِ فعال (با fallbackِ پیش‌فرض). @return array<int, string> */
     public static function activeServiceTypeSlugs(): array
     {
-        try {
-            $slugs = ServiceType::query()->active()->ordered()->pluck('slug')->all();
-        } catch (\Throwable $e) {
-            $slugs = [];
-        }
-
-        return $slugs !== [] ? $slugs : ['repair', 'service', 'install'];
+        // منبعِ واحد با بقیهٔ پنل (فرم تکنسین، اعتبارسنجی): ServiceTypeOptions،
+        // که خودش کشِ استاتیک + fallback دارد.
+        return \Modules\CRM\Support\ServiceTypeOptions::slugs();
     }
 
     /**

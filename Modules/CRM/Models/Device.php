@@ -56,6 +56,7 @@ class Device extends Model
         'is_active',
         'is_active_app',
         'is_featured',
+        'order_types',
     ];
 
     protected $casts = [
@@ -72,7 +73,25 @@ class Device extends Model
         'hero_image' => 'array',
         'service_steps' => 'array',
         'sections_enabled' => 'array',
+        'order_types' => 'array',
     ];
+
+    /**
+     * نوعِ خدماتِ قابلِ ارائهٔ این دستگاه (slugها) — null/خالی = همهٔ نوع‌ها.
+     * خروجی به ترتیبِ استانداردِ نوع‌ها (crm_service_types) مرتب می‌شود.
+     *
+     * @return array<int, string>
+     */
+    public function orderTypeSlugs(): array
+    {
+        $all = \Modules\CRM\Support\ServiceTypeOptions::slugs();
+        $own = is_array($this->order_types) ? $this->order_types : [];
+        if ($own === []) {
+            return $all; // پیکربندی‌نشده → همه (سازگاریِ عقب‌رو)
+        }
+
+        return array_values(array_filter($all, fn ($slug) => in_array($slug, $own, true)));
+    }
 
     /**
      * دسته‌بندی والد این دستگاه (مثل «لوازم آشپزخانه»).
