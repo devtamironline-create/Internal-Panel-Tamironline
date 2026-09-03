@@ -91,10 +91,12 @@ class ServiceController extends Controller
         // state_id مستقیم هم پذیرفته است. بدونِ هر دو مثلِ قبل (سازگاری).
         // شهر/استانِ نامعتبر یا بدونِ پوشش → آرایهٔ خالی، نه خطا. تا
         // کامل‌شدنِ دادهٔ پوشش (coverage_data_complete=false) بدونِ محدودیت.
+        $coverage = app(\Modules\CRM\Services\ServiceCoverage::class);
+
         $provinceId = $this->resolveProvinceId($request);
         if ($provinceId !== null) {
             $allowed = $provinceId > 0
-                ? app(\Modules\CRM\Services\ServiceCoverage::class)->appDeviceIdsForProvince($provinceId)
+                ? $coverage->appDeviceIdsForProvince($provinceId)
                 : []; // شهرِ نامعتبر
             if ($allowed !== null) {
                 $query->whereIn('id', $allowed);
@@ -102,6 +104,14 @@ class ServiceController extends Controller
         }
 
         $rows = $query->get(['id', 'name', 'slug', 'icon', 'thumbnail', 'description', 'sort_order', 'is_featured']);
+
+        // نوعِ خدماتِ فعالِ هر دستگاه در همین استان (نامهٔ تیمِ اپ: «نصب و سرویس»
+        // بدونِ کنترلِ دستگاه/استان). اگر استان مشخص نبود یا دادهٔ پوشش کامل نبود،
+        // همهٔ نوع‌ها برمی‌گردند (سازگاریِ عقب‌رو — اپ همه را نشان می‌دهد).
+        $allSlugs = \Modules\CRM\Services\ServiceCoverage::activeServiceTypeSlugs();
+        $orderTypeMap = ($provinceId !== null && $provinceId > 0)
+            ? $coverage->appOrderTypesForProvince($provinceId)
+            : null;
 
         $data = $rows->map(fn (Device $d) => [
             'id' => (int) $d->id,
@@ -115,6 +125,9 @@ class ServiceController extends Controller
             // sort_order ASC، سپس name مرتب شده است.
             'sort_order' => (int) $d->sort_order,
             'is_featured' => (bool) $d->is_featured,
+            'available_order_types' => $orderTypeMap === null
+                ? $allSlugs
+                : \Modules\CRM\Services\ServiceCoverage::resolveOrderTypes((int) $d->id, $orderTypeMap),
         ])->values();
 
         return response()->json([

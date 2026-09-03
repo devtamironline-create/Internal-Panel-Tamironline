@@ -73,7 +73,13 @@ class ProvinceScopedCatalogTest extends TestCase
         ]));
         Schema::create('crm_technicians', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->string('first_name')->nullable(), $x->string('mobile')->nullable(),
+            $x->json('service_types')->nullable(),
             $x->string('status', 20)->default('active'), $x->timestamps(), $x->softDeletes(),
+        ]));
+        Schema::create('crm_service_types', fn ($t) => tap($t, fn ($x) => [
+            $x->id(), $x->string('slug'), $x->string('name'), $x->string('icon')->nullable(),
+            $x->text('description')->nullable(), $x->integer('sort_order')->default(0),
+            $x->boolean('is_active')->default(true), $x->timestamps(),
         ]));
         Schema::create('crm_technician_cities', fn ($t) => tap($t, fn ($x) => [
             $x->id(), $x->unsignedBigInteger('technician_id'), $x->unsignedBigInteger('city_id'),
@@ -110,18 +116,53 @@ class ProvinceScopedCatalogTest extends TestCase
         $this->tehran = City::create(['province_id' => $this->tehranProv->id, 'name' => 'تهران', 'slug' => 'tehran']);
         $this->washer = Device::create(['name' => 'لباسشویی', 'slug' => 'washer']);
         $this->fridge = Device::create(['name' => 'یخچال', 'slug' => 'fridge']);
+
+        foreach ([['repair', 'تعمیر', 1], ['service', 'سرویس دوره‌ای', 2], ['install', 'نصب', 3]] as [$slug, $name, $sort]) {
+            \Modules\CRM\Models\ServiceType::create(['slug' => $slug, 'name' => $name, 'sort_order' => $sort, 'is_active' => true]);
+        }
     }
 
-    private function tech(array $cityIds, array $deviceIds = [], array $brandIds = []): Technician
+    private function tech(array $cityIds, array $deviceIds = [], array $brandIds = [], ?array $serviceTypes = null): Technician
     {
         $t = Technician::forceCreate([
             'first_name' => 'تکنسین', 'mobile' => '0912'.random_int(1000000, 9999999), 'status' => 'active',
+            'service_types' => $serviceTypes,
         ]);
         $t->cities()->sync($cityIds);
         $t->devices()->sync($deviceIds);
         $t->brands()->sync($brandIds);
 
         return $t;
+    }
+
+    public function test_available_order_types_reflect_technician_service_types(): void
+    {
+        // لباسشویی در مشهد: فقط تعمیر و نصب. یخچال در مشهد: فقط سرویس.
+        $this->tech([$this->mashhad->id], [$this->washer->id], [], ['install', 'repair']);
+        $this->tech([$this->mashhad->id], [$this->fridge->id], [], ['service']);
+
+        // نیشابور همان استانِ مشهد است.
+        $rows = collect(
+            $this->getJson('/v1/customer/services/categories?city_id='.$this->neyshabur->id)
+                ->assertOk()->json('data')
+        )->keyBy('slug');
+
+        // به ترتیبِ استانداردِ نوع‌ها (repair=1, install=3).
+        $this->assertSame(['repair', 'install'], $rows['washer']['available_order_types']);
+        $this->assertSame(['service'], $rows['fridge']['available_order_types']);
+    }
+
+    public function test_technician_without_service_types_offers_all(): void
+    {
+        // بدونِ service_types (legacy) → همهٔ نوع‌ها ارائه می‌شود.
+        $this->tech([$this->mashhad->id], [$this->washer->id], [], null);
+
+        $rows = collect(
+            $this->getJson('/v1/customer/services/categories?city_id='.$this->mashhad->id)
+                ->assertOk()->json('data')
+        )->keyBy('slug');
+
+        $this->assertSame(['repair', 'service', 'install'], $rows['washer']['available_order_types']);
     }
 
     public function test_coverage_in_one_city_opens_the_whole_province(): void
