@@ -132,9 +132,14 @@ class TechnicianSuggestionService
         $ids = $techs->pluck('id')->all();
         $stats = $this->statsFor($ids);
         $response = $this->responseMinutesFor($techs);
+        $ratings = $this->reviewRatingsFor($ids);
 
-        return $techs->mapWithKeys(function (Technician $t) use ($openCounts, $stats, $response) {
+        return $techs->mapWithKeys(function (Technician $t) use ($openCounts, $stats, $response, $ratings) {
             $t->setAttribute('_now_orders', (int) ($openCounts[$t->id] ?? 0));
+
+            // امتیازِ مؤثرِ رضایت (۰..۵) از نظرهای تأییدشده — کمتر از ۱۰ نظر → ۲.۵.
+            $r = $ratings[$t->id] ?? ['avg' => null, 'count' => 0];
+            $t->setAttribute('_review_rating', Technician::effectiveRatingFrom($r['avg'], $r['count']));
 
             return [$t->id => $this->scoreTechnician(
                 $t,
@@ -306,16 +311,13 @@ class TechnicianSuggestionService
             $reasons[] = '⚠ بدهی بحرانی';
         }
 
-        // ─── ۳) رضایت مشتری (20٪) — دستی توسط ادمین
-        $sat = $t->satisfaction_score !== null ? (float) $t->satisfaction_score : null;
-        if ($sat !== null) {
-            $satScore = max(0, min(1, $sat / 5));
-        } else {
-            // ست نشده — neutral midpoint
-            $satScore = 0.5;
-        }
+        // ─── ۳) رضایت مشتری (20٪) — از میانگینِ نظرهای تأییدشدهٔ مشتری
+        // (نظرسنجیِ اپ). کمتر از ۱۰ نظرِ تأییدشده → امتیازِ پیش‌فرضِ ۲.۵.
+        // مقدار در scoreAll روی صفتِ موقتِ _review_rating ست شده است.
+        $sat = (float) ($t->getAttribute('_review_rating') ?? Technician::DEFAULT_RATING);
+        $satScore = max(0, min(1, $sat / 5));
         $breakdown['satisfaction'] = (int) round($satScore * $weights['satisfaction']);
-        if ($sat !== null && $sat >= 4.5) {
+        if ($sat >= 4.5) {
             $reasons[] = 'رضایت عالی';
         }
 
@@ -402,6 +404,39 @@ class TechnicianSuggestionService
                 'last_assigned_at' => $row->last_assigned_at,
             ]])
             ->all();
+    }
+
+    /**
+     * میانگین و تعدادِ نظرهای «تأییدشده»ی مشتری برای هر تکنسین — یک کوئری
+     * برای کلِ استخر (به‌جای N+1). خروجی: [techId => ['avg'=>?float, 'count'=>int]].
+     *
+     * مقاوم: اگر جدولِ نظرها در دسترس نبود (مثلِ بعضی محیط‌های تست)، آرایهٔ
+     * خالی برمی‌گردد و امتیازدهی به پیش‌فرضِ ۲.۵ می‌افتد.
+     *
+     * @param  array<int, int>  $techIds
+     * @return array<int, array{avg: float|null, count: int}>
+     */
+    protected function reviewRatingsFor(array $techIds): array
+    {
+        if (empty($techIds)) {
+            return [];
+        }
+
+        try {
+            return \Modules\CRM\Models\OrderReview::query()
+                ->whereIn('technician_id', $techIds)
+                ->where('status', \Modules\CRM\Models\OrderReview::STATUS_APPROVED)
+                ->groupBy('technician_id')
+                ->selectRaw('technician_id, AVG(rating) as avg_rating, COUNT(*) as cnt')
+                ->get()
+                ->mapWithKeys(fn ($row) => [(int) $row->technician_id => [
+                    'avg' => $row->avg_rating !== null ? (float) $row->avg_rating : null,
+                    'count' => (int) $row->cnt,
+                ]])
+                ->all();
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     /**

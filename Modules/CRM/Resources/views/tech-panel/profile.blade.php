@@ -125,6 +125,25 @@
                 <span class="px-2 py-0.5 text-[11px] font-bold rounded-full {{ $statusBadge }}">{{ $statusLabel }}</span>
             </div>
         </div>
+
+        {{-- امتیازِ تکنسین از نظرسنجیِ مشتری --}}
+        <div class="flex items-center justify-between">
+            <span class="text-xs text-gray-400">امتیاز من</span>
+            <div class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.35 4.15a1 1 0 00.95.69h4.37c.97 0 1.37 1.24.59 1.81l-3.54 2.57a1 1 0 00-.36 1.12l1.35 4.15c.3.92-.75 1.69-1.54 1.12l-3.53-2.57a1 1 0 00-1.18 0l-3.53 2.57c-.79.57-1.84-.2-1.54-1.12l1.35-4.15a1 1 0 00-.36-1.12L1.44 9.58c-.78-.57-.38-1.81.59-1.81h4.37a1 1 0 00.95-.69L9.05 2.93z"/>
+                </svg>
+                <span class="text-sm font-extrabold text-gray-800">{{ number_format($rating, 1) }}</span>
+                <span class="text-[11px] text-gray-400">از ۵</span>
+            </div>
+        </div>
+        <div class="text-[10px] text-gray-400 -mt-1 leading-6">
+            @if($ratingIsDefault)
+                امتیازِ پایه (۲٫۵) — تا رسیدن به ۱۰ نظرِ تأییدشده. تاکنون {{ number_format($reviewsCount) }} نظر.
+            @else
+                میانگینِ {{ number_format($reviewsCount) }} نظرِ تأییدشدهٔ مشتری.
+            @endif
+        </div>
         @if($technician->technician_id)
             <div class="flex items-center justify-between">
                 <span class="text-xs text-gray-400">کد تکنسین</span>

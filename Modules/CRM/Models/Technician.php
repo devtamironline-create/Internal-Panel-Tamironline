@@ -389,6 +389,61 @@ class Technician extends Authenticatable
     }
 
     /**
+     * حدِ نصابِ تعدادِ نظرِ تأییدشده برای محاسبهٔ امتیازِ واقعی؛ کمتر از این
+     * تعداد → امتیازِ پیش‌فرض.
+     */
+    public const MIN_REVIEWS_FOR_RATING = 10;
+
+    /** امتیازِ پیش‌فرض (۰..۵) برای تکنسینی که هنوز نظرِ کافی ندارد. */
+    public const DEFAULT_RATING = 2.5;
+
+    /**
+     * میانگین و تعدادِ نظرهای «تأییدشده»ی مشتری روی سفارش‌های این تکنسین —
+     * مبنای امتیاز در سیستمِ پخشِ خودکار و نمایش به تکنسین.
+     *
+     * @return array{avg: float|null, count: int}
+     */
+    public function reviewRatingStats(): array
+    {
+        try {
+            $row = OrderReview::query()
+                ->where('technician_id', $this->id)
+                ->where('status', OrderReview::STATUS_APPROVED)
+                ->selectRaw('AVG(rating) as avg_rating, COUNT(*) as cnt')
+                ->first();
+
+            return [
+                'avg' => $row && $row->avg_rating !== null ? (float) $row->avg_rating : null,
+                'count' => (int) ($row->cnt ?? 0),
+            ];
+        } catch (\Throwable $e) {
+            // جدولِ نظرها در دسترس نبود → پیش‌فرض (بدونِ نظر).
+            return ['avg' => null, 'count' => 0];
+        }
+    }
+
+    /**
+     * امتیازِ مؤثرِ تکنسین (۰..۵). اگر کمتر از حدِ نصاب (۱۰) نظرِ تأییدشده
+     * داشته باشد، امتیازِ پیش‌فرضِ ۲.۵ در نظر گرفته می‌شود.
+     */
+    public static function effectiveRatingFrom(?float $avg, int $count): float
+    {
+        if ($count < self::MIN_REVIEWS_FOR_RATING || $avg === null) {
+            return self::DEFAULT_RATING;
+        }
+
+        return round($avg, 2);
+    }
+
+    /** امتیازِ مؤثرِ همین تکنسین — یک کوئری. */
+    public function effectiveRating(): float
+    {
+        $s = $this->reviewRatingStats();
+
+        return self::effectiveRatingFrom($s['avg'], $s['count']);
+    }
+
+    /**
      * نام نمایشی — اولویت با firstname_tech (نام تجاری/کامل WP)،
      * fallback به first_name + last_name (داده‌ی legacy لاراولی)،
      * در نهایت موبایل.

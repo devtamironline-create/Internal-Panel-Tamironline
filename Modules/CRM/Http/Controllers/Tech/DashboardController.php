@@ -1113,8 +1113,14 @@ class DashboardController extends Controller
 
     public function profile()
     {
+        $technician = Auth::guard('tech')->user();
+        $rev = $technician->reviewRatingStats();
+
         return view('crm::tech-panel.profile', [
-            'technician' => Auth::guard('tech')->user(),
+            'technician' => $technician,
+            'rating' => \Modules\CRM\Models\Technician::effectiveRatingFrom($rev['avg'], $rev['count']),
+            'reviewsCount' => $rev['count'],
+            'ratingIsDefault' => $rev['count'] < \Modules\CRM\Models\Technician::MIN_REVIEWS_FOR_RATING,
         ]);
     }
 
