@@ -91,6 +91,81 @@ class Order extends Model
         return self::CANCEL_REASONS;
     }
 
+    /**
+     * دلایلِ «ردِ سفارش توسطِ تکنسین» — مفهومی جدا از «کنسل» است.
+     *   • کنسل (ادمین/پنل): سفارش مرده به حساب می‌آید.
+     *   • رد (تکنسین/اپ): تکنسین توانایی/صرفهٔ انجام نداشته؛ سفارش می‌تواند
+     *     برای تکنسینِ دیگری باز شود.
+     *
+     * هر آیتم: label (متن) + reopen (اگر true، ردِ سفارش با این علت، آن را
+     * از تکنسین می‌گیرد و برای تخصیصِ مجدد باز می‌کند).
+     */
+    public const DECLINE_REASONS = [
+        ['label' => 'عدم توانایی در انجام کار', 'reopen' => true],
+        ['label' => 'خارج از محدودهٔ کاری من', 'reopen' => true],
+        ['label' => 'این نوع خدمت در تخصص من نیست', 'reopen' => true],
+        ['label' => 'عدم صرفهٔ اقتصادی برای من', 'reopen' => true],
+        ['label' => 'مشتری درخواستِ تکنسینِ دیگری داشت', 'reopen' => true],
+        ['label' => 'سایر (بدون بازگشت به تخصیص خودکار)', 'reopen' => false],
+    ];
+
+    /**
+     * لیستِ دلایلِ ردِ تکنسین — قابلِ مدیریتِ ادمین (کلیدِ crm_settings:
+     * technician_decline_reasons). خروجی نرمال‌شده: هر آیتم
+     * ['label' => string, 'reopen' => bool]. در نبودِ تنظیم → پیش‌فرض.
+     *
+     * @return list<array{label:string, reopen:bool}>
+     */
+    public static function declineReasons(): array
+    {
+        $stored = CrmSetting::getJson('technician_decline_reasons', null);
+
+        if (is_array($stored)) {
+            $clean = [];
+            foreach ($stored as $row) {
+                // پذیرشِ دو شکل: آبجکت {label,reopen} یا رشتهٔ ساده (reopen=false).
+                $label = is_array($row) ? trim((string) ($row['label'] ?? '')) : trim((string) $row);
+                if ($label === '') {
+                    continue;
+                }
+                $reopen = is_array($row) ? filter_var($row['reopen'] ?? false, FILTER_VALIDATE_BOOLEAN) : false;
+                $clean[] = ['label' => $label, 'reopen' => $reopen];
+            }
+
+            if ($clean !== []) {
+                return $clean;
+            }
+        }
+
+        return self::DECLINE_REASONS;
+    }
+
+    /**
+     * فقط برچسب‌های دلایلِ رد — برای اعتبارسنجیِ ورودیِ اپ.
+     *
+     * @return list<string>
+     */
+    public static function declineReasonLabels(): array
+    {
+        return array_map(fn ($r) => $r['label'], self::declineReasons());
+    }
+
+    /**
+     * آیا ردِ سفارش با این علت باید آن را برای تخصیصِ مجدد باز کند؟
+     * برچسبِ ناشناخته = false (محافظه‌کارانه).
+     */
+    public static function declineReasonReopens(string $label): bool
+    {
+        $label = trim($label);
+        foreach (self::declineReasons() as $r) {
+            if ($r['label'] === $label) {
+                return (bool) $r['reopen'];
+            }
+        }
+
+        return false;
+    }
+
     protected $fillable = [
         // پایه
         'order_code', 'wp_id',
@@ -105,6 +180,7 @@ class Order extends Model
 
         // وضعیت
         'status', 'status_changed_at', 'cancel_reason', 'cancel_reason_id',
+        'declined_technician_ids',
         'estimated_ready_at',
         'return_review_pending', 'return_reviewed_at', 'return_review_approved', 'return_review_days',
         'return_type', 'return_description', 'status_internal_order', 'qc_status',
@@ -196,6 +272,9 @@ class Order extends Model
         'hc_customer_data' => 'array',
         'hc_tech_data' => 'array',
         'attribution' => 'array',
+        // شناسهٔ تکنسین‌هایی که این سفارش را رد کرده‌اند — تا در پخشِ خودکار
+        // دوباره به همان‌ها پیشنهاد نشود (جلوگیری از حلقه).
+        'declined_technician_ids' => 'array',
 
         'wp_id' => 'integer',
         'subscription' => 'integer',

@@ -246,6 +246,7 @@ final class AutoAssignService
             'device' => 'دستگاه در پوششش نیست',
             'service_type' => 'این نوع خدمت را ارائه نمی‌دهد',
             'no_service_types' => 'نوع خدماتش در پروفایل تعیین نشده',
+            'previously_declined' => 'قبلاً همین سفارش را رد کرده',
         ];
 
         $parts = [];

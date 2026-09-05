@@ -15,6 +15,7 @@ use Modules\CRM\Models\CrmSetting;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\OrderStatusLog;
 use Modules\CRM\Services\InvoiceService;
+use Modules\CRM\Services\OrderAssigner;
 use Modules\CRM\Services\OrderSmsNotifier;
 use Modules\CRM\Services\TransferReceiptService;
 use Modules\CRM\Support\TechImageStorage;
@@ -28,6 +29,7 @@ class OrderActionController extends Controller
     public function __construct(
         private OrderSmsNotifier $smsNotifier,
         private InvoiceService $invoiceService,
+        private OrderAssigner $assigner,
     ) {}
 
     /** POST /v1/technician/orders/{id}/status */
@@ -40,15 +42,21 @@ class OrderActionController extends Controller
 
         $request->merge(['description' => trim((string) $request->input('description', ''))]);
 
-        // علت‌های ردِ سفارش — لیستِ انتخابیِ قابلِ مدیریتِ ادمین. اگر تکنسین
-        // یکی از این گزینه‌ها را انتخاب کرده باشد، متنِ توضیحِ اجباری لازم
-        // نیست؛ وگرنه (کلاینتِ قدیمی که فقط متن می‌فرستد) توضیحِ متنی اجباری
-        // می‌ماند — سازگاریِ عقب‌رو.
-        $declineReasons = Order::cancelReasons();
+        // علت‌های ردِ سفارش (توسطِ تکنسین) — لیستِ انتخابیِ قابلِ مدیریتِ ادمین،
+        // مستقل از «کنسل»ِ ادمین. اپ می‌تواند علت را در فیلدِ `decline_reason`
+        // یا `cancel_reason` (نامِ قدیمی) بفرستد؛ به یک فیلد نرمال می‌کنیم.
+        $request->merge([
+            'cancel_reason' => trim((string) $request->input('decline_reason', $request->input('cancel_reason', ''))),
+        ]);
+
+        // اگر تکنسین یکی از گزینه‌های ادمین را انتخاب کرده باشد، متنِ توضیحِ
+        // اجباری لازم نیست؛ وگرنه (کلاینتِ قدیمی که فقط متن می‌فرستد) توضیحِ
+        // متنی اجباری می‌ماند — سازگاریِ عقب‌رو.
+        $declineReasonLabels = Order::declineReasonLabels();
         $statusValue = (string) $request->input('status');
         $isDeclined = $statusValue === OrderStatus::Declined->value;
         $selectedReason = trim((string) $request->input('cancel_reason', ''));
-        $hasSelectedReason = $isDeclined && $selectedReason !== '' && in_array($selectedReason, $declineReasons, true);
+        $hasSelectedReason = $isDeclined && $selectedReason !== '' && in_array($selectedReason, $declineReasonLabels, true);
 
         // توضیح فقط برای این وضعیت‌ها الزامی است (Open اختیاری — رسیدِ انتقال).
         // «هماهنگ شده» عمداً توضیح نمی‌خواهد: تکنسین فقط تقویم را می‌بیند و
@@ -61,7 +69,7 @@ class OrderActionController extends Controller
         $validated = $request->validate([
             'status' => 'required|string',
             // علتِ ردِ انتخابی — باید یکی از گزینه‌های تعیین‌شدهٔ ادمین باشد.
-            'cancel_reason' => ['nullable', 'string', Rule::in($declineReasons)],
+            'cancel_reason' => ['nullable', 'string', Rule::in($declineReasonLabels)],
             'description' => $needsDesc ? 'required|string|min:15|max:2000' : 'nullable|string|max:2000',
             'price_customer' => 'nullable|integer|min:0',
             'hire' => 'nullable|integer|min:0',
@@ -124,6 +132,13 @@ class OrderActionController extends Controller
 
         if (! in_array($newStatus, $this->allowedStatusesFor($order), true)) {
             throw ValidationException::withMessages(['status' => 'تغییر به این وضعیت در شرایط فعلی مجاز نیست.']);
+        }
+
+        // ردِ سفارش با علتی که ادمین «بازگشت به تخصیص خودکار» را برایش روشن
+        // کرده: سفارش «رد شده»ی نهایی نمی‌شود؛ از تکنسین گرفته و برای
+        // تخصیصِ تکنسینِ جدید باز می‌شود (خودکار یا دستیِ ادمین).
+        if ($isDeclined && Order::declineReasonReopens($selectedReason)) {
+            return $this->declineAndReopen($order, $tech, $selectedReason, trim((string) ($validated['description'] ?? '')));
         }
 
         // «هماهنگ شده» بدونِ زمانِ مراجعه معنا ندارد — مسیرِ درست
@@ -666,6 +681,56 @@ class OrderActionController extends Controller
         }
 
         return $updates;
+    }
+
+    /**
+     * ردِ سفارش با علتی که «بازگشت به تخصیص خودکار» دارد: سفارش از تکنسین
+     * گرفته و برای تخصیصِ تکنسینِ جدید باز می‌شود (نه «رد شده»ی نهایی).
+     * تکنسینِ ردکننده در declined_technician_ids ثبت می‌شود تا پخشِ خودکار
+     * دوباره او را روی همین سفارش پیشنهاد ندهد.
+     */
+    private function declineAndReopen(Order $order, $tech, string $reason, string $note): JsonResponse
+    {
+        // ثبتِ تکنسینِ ردکننده (dedupe) — پیش از unassign که technician_id
+        // را null می‌کند.
+        $declined = $order->declined_technician_ids;
+        $declined = is_array($declined) ? array_map('intval', $declined) : [];
+        if (! in_array((int) $tech->id, $declined, true)) {
+            $declined[] = (int) $tech->id;
+        }
+        $order->forceFill(['declined_technician_ids' => $declined])->save();
+
+        // لاگِ دلیلِ رد در تاریخچهٔ وضعیت — پیش از بازگرداندنِ وضعیت به «جدید».
+        OrderStatusLog::create([
+            'order_id' => $order->id,
+            'from_status' => $order->status?->value ?? '',
+            'to_status' => $order->status?->value ?? '',
+            'note' => 'ردِ تکنسین — علت: '.$reason.($note !== '' ? ' — '.$note : '')
+                .' · سفارش برای تخصیصِ تکنسینِ جدید باز شد.',
+            'changed_by' => $tech->user_id,
+            ...OrderStatusLog::technicianActor($tech),
+            'created_at' => now(),
+        ]);
+
+        // بازکردن برای تخصیصِ مجدد — technician_id=null و وضعیت→«جدید».
+        // از همان نقطهٔ واحدِ تخصیص/لغو استفاده می‌شود تا لاگ و رفتار یکسان بماند.
+        $this->assigner->unassign(
+            $order,
+            $tech->user_id,
+            'ردِ تکنسین «'.OrderAssigner::technicianName($tech).'» — علت: '.$reason.'؛ باز برای تخصیصِ مجدد.'
+        );
+
+        $this->clearForceReview($order->refresh());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'سفارش رد شد و برای تخصیصِ تکنسینِ جدید باز شد.',
+            'data' => [
+                'reopened' => true,
+                'order_id' => $order->id,
+                'status' => $order->fresh()->status?->value,
+            ],
+        ]);
     }
 
     /**

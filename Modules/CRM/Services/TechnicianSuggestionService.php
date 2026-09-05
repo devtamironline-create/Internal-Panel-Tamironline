@@ -155,6 +155,14 @@ class TechnicianSuggestionService
      */
     public function rejectionFor(Technician $t, Order $order, int $openCount): ?string
     {
+        // تکنسینی که همین سفارش را قبلاً رد کرده، در پخشِ خودکار دوباره روی
+        // همین سفارش پیشنهاد نمی‌شود (جلوگیری از حلقه). ادمین می‌تواند در
+        // صورتِ نیاز دستی همان را برگرداند.
+        $declined = $order->declined_technician_ids;
+        if (is_array($declined) && in_array((int) $t->id, array_map('intval', $declined), true)) {
+            return 'previously_declined';
+        }
+
         $max = (int) ($t->max_order ?? 0);
         if ($max > 0 && $openCount >= $max) {
             return 'capacity';
