@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers\Api\V1\Technician;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Enums\SmsTrigger;
@@ -39,16 +40,28 @@ class OrderActionController extends Controller
 
         $request->merge(['description' => trim((string) $request->input('description', ''))]);
 
+        // علت‌های ردِ سفارش — لیستِ انتخابیِ قابلِ مدیریتِ ادمین. اگر تکنسین
+        // یکی از این گزینه‌ها را انتخاب کرده باشد، متنِ توضیحِ اجباری لازم
+        // نیست؛ وگرنه (کلاینتِ قدیمی که فقط متن می‌فرستد) توضیحِ متنی اجباری
+        // می‌ماند — سازگاریِ عقب‌رو.
+        $declineReasons = Order::cancelReasons();
+        $statusValue = (string) $request->input('status');
+        $isDeclined = $statusValue === OrderStatus::Declined->value;
+        $selectedReason = trim((string) $request->input('cancel_reason', ''));
+        $hasSelectedReason = $isDeclined && $selectedReason !== '' && in_array($selectedReason, $declineReasons, true);
+
         // توضیح فقط برای این وضعیت‌ها الزامی است (Open اختیاری — رسیدِ انتقال).
         // «هماهنگ شده» عمداً توضیح نمی‌خواهد: تکنسین فقط تقویم را می‌بیند و
         // زمان را انتخاب می‌کند (تصمیمِ ۱۴۰۵/۰۵)؛ توضیح اگر بیاید اختیاری است.
-        $needsDesc = in_array((string) $request->input('status'), [
+        $needsDesc = in_array($statusValue, [
             OrderStatus::Suspended->value,
-            OrderStatus::Declined->value, OrderStatus::Transit->value,
-        ], true);
+            OrderStatus::Transit->value,
+        ], true) || ($isDeclined && ! $hasSelectedReason);
 
         $validated = $request->validate([
             'status' => 'required|string',
+            // علتِ ردِ انتخابی — باید یکی از گزینه‌های تعیین‌شدهٔ ادمین باشد.
+            'cancel_reason' => ['nullable', 'string', Rule::in($declineReasons)],
             'description' => $needsDesc ? 'required|string|min:15|max:2000' : 'nullable|string|max:2000',
             'price_customer' => 'nullable|integer|min:0',
             'hire' => 'nullable|integer|min:0',
@@ -78,6 +91,7 @@ class OrderActionController extends Controller
                 'before_or_equal:'.\Modules\CRM\Support\SlaPolicy::maxEstimateDate()->format('Y-m-d'),
             ],
         ], [
+            'cancel_reason.in' => 'علتِ ردِ انتخاب‌شده معتبر نیست؛ یکی از گزینه‌های تعیین‌شده را انتخاب کنید.',
             'description.required' => 'برای ثبت تغییر این وضعیت، توضیحات الزامی است.',
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد.',
             'estimated_ready_at.after_or_equal' => 'تاریخ تخمینی نمی‌تواند در گذشته باشد.',
@@ -152,10 +166,21 @@ class OrderActionController extends Controller
                 OrderStatus::Coordinated => ['description_tech' => $description],
                 OrderStatus::Suspended => ['description_tech1' => $description],
                 OrderStatus::Open => ['description_tech2' => $description],
-                OrderStatus::Declined => ['cancel_reason' => $description],
                 OrderStatus::Transit => ['return_description' => $description],
                 default => [],
             };
+        }
+
+        // «رد شده»: علتِ ردِ انتخاب‌شده از لیستِ ادمین اولویت دارد و در ستونِ
+        // cancel_reason می‌نشیند؛ اگر انتخاب نشده بود، متنِ آزادِ تکنسین
+        // (سازگاریِ عقب‌رو) در همان ستون ذخیره می‌شود.
+        if ($newStatus === OrderStatus::Declined) {
+            $chosen = trim((string) ($validated['cancel_reason'] ?? ''));
+            if ($chosen !== '') {
+                $updates['cancel_reason'] = $chosen;
+            } elseif ($description !== '') {
+                $updates['cancel_reason'] = $description;
+            }
         }
 
         // ─── بلاکِ فاکتور هنگام Completed (هم‌ارز پنل) ───
@@ -172,6 +197,11 @@ class OrderActionController extends Controller
         // بماند (۱۴۰۵/۰۶/۰۳) — نه فقط روی فیلدِ سفارش که با ویرایشِ بعدی
         // بازنویسی می‌شود.
         $note = $description !== '' ? $description : null;
+        // علتِ ردِ انتخابی هم در تاریخچه ثبت شود، حتی وقتی متنِ آزادی نیامده.
+        if ($newStatus === OrderStatus::Declined && ! empty($validated['cancel_reason'])) {
+            $reasonNote = 'علت رد: '.trim((string) $validated['cancel_reason']);
+            $note = $note !== null ? $reasonNote."\n".$note : $reasonNote;
+        }
         $invoiceDesc = trim((string) ($updates['invoice_descripotion'] ?? ''));
         if ($invoiceDesc !== '') {
             $note = ($note !== null ? $note."\n" : '').'توضیحات فاکتور: '.$invoiceDesc;
