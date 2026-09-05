@@ -19,11 +19,19 @@ class TechnicianResource extends JsonResource
     public function toArray(Request $request): array
     {
         $progress = $this->trainingProgress();
+        $rev = $this->reviewRatingStats();
 
         return [
             'id' => (int) $this->id,
             'name' => $this->display_name,
             'mobile' => $this->mobile,
+            // امتیازِ تکنسین (۰..۵) از نظرسنجیِ مشتری — کمتر از ۱۰ نظرِ
+            // تأییدشده → امتیازِ پیش‌فرضِ ۲.۵ (is_default=true).
+            'rating' => [
+                'score' => Technician::effectiveRatingFrom($rev['avg'], $rev['count']),
+                'reviews_count' => $rev['count'],
+                'is_default' => $rev['count'] < Technician::MIN_REVIEWS_FOR_RATING,
+            ],
             'avatar_url' => $this->img_personal ? storage_url($this->img_personal) : null,
             'status' => $this->status,
             // «اعتبار» کیف‌پول — همان ستونِ running sum که پنل ادمین نشان
