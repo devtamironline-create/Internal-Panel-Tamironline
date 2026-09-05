@@ -4,6 +4,7 @@ namespace Modules\CRM\Http\Controllers\Api\V1\Technician;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
+use Modules\CRM\Models\Order;
 use Modules\CRM\Support\AppMessages;
 use Modules\CRM\Support\SlaPolicy;
 use Modules\CRM\Support\UploadLimits;
@@ -29,6 +30,11 @@ class AppConfigController extends Controller
                 // سقفِ انتخابِ «زمانِ مراجعه» — عادی ۵ روز، بازگشتی ۳ روز.
                 'max_visit_days' => SlaPolicy::MAX_VISIT_DAYS,
                 'max_return_visit_days' => SlaPolicy::MAX_RETURN_VISIT_DAYS,
+                // علت‌های «ردِ سفارش» — لیستِ انتخابیِ قابلِ مدیریتِ ادمین
+                // (تنظیماتِ سفارش). اپ این‌ها را به‌صورتِ گزینه‌های انتخابی در
+                // مودالِ ردِ سفارش نشان می‌دهد و مقدارِ انتخاب‌شده را در
+                // فیلدِ `cancel_reason` به endpointِ تغییرِ وضعیت می‌فرستد.
+                'decline_reasons' => Order::cancelReasons(),
                 'messages' => AppMessages::all(),
                 // سقفِ واقعیِ آپلود تا اپ بتواند *پیش از* ارسال فشرده کند.
                 // بدونِ این، عکسِ بزرگ به سرور می‌رود و آن‌جا رد می‌شود —
