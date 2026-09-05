@@ -20,10 +20,10 @@
         @csrf
 
         <div class="mb-2">
-            <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">دلایلِ کنسل / رد سفارش</h2>
+            <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">دلایلِ کنسلِ سفارش (ادمین)</h2>
             <p class="text-xs text-gray-500 mt-0.5 leading-6">
-                این دلایل هنگامِ «کنسل» یا «رد» سفارش به‌صورتِ کشویی نمایش داده می‌شوند —
-                هم به ادمین در پنل و هم به <b>تکنسین در اپ</b> (مودالِ ردِ سفارش).
+                «کنسل» یعنی سفارش مرده به حساب می‌آید. این دلایل هنگامِ کنسلِ سفارش
+                <b>در پنلِ ادمین</b> به‌صورتِ کشویی نمایش داده می‌شوند (جدا از «ردِ» تکنسین در اپ).
                 افزودن/حذف/ویرایش آزاد است؛ حداقل یک مورد لازم است.
             </p>
         </div>
@@ -56,6 +56,52 @@
                                class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
                         <button type="button" @click="moveUp(i)" class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-600 rounded">↑</button>
                         <button type="button" @click="moveDown(i)" class="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-600 rounded">↓</button>
+                        <button type="button" @click="remove(i)" class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">حذف</button>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        {{-- ─── دلایلِ ردِ سفارش توسطِ تکنسین (اپ) ─── --}}
+        <div class="mt-8 mb-2">
+            <h2 class="text-sm font-bold text-gray-900 dark:text-gray-100">دلایلِ ردِ سفارش توسطِ تکنسین (اپ)</h2>
+            <p class="text-xs text-gray-500 mt-0.5 leading-6">
+                این‌ها مفهومی <b>جدا از کنسل</b> هستند: «رد» یعنی تکنسین توانایی/صرفهٔ انجام نداشته.
+                تکنسین در اپ یکی از این گزینه‌ها را انتخاب می‌کند. اگر تیکِ
+                <b>«بازگشت به تخصیصِ خودکار»</b> برای یک علت روشن باشد، ردِ سفارش با آن علت،
+                سفارش را از تکنسین می‌گیرد و برای انتخابِ تکنسینِ جدید (خودکار یا دستیِ ادمین) باز می‌کند.
+            </p>
+        </div>
+
+        <div x-data="{
+                items: @js(array_values($declineReasons)),
+                add() { this.items.push({ label: '', reopen: true }); this.$nextTick(() => { const els = this.$refs.dlist.querySelectorAll('input[type=text]'); els[els.length-1]?.focus(); }); },
+                remove(i) { this.items.splice(i, 1); if (this.items.length === 0) this.items.push({ label: '', reopen: true }); },
+                reset() { this.items = @js(array_values($defaultDeclineReasons)); },
+             }"
+             class="border border-gray-200 dark:border-gray-600 rounded-lg p-3 bg-gray-50/40 dark:bg-gray-800/40">
+
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-gray-500" x-text="items.length + ' علت'"></span>
+                <div class="flex gap-2">
+                    <button type="button" @click="reset()"
+                            class="text-xs px-2.5 py-1 bg-gray-100 dark:bg-gray-600 rounded hover:bg-gray-200">بازگردانی به پیش‌فرض</button>
+                    <button type="button" @click="add()"
+                            class="text-xs px-2.5 py-1 bg-brand-600 text-white rounded hover:bg-brand-700">+ افزودن علت</button>
+                </div>
+            </div>
+
+            <div class="space-y-2" x-ref="dlist">
+                <template x-for="(item, i) in items" :key="i">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-400 w-6 text-center" x-text="i+1"></span>
+                        <input type="text" :name="`decline_reasons[${i}][label]`" x-model="item.label" maxlength="200"
+                               class="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+                        <label class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap cursor-pointer select-none">
+                            <input type="checkbox" :name="`decline_reasons[${i}][reopen]`" value="1" x-model="item.reopen"
+                                   class="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500">
+                            بازگشت به تخصیصِ خودکار
+                        </label>
                         <button type="button" @click="remove(i)" class="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200">حذف</button>
                     </div>
                 </template>
