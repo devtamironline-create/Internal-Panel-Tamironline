@@ -53,7 +53,7 @@
                    class="text-[11px] text-brand-600 hover:underline whitespace-nowrap">ویرایش مقادیر پیش‌فرض در تنظیمات ↗</a>
             </div>
             <p class="text-[11px] text-gray-500 mb-3">به <b>ریال</b> — جمع روزانه، ۳۰ و ۳۱ روزه و جمع کل خودکار از این سه عدد محاسبه می‌شوند. پیش‌فرض از تنظیماتِ مجموعه پر می‌شود (اگر خالی بگذارید همان تنظیمات به‌کار می‌رود).</p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">دستمزد روزانه (ریال)</label>
                     <input type="number" name="v2_daily_wage" min="0" dir="ltr"
@@ -72,7 +72,14 @@
                            value="{{ old('v2_monthly_benefits', $party1['contract_v2_monthly_benefits'] ?? '') }}"
                            class="{{ $box ?? 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm' }}">
                 </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">حق تأهل ماهانه (ریال)</label>
+                    <input type="number" name="v2_marriage_allowance" min="0" dir="ltr"
+                           value="{{ old('v2_marriage_allowance', $party1['contract_v2_marriage_allowance'] ?? '') }}"
+                           class="{{ $box ?? 'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm' }}">
+                </div>
             </div>
+            <p class="text-[11px] text-gray-400 mt-2">حق اولاد یک فرزند = ۳× دستمزد روزانه (خودکار، در صورت احراز شرایط قانونی).</p>
         </div>
 
         {{-- انتخاب کارمندان --}}

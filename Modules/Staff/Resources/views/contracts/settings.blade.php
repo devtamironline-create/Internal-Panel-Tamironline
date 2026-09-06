@@ -34,7 +34,7 @@
 
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
             <p class="text-[11px] text-gray-500 mb-3">همهٔ مبالغ به <b>ریال</b>.</p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">دستمزد روزانه (ریال)</label>
                     <input type="number" name="contract_v2_daily_wage" min="0" dir="ltr" required
@@ -53,7 +53,17 @@
                            value="{{ old('contract_v2_monthly_benefits', $settings['contract_v2_monthly_benefits'] ?? '') }}"
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
                 </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">حق تأهل ماهانه (ریال)</label>
+                    <input type="number" name="contract_v2_marriage_allowance" min="0" dir="ltr" required
+                           value="{{ old('contract_v2_marriage_allowance', $settings['contract_v2_marriage_allowance'] ?? '') }}"
+                           class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded text-sm">
+                </div>
             </div>
+            <p class="text-[11px] text-gray-400 mt-2">
+                <b>حق اولاد یک فرزند</b> جداگانه تنظیم نمی‌شود؛ طبق قانون کار برابرِ <b>۳ برابرِ دستمزد روزانه</b>
+                محاسبه می‌شود و «در صورت احراز شرایط قانونی» به کارمند تعلق می‌گیرد.
+            </p>
             <div class="mt-4">
                 <button class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">ذخیرهٔ تنظیمات</button>
             </div>

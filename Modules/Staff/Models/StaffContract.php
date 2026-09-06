@@ -24,7 +24,7 @@ class StaffContract extends Model
         'party_address', 'party_phone',
         'contract_date', 'start_date', 'end_date', 'service_description',
         'monthly_wage', 'holiday_hourly_rate', 'promissory_amount', 'promissory_serial',
-        'v2_daily_wage', 'v2_daily_seniority', 'v2_monthly_benefits',
+        'v2_daily_wage', 'v2_daily_seniority', 'v2_monthly_benefits', 'v2_marriage_allowance',
         'non_solicit_months', 'payment_grace_days', 'confidentiality_years',
         'status', 'reject_reason',
         'doc_national_card_front', 'doc_national_card_back',
@@ -51,6 +51,7 @@ class StaffContract extends Model
         'v2_daily_wage' => 'integer',
         'v2_daily_seniority' => 'integer',
         'v2_monthly_benefits' => 'integer',
+        'v2_marriage_allowance' => 'integer',
         'non_solicit_months' => 'integer',
         'payment_grace_days' => 'integer',
         'confidentiality_years' => 'integer',
@@ -82,15 +83,24 @@ class StaffContract extends Model
             ? $col
             : ((int) (\Modules\Staff\Support\ContractSettings::int($key) ?? $fallback));
 
+        $dailyWage = $get($this->v2_daily_wage, 'contract_v2_daily_wage', 5541850);
+
         return [
-            'daily_wage' => $get($this->v2_daily_wage, 'contract_v2_daily_wage', 5541850),
+            'daily_wage' => $dailyWage,
             'daily_seniority' => $get($this->v2_daily_seniority, 'contract_v2_daily_seniority', 166667),
             'monthly_benefits' => $get($this->v2_monthly_benefits, 'contract_v2_monthly_benefits', 52000000),
+            // حق تأهلِ ماهانه — مبلغِ قابلِ تنظیمِ مجموعه (پیش‌فرض ۵٬۰۰۰٬۰۰۰).
+            'marriage_allowance' => $get($this->v2_marriage_allowance, 'contract_v2_marriage_allowance', 5000000),
+            // حق اولادِ یک فرزند = ۳ برابرِ دستمزدِ روزانه (طبق قانونِ کار،
+            // معادلِ ۳ روزِ حداقلِ دستمزد). مشتق است، تنظیمِ جدا ندارد.
+            'child_allowance' => $dailyWage * 3,
         ];
     }
 
     /**
-     * جدولِ کاملِ حقوقِ نسخه ۲ — سه عددِ پایه + چهار ردیفِ محاسبه‌شده.
+     * جدولِ کاملِ حقوقِ نسخه ۲ (۱۲ ردیف، مطابقِ متنِ رسمیِ قرارداد):
+     * دستمزد/سنوات + جمع‌های ۳۰ و ۳۱ روزه + مزایا + حق تأهل + جمع کل +
+     * حق اولاد + جمع ناخالص با حق اولاد.
      *
      * @return array<int, array{no:int, label:string, amount:int, bold:bool}>
      */
@@ -100,15 +110,27 @@ class StaffContract extends Model
         $dailyTotal = $b['daily_wage'] + $b['daily_seniority'];
         $m30 = $dailyTotal * 30;
         $m31 = $dailyTotal * 31;
+        $benefits = $b['monthly_benefits'];
+        $marriage = $b['marriage_allowance'];
+        $child = $b['child_allowance'];
+
+        // جمعِ کلِ ماهانه = دستمزدِ ماهانه + مزایای مشمول + حق تأهل.
+        $gross30 = $m30 + $benefits + $marriage;
+        $gross31 = $m31 + $benefits + $marriage;
 
         return [
             ['no' => 1, 'label' => 'دستمزد روزانه مبنای قرارداد و بیمه', 'amount' => $b['daily_wage'], 'bold' => false],
             ['no' => 2, 'label' => 'پایه سنوات روزانه', 'amount' => $b['daily_seniority'], 'bold' => false],
             ['no' => 3, 'label' => 'جمع دستمزد روزانه با پایه سنوات', 'amount' => $dailyTotal, 'bold' => false],
             ['no' => 4, 'label' => 'جمع دستمزد ۳۰ روزه با پایه سنوات', 'amount' => $m30, 'bold' => false],
-            ['no' => 5, 'label' => 'مزایای ماهانه مشمول شامل بن، حق مسکن و مزایای رفاهی قانونی', 'amount' => $b['monthly_benefits'], 'bold' => false],
-            ['no' => 6, 'label' => 'جمع کل حقوق و مزایای ماهانه ۳۰ روزه', 'amount' => $m30 + $b['monthly_benefits'], 'bold' => true],
-            ['no' => 7, 'label' => 'جمع کل حقوق و مزایای ماهانه در ماه ۳۱ روزه', 'amount' => $m31 + $b['monthly_benefits'], 'bold' => true],
+            ['no' => 5, 'label' => 'جمع دستمزد ۳۱ روزه با پایه سنوات', 'amount' => $m31, 'bold' => false],
+            ['no' => 6, 'label' => 'مزایای ماهانه مشمول شامل بن، حق مسکن و مزایای رفاهی قانونی', 'amount' => $benefits, 'bold' => false],
+            ['no' => 7, 'label' => 'حق تأهل ماهانه', 'amount' => $marriage, 'bold' => false],
+            ['no' => 8, 'label' => 'جمع کل حقوق و مزایای ماهانه ۳۰ روزه', 'amount' => $gross30, 'bold' => true],
+            ['no' => 9, 'label' => 'حق اولاد یک فرزند (در صورت احراز شرایط قانونی)', 'amount' => $child, 'bold' => false],
+            ['no' => 10, 'label' => 'جمع ناخالص ماهانه ۳۰ روزه با حق اولاد', 'amount' => $gross30 + $child, 'bold' => false],
+            ['no' => 11, 'label' => 'جمع کل حقوق و مزایای ماهانه ۳۱ روزه', 'amount' => $gross31, 'bold' => true],
+            ['no' => 12, 'label' => 'جمع ناخالص ماهانه ۳۱ روزه با حق اولاد', 'amount' => $gross31 + $child, 'bold' => false],
         ];
     }
 

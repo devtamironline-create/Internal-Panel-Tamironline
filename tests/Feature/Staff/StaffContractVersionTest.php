@@ -79,23 +79,37 @@ class StaffContractVersionTest extends TestCase
     {
         $c = $this->contract(2);
         // بدونِ snapshot → پیش‌فرضِ مجموعه (۱۴۰۵).
-        $rows = $c->v2SalaryTable();
-        $this->assertCount(7, $rows);
-        $this->assertSame(5541850, $rows[0]['amount']);          // دستمزد روزانه
-        $this->assertSame(166667, $rows[1]['amount']);           // پایه سنوات
-        $this->assertSame(5541850 + 166667, $rows[2]['amount']); // جمع روزانه
-        $this->assertSame((5541850 + 166667) * 30, $rows[3]['amount']); // ۳۰ روزه
-        $this->assertSame(52000000, $rows[4]['amount']);         // مزایای ماهانه
-        $this->assertSame((5541850 + 166667) * 30 + 52000000, $rows[5]['amount']); // جمع کل ۳۰
-        $this->assertSame((5541850 + 166667) * 31 + 52000000, $rows[6]['amount']); // جمع کل ۳۱
+        $rows = collect($c->v2SalaryTable())->keyBy('no');
+        $this->assertCount(12, $rows);
+        $daily = 5541850;
+        $sen = 166667;
+        $total = $daily + $sen;
+        $benefits = 52000000;
+        $marriage = 5000000;
+        $child = $daily * 3;
+        $this->assertSame($daily, $rows[1]['amount']);           // دستمزد روزانه
+        $this->assertSame($sen, $rows[2]['amount']);             // پایه سنوات
+        $this->assertSame($total, $rows[3]['amount']);           // جمع روزانه
+        $this->assertSame($total * 30, $rows[4]['amount']);      // ۳۰ روزه
+        $this->assertSame($total * 31, $rows[5]['amount']);      // ۳۱ روزه
+        $this->assertSame($benefits, $rows[6]['amount']);        // مزایای ماهانه
+        $this->assertSame($marriage, $rows[7]['amount']);        // حق تأهل
+        $this->assertSame($total * 30 + $benefits + $marriage, $rows[8]['amount']);  // جمع کل ۳۰
+        $this->assertSame($child, $rows[9]['amount']);           // حق اولاد = ۳× دستمزد
+        $this->assertSame($total * 30 + $benefits + $marriage + $child, $rows[10]['amount']); // ناخالص ۳۰ با اولاد
+        $this->assertSame($total * 31 + $benefits + $marriage, $rows[11]['amount']); // جمع کل ۳۱
+        $this->assertSame($total * 31 + $benefits + $marriage + $child, $rows[12]['amount']); // ناخالص ۳۱ با اولاد
 
         // با snapshotِ اعدادِ سفارشی، جدول از همان‌ها محاسبه می‌شود.
         $c->v2_daily_wage = 6000000;
         $c->v2_daily_seniority = 200000;
         $c->v2_monthly_benefits = 60000000;
-        $rows2 = $c->v2SalaryTable();
-        $this->assertSame(6200000, $rows2[2]['amount']);
-        $this->assertSame(6200000 * 30 + 60000000, $rows2[5]['amount']);
+        $c->v2_marriage_allowance = 7000000;
+        $rows2 = collect($c->v2SalaryTable())->keyBy('no');
+        $this->assertSame(6200000, $rows2[3]['amount']);                       // جمع روزانه
+        $this->assertSame(7000000, $rows2[7]['amount']);                       // حق تأهلِ سفارشی
+        $this->assertSame(6000000 * 3, $rows2[9]['amount']);                   // حق اولاد = ۳× دستمزدِ سفارشی
+        $this->assertSame(6200000 * 30 + 60000000 + 7000000, $rows2[8]['amount']); // جمع کل ۳۰
 
         // در متنِ رندرشدهٔ v2 هم عددِ سفارشی می‌آید (ارقامِ فارسی).
         $html = view('staff::contracts._document_v2', [
