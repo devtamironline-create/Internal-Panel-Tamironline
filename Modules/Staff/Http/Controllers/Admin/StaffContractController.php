@@ -3,6 +3,7 @@
 namespace Modules\Staff\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Setting;
 use App\Models\User;
 use App\Support\ActivityLog\ActivityLog;
 use App\Support\JalaliDate;
@@ -54,6 +55,49 @@ class StaffContractController extends Controller
             'staff' => User::query()->where('is_staff', true)->orderBy('first_name')->get(),
             'party1' => ContractSettings::all(),
         ]);
+    }
+
+    /**
+     * تنظیماتِ «اعدادِ جدولِ حقوقِ قرارداد (نسخه ۲)» — دستمزد روزانه، پایه
+     * سنوات روزانه و مزایای ماهانه. این‌جا مقدارِ پیش‌فرضِ مجموعه ذخیره می‌شود
+     * که هم فرمِ صدور با آن پُر می‌شود و هم (اگر موقعِ صدور خالی بماند) در
+     * جدولِ قرارداد به‌کار می‌رود.
+     */
+    public function settings()
+    {
+        return view('staff::contracts.settings', [
+            'settings' => ContractSettings::all(),
+            // پیش‌نمایشِ جدولِ محاسبه‌شده با مقادیرِ فعلیِ تنظیمات (ستون‌ها null →
+            // از تنظیمات خوانده می‌شود).
+            'preview' => (new StaffContract)->v2SalaryTable(),
+        ]);
+    }
+
+    /** ذخیرهٔ اعدادِ جدولِ حقوقِ قرارداد (نسخه ۲) در تنظیماتِ مجموعه. */
+    public function updateSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'contract_v2_daily_wage' => 'required|integer|min:0',
+            'contract_v2_daily_seniority' => 'required|integer|min:0',
+            'contract_v2_monthly_benefits' => 'required|integer|min:0',
+        ], [], [
+            'contract_v2_daily_wage' => 'دستمزد روزانه',
+            'contract_v2_daily_seniority' => 'پایه سنوات روزانه',
+            'contract_v2_monthly_benefits' => 'مزایای ماهانه مشمول',
+        ]);
+
+        foreach ($validated as $key => $value) {
+            Setting::set($key, (string) $value);
+        }
+
+        ActivityLog::record('updated', 'به‌روزرسانی اعدادِ جدولِ حقوقِ قرارداد (نسخه ۲)', [
+            'entity' => StaffContract::class,
+            'entity_label' => 'تنظیمات قرارداد',
+            'entity_title' => 'اعداد جدول حقوق نسخه ۲',
+        ]);
+
+        return redirect()->route('admin.staff-contracts.settings')
+            ->with('success', 'اعدادِ جدولِ حقوقِ قرارداد ذخیره شد و از این پس در قراردادهای جدید به‌کار می‌رود.');
     }
 
     /** صدور یک قرارداد به‌ازای هر کارمندِ تیک‌خورده. */

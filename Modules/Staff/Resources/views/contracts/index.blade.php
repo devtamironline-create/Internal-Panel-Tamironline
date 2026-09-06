@@ -11,7 +11,10 @@
             <h1 class="text-xl font-bold text-gray-800 dark:text-white">📄 قرارداد کارمندان</h1>
             <p class="text-sm text-gray-500 mt-1">صدور قرارداد برای پرسنل، بررسی مدارک و امضای الکترونیک، و تحویل نسخهٔ مهر و امضاشده.</p>
         </div>
-        <a href="{{ route('admin.staff-contracts.create') }}" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">➕ صدور قرارداد جدید</a>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('admin.staff-contracts.settings') }}" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-bold whitespace-nowrap">⚙️ تنظیمات جدول حقوق</a>
+            <a href="{{ route('admin.staff-contracts.create') }}" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold whitespace-nowrap">➕ صدور قرارداد جدید</a>
+        </div>
     </div>
 
     @if(session('success'))<div class="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg p-3 text-sm">{{ session('success') }}</div>@endif

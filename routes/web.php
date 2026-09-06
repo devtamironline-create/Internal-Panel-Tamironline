@@ -149,6 +149,10 @@ Route::middleware(['auth', 'verified.mobile'])->prefix('admin')->name('admin.')-
     // مدیریت و تأیید: دسترسی manage-staff-contracts
     Route::middleware('can:manage-staff-contracts')->prefix('staff-contracts')->name('staff-contracts.')->group(function () {
         Route::get('/', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'index'])->name('index');
+        // تنظیماتِ اعدادِ جدولِ حقوقِ قرارداد (نسخه ۲) — پیش از /{staffContract}
+        // تا «settings» به‌عنوان شناسهٔ قرارداد گرفته نشود.
+        Route::get('/settings', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'settings'])->name('settings');
+        Route::put('/settings', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'updateSettings'])->name('settings.update');
         Route::get('/create', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'create'])->name('create');
         Route::post('/', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'store'])->name('store');
         Route::get('/{staffContract}', [\Modules\Staff\Http\Controllers\Admin\StaffContractController::class, 'show'])->name('show');
