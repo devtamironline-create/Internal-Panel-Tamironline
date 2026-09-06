@@ -80,10 +80,12 @@ class StaffContractController extends Controller
             'contract_v2_daily_wage' => 'required|integer|min:0',
             'contract_v2_daily_seniority' => 'required|integer|min:0',
             'contract_v2_monthly_benefits' => 'required|integer|min:0',
+            'contract_v2_marriage_allowance' => 'required|integer|min:0',
         ], [], [
             'contract_v2_daily_wage' => 'دستمزد روزانه',
             'contract_v2_daily_seniority' => 'پایه سنوات روزانه',
             'contract_v2_monthly_benefits' => 'مزایای ماهانه مشمول',
+            'contract_v2_marriage_allowance' => 'حق تأهل ماهانه',
         ]);
 
         foreach ($validated as $key => $value) {
@@ -123,6 +125,7 @@ class StaffContractController extends Controller
             'v2_daily_wage' => 'nullable|integer|min:0',
             'v2_daily_seniority' => 'nullable|integer|min:0',
             'v2_monthly_benefits' => 'nullable|integer|min:0',
+            'v2_marriage_allowance' => 'nullable|integer|min:0',
             // مشخصات اختصاصیِ هر کارمند (اختیاری — در نبودش از پروفایل پر می‌شود)
             'party' => 'nullable|array',
         ], [], [
@@ -175,6 +178,7 @@ class StaffContractController extends Controller
                     'v2_daily_wage' => $validated['v2_daily_wage'] ?? null,
                     'v2_daily_seniority' => $validated['v2_daily_seniority'] ?? null,
                     'v2_monthly_benefits' => $validated['v2_monthly_benefits'] ?? null,
+                    'v2_marriage_allowance' => $validated['v2_marriage_allowance'] ?? null,
                     // ثابت برای کلِ مجموعه — در ستون snapshot می‌شود تا تغییرِ
                     // بعدیِ تنظیمات، قراردادِ امضاشده را عوض نکند.
                     'holiday_hourly_rate' => ContractSettings::int('contract_holiday_hourly_rate'),

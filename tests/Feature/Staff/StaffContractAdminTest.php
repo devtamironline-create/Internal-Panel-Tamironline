@@ -72,6 +72,10 @@ class StaffContractAdminTest extends TestCase
             '--path' => 'database/migrations/2026_08_27_000002_add_v2_salary_to_staff_contracts.php',
             '--force' => true,
         ]);
+        Artisan::call('migrate', [
+            '--path' => 'database/migrations/2026_09_06_120000_add_v2_marriage_allowance_to_staff_contracts.php',
+            '--force' => true,
+        ]);
 
         Storage::fake('public');
 

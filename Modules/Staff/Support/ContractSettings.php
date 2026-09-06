@@ -42,6 +42,8 @@ final class ContractSettings
         'contract_v2_daily_wage' => '5541850',       // دستمزد روزانه مبنای قرارداد و بیمه
         'contract_v2_daily_seniority' => '166667',   // پایه سنوات روزانه
         'contract_v2_monthly_benefits' => '52000000', // مزایای ماهانه مشمول (بن، مسکن، رفاهی)
+        'contract_v2_marriage_allowance' => '5000000', // حق تأهل ماهانه
+        // توجه: حق اولادِ یک فرزند مشتق است (۳× دستمزد روزانه) و تنظیمِ جدا ندارد.
     ];
 
     public static function get(string $key): string
