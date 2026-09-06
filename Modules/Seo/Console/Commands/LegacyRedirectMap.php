@@ -7,6 +7,7 @@ use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceBrandPage;
 use Modules\Seo\Models\SeoNotFound;
+use Modules\Seo\Models\SeoRedirect;
 use Modules\Site\Models\Article;
 
 /**
@@ -24,7 +25,7 @@ use Modules\Site\Models\Article;
  */
 class LegacyRedirectMap extends Command
 {
-    protected $signature = 'seo:legacy-redirect-map {--out= : مسیرِ CSV (پیش‌فرض: storage/app/legacy-redirects.csv)} {--all : علاوه بر لاگِ ۴۰۴، همهٔ اسلاگ‌های *-repairِ قابلِ‌تولید را هم بده}';
+    protected $signature = 'seo:legacy-redirect-map {--out= : مسیرِ CSV (پیش‌فرض: storage/app/legacy-redirects.csv)} {--all : علاوه بر لاگِ ۴۰۴، همهٔ اسلاگ‌های *-repairِ قابلِ‌تولید را هم بده} {--write : ردیف‌های status=published را به‌شکلِ idempotent در جدولِ seo_redirects ثبت/به‌روزرسانی کن}';
 
     protected $description = 'دادهٔ ریدایرکتِ قدیمی + وضعیتِ کامبوها + لینک‌های CMS برای تیمِ فرانت (فقط‌خواندنی)';
 
@@ -129,6 +130,29 @@ class LegacyRedirectMap extends Command
             $this->line('… '.(count($rowsOut) - 40).' ردیفِ دیگر در CSV.');
         }
 
+        // ── بخش ۲: ثبت/گزارشِ ریدایرکت‌های تأییدشده در seo_redirects (فقط published) ──
+        $published = array_values(array_filter($rowsOut, fn ($r) => $r['status'] === 'published'));
+        if ($this->option('write')) {
+            $this->writeRedirects($published);
+        }
+        $this->newLine();
+        $this->info('── جدولِ ریدایرکت‌های تأییدشده در seo_redirects (بخش ۲ نامهٔ فرانت) ──');
+        $seoRows = [];
+        foreach ($published as $r) {
+            $rec = SeoRedirect::query()->where('source', $r['source'])->first();
+            $seoRows[] = [
+                $r['source'],
+                $r['destination'],
+                $rec->match_type ?? 'exact',
+                (string) ($rec->status_code ?? 301),
+                $rec ? ($rec->is_active ? 'منتشرشده (is_active=1)' : 'غیرفعال (is_active=0)') : 'در seo_redirects نیست',
+            ];
+        }
+        $this->table(['source', 'destination', 'match_type', 'status_code', 'وضعیتِ انتشار'], $seoRows);
+        if (! $this->option('write')) {
+            $this->line('برای ثبتِ خودکارِ این ردیف‌ها در جدول: همین دستور را با --write اجرا کنید (idempotent، بدونِ رکوردِ تکراری).');
+        }
+
         // ── بخش ۱: دو کامبویِ خاص ──
         $this->newLine();
         $this->info('── وضعیتِ دو کامبویِ خاص (بخش ۱ نامهٔ فرانت) ──');
@@ -145,6 +169,37 @@ class LegacyRedirectMap extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * ثبتِ idempotentِ ریدایرکت‌های تأییدشده در seo_redirects.
+     * کلیدِ یکتا: source (updateOrCreate) → هیچ رکوردِ تکراری ساخته نمی‌شود؛
+     * اجرای دوباره فقط mقصد/کد را هم‌سو می‌کند و hits/last_hit_at دست‌نخورده می‌ماند.
+     */
+    private function writeRedirects(array $published): void
+    {
+        $created = 0;
+        $updated = 0;
+        foreach ($published as $r) {
+            if ($r['destination'] === '—' || $r['destination'] === $r['source']) {
+                continue; // مقصدِ نامعتبر یا حلقه — رد.
+            }
+            $existing = SeoRedirect::query()->where('source', $r['source'])->first();
+            $attrs = [
+                'target' => $r['destination'],
+                'status_code' => 301,
+                'match_type' => 'exact',
+                'is_active' => true,
+            ];
+            if ($existing) {
+                $existing->fill($attrs)->save(); // hits/last_hit_at لمس نمی‌شود.
+                $updated++;
+            } else {
+                SeoRedirect::query()->create(array_merge(['source' => $r['source']], $attrs, ['hits' => 0]));
+                $created++;
+            }
+        }
+        $this->info("seo_redirects به‌روزرسانی شد: {$created} رکوردِ جدید، {$updated} رکوردِ موجودِ هم‌سوشده (بدونِ تکرار).");
     }
 
     /** تفکیکِ {brand}-{device} یا {device}-{brand} از روی اسلاگ‌های واقعی (بلندترین اول). */
