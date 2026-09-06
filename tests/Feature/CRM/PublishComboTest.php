@@ -52,8 +52,33 @@ class PublishComboTest extends TestCase
         $this->assertTrue((bool) $page->is_active);
         $this->assertStringContainsString('جاروبرقی', $page->title);
         $this->assertStringContainsString('فیلیپس', $page->title);
-        $this->assertNotEmpty($page->meta_title);
         $this->assertNotEmpty($page->description);
+        // متایِ اختصاصی ست نمی‌شود تا نامِ سایت («تعمیرآنلاین») فقط یک‌بار از فرانت بیاید.
+        $this->assertNull($page->meta_title);
+        $this->assertNull($page->meta_description);
+    }
+
+    public function test_refresh_seo_clears_site_suffixed_meta(): void
+    {
+        $d = Device::create(['name' => 'جاروبرقی', 'slug' => 'vacuum-cleaner']);
+        $b = Brand::create(['name' => 'فیلیپس', 'slug' => 'philips']);
+        // شبیه‌سازیِ صفحهٔ آلوده به پسوندِ تکراریِ نامِ سایت (باگِ Title).
+        DeviceBrandPage::create([
+            'device_id' => $d->id, 'brand_id' => $b->id, 'is_active' => true,
+            'title' => 'تعمیر جاروبرقی فیلیپس',
+            'meta_title' => 'تعمیر جاروبرقی فیلیپس | تعمیرآنلاین',
+            'meta_description' => 'تعمیر جاروبرقی فیلیپس | تعمیرآنلاین',
+        ]);
+
+        Artisan::call('crm:publish-combo', [
+            'device' => 'vacuum-cleaner', 'brand' => 'philips', '--refresh-seo' => true,
+        ]);
+
+        $page = DeviceBrandPage::where('device_id', $d->id)->where('brand_id', $b->id)->first();
+        $this->assertTrue((bool) $page->is_active);
+        $this->assertSame('تعمیر جاروبرقی فیلیپس', $page->title); // محتوای صفحه حفظ شد
+        $this->assertNull($page->meta_title);                    // پسوندِ تکراری پاک شد
+        $this->assertNull($page->meta_description);
     }
 
     public function test_does_not_overwrite_existing_content(): void
