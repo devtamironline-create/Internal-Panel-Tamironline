@@ -9,6 +9,7 @@ use Modules\Seo\Console\Commands\CleanupImportedMeta;
 use Modules\Seo\Console\Commands\CrawlCommand;
 use Modules\Seo\Console\Commands\ExportStaticPages;
 use Modules\Seo\Console\Commands\ExportUrls;
+use Modules\Seo\Console\Commands\LegacyRedirectMap;
 use Modules\Seo\Console\Commands\PingCommand;
 use Modules\Seo\Console\Commands\RefreshMetaAudit;
 use Modules\Seo\Console\Commands\SitemapExport;
@@ -44,7 +45,7 @@ class SeoServiceProvider extends ServiceProvider
         Livewire::component('seo.meta-panel', SeoMetaPanel::class);
 
         if ($this->app->runningInConsole()) {
-            $this->commands([CrawlCommand::class, PingCommand::class, ExportUrls::class, ExportStaticPages::class, SitemapExport::class, SitemapFlush::class, CleanupImportedMeta::class, RefreshMetaAudit::class]);
+            $this->commands([CrawlCommand::class, PingCommand::class, ExportUrls::class, ExportStaticPages::class, SitemapExport::class, SitemapFlush::class, LegacyRedirectMap::class, CleanupImportedMeta::class, RefreshMetaAudit::class]);
         }
 
         // کرال زمان‌بندی‌شدهٔ روزانه (در صورت تنظیم‌بودن scheduler سیستم).
