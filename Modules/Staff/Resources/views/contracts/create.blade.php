@@ -47,8 +47,12 @@
              تنظیماتِ مجموعه؛ بقیهٔ جدول خودکار محاسبه می‌شود. --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4"
              x-show="version === '2'" x-cloak>
-            <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100 mb-1">اعداد جدول حقوق (نسخه ۲)</h2>
-            <p class="text-[11px] text-gray-500 mb-3">به <b>ریال</b> — جمع روزانه، ۳۰ و ۳۱ روزه و جمع کل خودکار از این سه عدد محاسبه می‌شوند. پیش‌فرض، مقادیر قانونی سال ۱۴۰۵ است.</p>
+            <div class="flex items-center justify-between mb-1">
+                <h2 class="font-bold text-sm text-gray-800 dark:text-gray-100">اعداد جدول حقوق (نسخه ۲)</h2>
+                <a href="{{ route('admin.staff-contracts.settings') }}" target="_blank"
+                   class="text-[11px] text-brand-600 hover:underline whitespace-nowrap">ویرایش مقادیر پیش‌فرض در تنظیمات ↗</a>
+            </div>
+            <p class="text-[11px] text-gray-500 mb-3">به <b>ریال</b> — جمع روزانه، ۳۰ و ۳۱ روزه و جمع کل خودکار از این سه عدد محاسبه می‌شوند. پیش‌فرض از تنظیماتِ مجموعه پر می‌شود (اگر خالی بگذارید همان تنظیمات به‌کار می‌رود).</p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">دستمزد روزانه (ریال)</label>
