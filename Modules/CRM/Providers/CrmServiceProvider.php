@@ -31,6 +31,7 @@ use Modules\CRM\Console\Commands\ImportTechnicianFromWp;
 use Modules\CRM\Console\Commands\ImportTermContentFromWp;
 use Modules\CRM\Console\Commands\ImportWalletArchiveFromWp;
 use Modules\CRM\Console\Commands\InspectOrder;
+use Modules\CRM\Console\Commands\PublishCombo;
 use Modules\CRM\Console\Commands\PullNewOrdersFromWp;
 use Modules\CRM\Console\Commands\PullTechPercentFromWp;
 use Modules\CRM\Console\Commands\RebuildTechWallet;
@@ -151,6 +152,7 @@ class CrmServiceProvider extends ServiceProvider
                 ImportTermContentFromWp::class,
                 RepairContentImages::class,
                 CombosAudit::class,
+                PublishCombo::class,
                 ConsolidateDeviceSlugs::class,
                 ImportServicePrices::class,
                 ImportDeviceThumbnailsFromWp::class,
