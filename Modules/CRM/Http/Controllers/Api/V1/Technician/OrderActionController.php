@@ -26,6 +26,11 @@ use Modules\CRM\Support\TechImageStorage;
  */
 class OrderActionController extends Controller
 {
+    /** کف و سقفِ مبلغِ کلِ فاکتور برای بستنِ سفارش توسطِ تکنسین (تومان). */
+    private const MIN_INVOICE_CLOSE_TOMAN = 200_000;
+
+    private const MAX_INVOICE_CLOSE_TOMAN = 50_000_000;
+
     public function __construct(
         private OrderSmsNotifier $smsNotifier,
         private InvoiceService $invoiceService,
@@ -49,27 +54,27 @@ class OrderActionController extends Controller
             'cancel_reason' => trim((string) $request->input('decline_reason', $request->input('cancel_reason', ''))),
         ]);
 
-        // اگر تکنسین یکی از گزینه‌های ادمین را انتخاب کرده باشد، متنِ توضیحِ
-        // اجباری لازم نیست؛ وگرنه (کلاینتِ قدیمی که فقط متن می‌فرستد) توضیحِ
-        // متنی اجباری می‌ماند — سازگاریِ عقب‌رو.
+        // ردِ سفارش «فقط انتخابی» است: تکنسین باید یکی از علت‌های تعیین‌شدهٔ
+        // ادمین را برگزیند و اجازهٔ نوشتنِ متنِ دستی برای رد ندارد. پس هنگام
+        // رد، `cancel_reason` اجباری و از لیست است و توضیحِ متنی لازم نیست.
         $declineReasonLabels = Order::declineReasonLabels();
         $statusValue = (string) $request->input('status');
         $isDeclined = $statusValue === OrderStatus::Declined->value;
         $selectedReason = trim((string) $request->input('cancel_reason', ''));
-        $hasSelectedReason = $isDeclined && $selectedReason !== '' && in_array($selectedReason, $declineReasonLabels, true);
 
         // توضیح فقط برای این وضعیت‌ها الزامی است (Open اختیاری — رسیدِ انتقال).
         // «هماهنگ شده» عمداً توضیح نمی‌خواهد: تکنسین فقط تقویم را می‌بیند و
         // زمان را انتخاب می‌کند (تصمیمِ ۱۴۰۵/۰۵)؛ توضیح اگر بیاید اختیاری است.
+        // رد دیگر توضیحِ متنی نمی‌خواهد (فقط انتخابِ علت).
         $needsDesc = in_array($statusValue, [
             OrderStatus::Suspended->value,
             OrderStatus::Transit->value,
-        ], true) || ($isDeclined && ! $hasSelectedReason);
+        ], true);
 
         $validated = $request->validate([
             'status' => 'required|string',
-            // علتِ ردِ انتخابی — باید یکی از گزینه‌های تعیین‌شدهٔ ادمین باشد.
-            'cancel_reason' => ['nullable', 'string', Rule::in($declineReasonLabels)],
+            // علتِ ردِ انتخابی — هنگام رد اجباری و باید یکی از گزینه‌های ادمین باشد.
+            'cancel_reason' => [$isDeclined ? 'required' : 'nullable', 'string', Rule::in($declineReasonLabels)],
             'description' => $needsDesc ? 'required|string|min:15|max:2000' : 'nullable|string|max:2000',
             'price_customer' => 'nullable|integer|min:0',
             'hire' => 'nullable|integer|min:0',
@@ -99,6 +104,7 @@ class OrderActionController extends Controller
                 'before_or_equal:'.\Modules\CRM\Support\SlaPolicy::maxEstimateDate()->format('Y-m-d'),
             ],
         ], [
+            'cancel_reason.required' => 'برای ردِ سفارش باید یکی از علت‌های تعیین‌شده را انتخاب کنید.',
             'cancel_reason.in' => 'علتِ ردِ انتخاب‌شده معتبر نیست؛ یکی از گزینه‌های تعیین‌شده را انتخاب کنید.',
             'description.required' => 'برای ثبت تغییر این وضعیت، توضیحات الزامی است.',
             'description.min' => 'توضیحات باید حداقل ۱۵ کاراکتر باشد.',
@@ -666,6 +672,18 @@ class OrderActionController extends Controller
         if (! $isDraft && ! $isReturned && $priceCustomer < $costPrice) {
             throw ValidationException::withMessages([
                 'price_customer' => 'جمع کل مبلغ فاکتور نمی‌تواند کمتر از جمع هزینهٔ قطعات باشد.',
+            ]);
+        }
+        // کف و سقفِ مبلغِ فاکتور برای بستن — فقط سفارشِ عادیِ نهایی (برگشتیِ
+        // رایگان و پیش‌نویس مشمول نیستند).
+        if (! $isDraft && ! $isReturned && $priceCustomer < self::MIN_INVOICE_CLOSE_TOMAN) {
+            throw ValidationException::withMessages([
+                'price_customer' => 'مبلغ کل فاکتور نمی‌تواند کمتر از '.number_format(self::MIN_INVOICE_CLOSE_TOMAN).' تومان باشد.',
+            ]);
+        }
+        if (! $isDraft && ! $isReturned && $priceCustomer > self::MAX_INVOICE_CLOSE_TOMAN) {
+            throw ValidationException::withMessages([
+                'price_customer' => 'مبلغ کل فاکتور نمی‌تواند بیشتر از '.number_format(self::MAX_INVOICE_CLOSE_TOMAN).' تومان باشد.',
             ]);
         }
         $updates['total_invoice'] = max(0, $priceCustomer - $costPrice);

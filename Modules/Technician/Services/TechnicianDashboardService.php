@@ -35,7 +35,7 @@ class TechnicianDashboardService
         'completion_rate' => 'بالاترین نرخ تکمیل',
         'revenue' => 'بیشترین گردش مالی',
         'last_order' => 'تازه‌ترین سفارش',
-        'profile' => 'کامل‌ترین پروفایل',
+        'rating' => 'بیشترین امتیاز',
     ];
 
     /**
@@ -48,17 +48,19 @@ class TechnicianDashboardService
         $since = $this->since($range);
 
         $orderStats = $this->orderStatsByTechnician($since);
+        $ratingStats = $this->ratingStatsByTechnician();
 
+        // فقط تکنسین‌های فعال در این داشبورد نمایش داده می‌شوند (خواستهٔ
+        // مدیریت): تکنسینِ غیرفعال نه در جدول و نه در آمار شمرده نمی‌شود.
         $technicians = Technician::query()
+            ->where('status', 'active')
             ->when($filters['q'] ?? null, fn ($q, $v) => $q->search($v))
             ->when(($filters['province'] ?? '') !== '', fn ($q) => $q->where('province', $filters['province']))
-            ->when(($filters['status'] ?? '') === 'active', fn ($q) => $q->where('status', 'active'))
-            ->when(($filters['status'] ?? '') === 'inactive', fn ($q) => $q->where('status', '!=', 'active'))
-            ->when(($filters['status'] ?? '') === 'ready', fn ($q) => $q->where('status', 'active')->where('ready_for_delivery', true))
+            ->when(($filters['status'] ?? '') === 'ready', fn ($q) => $q->where('ready_for_delivery', true))
             ->get();
 
         $rows = $technicians
-            ->map(fn (Technician $tech) => $this->row($tech, $orderStats[$tech->id] ?? null))
+            ->map(fn (Technician $tech) => $this->row($tech, $orderStats[$tech->id] ?? null, $ratingStats[$tech->id] ?? null))
             ->when(! empty($filters['only_with_orders']), fn (Collection $c) => $c->where('total', '>', 0))
             ->pipe(fn (Collection $c) => $this->sort($c, (string) ($filters['sort'] ?? 'open')))
             ->values();
@@ -111,12 +113,43 @@ class TechnicianDashboardService
     }
 
     /**
+     * امتیازِ نظرهای «تأییدشده»ی مشتری برای همهٔ تکنسین‌ها — یک کوئریِ گروهی
+     * (technician_id) تا برای هر ردیف N+1 نشود.
+     *
+     * @return array<int, array{avg: float|null, count: int}>
+     */
+    private function ratingStatsByTechnician(): array
+    {
+        $out = [];
+        try {
+            $rows = DB::table('crm_order_reviews')
+                ->selectRaw('technician_id, AVG(rating) as avg_rating, COUNT(*) as cnt')
+                ->where('status', 'approved')
+                ->whereNotNull('technician_id')
+                ->groupBy('technician_id')
+                ->get();
+
+            foreach ($rows as $row) {
+                $out[(int) $row->technician_id] = [
+                    'avg' => $row->avg_rating !== null ? (float) $row->avg_rating : null,
+                    'count' => (int) $row->cnt,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // جدولِ نظرها در دسترس نبود → همه امتیازِ پیش‌فرض می‌گیرند.
+        }
+
+        return $out;
+    }
+
+    /**
      * ردیفِ آمادهٔ نمایشِ یک تکنسین.
      *
      * @param  array<string, mixed>|null  $stats
+     * @param  array{avg: float|null, count: int}|null  $rating
      * @return array<string, mixed>
      */
-    private function row(Technician $tech, ?array $stats): array
+    private function row(Technician $tech, ?array $stats, ?array $rating = null): array
     {
         $byStatus = $stats['by_status'] ?? [];
         $groups = ['in_progress' => 0, 'waiting' => 0, 'finished' => 0];
@@ -159,33 +192,11 @@ class TechnicianDashboardService
             'completion_rate' => $total > 0 ? (int) round($completed / $total * 100) : null,
             'revenue' => (int) ($stats['revenue'] ?? 0),
             'last_at' => $stats['last_at'] ?? null,
-            'profile' => $this->profileCompleteness($tech),
+            // امتیازِ مؤثرِ تکنسین (۰..۵)؛ زیرِ حدِ نصابِ نظر → پیش‌فرضِ ۲.۵.
+            'rating' => Technician::effectiveRatingFrom($rating['avg'] ?? null, (int) ($rating['count'] ?? 0)),
+            'rating_count' => (int) ($rating['count'] ?? 0),
+            'rating_enough' => (int) ($rating['count'] ?? 0) >= Technician::MIN_REVIEWS_FOR_RATING,
         ];
-    }
-
-    /**
-     * درصدِ کاملی پروفایل + فهرستِ موارد ناقص (برای ستونِ «وضعیت پروفایل»).
-     *
-     * @return array{percent: int, missing: list<string>}
-     */
-    private function profileCompleteness(Technician $tech): array
-    {
-        $checks = [
-            'نام و نام خانوادگی' => filled($tech->first_name),
-            'موبایل' => filled($tech->mobile),
-            'کد ملی' => filled($tech->national_code),
-            'استان' => filled($tech->province),
-            'آدرس' => filled($tech->address),
-            'تخصص' => filled($tech->specialty) || filled($tech->type_tech),
-            'درصد کمیسیون' => (int) ($tech->percent ?? 0) > 0,
-            'عکس پرسنلی' => filled($tech->img_personal),
-            'حساب کاربری' => filled($tech->user_id),
-        ];
-
-        $missing = array_keys(array_filter($checks, fn ($ok) => ! $ok));
-        $percent = (int) round((count($checks) - count($missing)) / max(1, count($checks)) * 100);
-
-        return ['percent' => $percent, 'missing' => array_values($missing)];
     }
 
     /**
@@ -201,7 +212,7 @@ class TechnicianDashboardService
             'completion_rate' => $rows->sortByDesc(fn ($r) => [$r['completion_rate'] ?? -1, $r['total']]),
             'revenue' => $rows->sortByDesc('revenue'),
             'last_order' => $rows->sortByDesc(fn ($r) => $r['last_at'] ?? ''),
-            'profile' => $rows->sortByDesc(fn ($r) => $r['profile']['percent']),
+            'rating' => $rows->sortByDesc(fn ($r) => [$r['rating'], $r['rating_count']]),
             // پیش‌فرض: بیشترین کارِ فعال (در انتظار + در جریان). در تساوی،
             // کسی که کارِ در جریانِ بیشتری دارد جلوتر می‌آید و بعد کلِ سفارش‌ها.
             default => $rows->sortByDesc(fn ($r) => [$r['open'], $r['groups']['in_progress'], $r['total']]),
@@ -231,7 +242,6 @@ class TechnicianDashboardService
             'completed' => (int) $rows->sum('completed'),
             'revenue' => (int) $rows->sum('revenue'),
             'avg_orders' => $withOrders > 0 ? round($totalOrders / $withOrders, 1) : 0,
-            'incomplete_profiles' => $rows->filter(fn ($r) => $r['profile']['percent'] < 100)->count(),
         ];
     }
 

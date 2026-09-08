@@ -207,40 +207,50 @@ class TechnicianDashboardTest extends TestCase
 
         $data = app(TechnicianDashboardService::class)->build();
 
-        $this->assertSame(2, $data['summary']['technicians']);
+        // فقط تکنسینِ فعال شمرده می‌شود؛ غیرفعال اصلاً در داشبورد نیست.
+        $this->assertSame(1, $data['summary']['technicians']);
         $this->assertSame(1, $data['summary']['active']);
         $this->assertSame(1, $data['summary']['ready']);
         $this->assertSame(1, $data['summary']['with_orders']);
-        $this->assertSame(1, $data['summary']['idle']);
+        $this->assertSame(0, $data['summary']['idle']);
         $this->assertSame(4, $data['summary']['orders']);
         $this->assertSame(3, $data['summary']['completed']);
         $this->assertSame(1, $data['unassignedOrders'], 'سفارش بدون تکنسین باید جدا شمرده شود.');
     }
 
-    public function test_profile_completeness_lists_missing_fields(): void
+    public function test_rating_uses_review_average_with_default_below_threshold(): void
     {
-        $complete = $this->technician('کامل', '09120000109', [
-            'national_code' => '0012345678',
-            'province' => 'تهران',
-            'address' => 'خیابان آزادی',
-            'specialty' => 'لباسشویی',
-            'percent' => 40,
-            'img_personal' => 'photo.jpg',
-            'user_id' => 1,
-        ]);
-        $incomplete = $this->technician('ناقص', '09120000110');
+        Schema::create('crm_order_reviews', function ($t) {
+            $t->id();
+            $t->unsignedBigInteger('technician_id')->nullable();
+            $t->unsignedTinyInteger('rating')->default(0);
+            $t->string('status', 20)->default('approved');
+            $t->timestamps();
+        });
 
-        $rows = app(TechnicianDashboardService::class)->build(['sort' => 'profile'])['rows'];
+        $enough = $this->technician('پرنظر', '09120000109');
+        $few = $this->technician('کم‌نظر', '09120000110');
+
+        // ۱۲ نظرِ تأییدشده با میانگینِ ۴ → امتیازِ واقعی ۴.۰
+        $this->reviews($enough, 4, 12);
+        // ۳ نظرِ ۵ → کمتر از حدِ نصابِ ۱۰ → امتیازِ پیش‌فرضِ ۲.۵
+        $this->reviews($few, 5, 3);
+
+        $rows = app(TechnicianDashboardService::class)->build(['sort' => 'rating'])['rows'];
         $byId = $rows->keyBy(fn ($r) => $r['technician']->id);
 
-        $this->assertSame(100, $byId[$complete->id]['profile']['percent']);
-        $this->assertSame([], $byId[$complete->id]['profile']['missing']);
+        $this->assertSame(4.0, $byId[$enough->id]['rating']);
+        $this->assertTrue($byId[$enough->id]['rating_enough']);
+        $this->assertSame(12, $byId[$enough->id]['rating_count']);
 
-        $this->assertLessThan(100, $byId[$incomplete->id]['profile']['percent']);
-        $this->assertContains('کد ملی', $byId[$incomplete->id]['profile']['missing']);
+        $this->assertSame(2.5, $byId[$few->id]['rating'], 'زیر ۱۰ نظر → پیش‌فرض ۲.۵');
+        $this->assertFalse($byId[$few->id]['rating_enough']);
+
+        // مرتب‌سازیِ «بیشترین امتیاز» تکنسینِ ۴.۰ را جلوتر می‌آورد.
+        $this->assertSame($enough->id, $rows[0]['technician']->id);
     }
 
-    public function test_filters_by_status_and_only_with_orders(): void
+    public function test_inactive_technicians_are_excluded_from_dashboard(): void
     {
         $withOrders = $this->technician('دارای سفارش', '09120000111');
         $this->technician('بدون سفارش', '09120000112');
@@ -250,9 +260,12 @@ class TechnicianDashboardTest extends TestCase
 
         $service = app(TechnicianDashboardService::class);
 
+        // فقط دو تکنسینِ فعال؛ غیرفعال هرگز نمایش داده نمی‌شود.
+        $rows = $service->build()['rows'];
+        $this->assertSame(2, $rows->count());
+        $this->assertNotContains('غیرفعال', $rows->pluck('technician.first_name')->all());
+
         $this->assertSame(1, $service->build(['only_with_orders' => true])['rows']->count());
-        $this->assertSame(2, $service->build(['status' => 'active'])['rows']->count());
-        $this->assertSame(1, $service->build(['status' => 'inactive'])['rows']->count());
     }
 
     public function test_aggregation_does_not_scale_queries_with_technicians(): void
@@ -323,6 +336,21 @@ class TechnicianDashboardTest extends TestCase
             ];
         }
         DB::table('crm_orders')->insert($rows);
+    }
+
+    private function reviews(object $tech, int $rating, int $count): void
+    {
+        $rows = [];
+        for ($i = 0; $i < $count; $i++) {
+            $rows[] = [
+                'technician_id' => $tech->id,
+                'rating' => $rating,
+                'status' => 'approved',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+        DB::table('crm_order_reviews')->insert($rows);
     }
 
     private function user(string $mobile): User
