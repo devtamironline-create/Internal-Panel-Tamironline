@@ -536,14 +536,26 @@ class OrderActionController extends Controller
         $this->authorizeOwnership($order, $tech);
         $this->guardNotFrozen($order);
 
-        // قبلاً بررسی شده → پاسخِ تمیزِ idempotent، بدونِ دست‌زدن به چیزی.
+        // قبلاً بررسی شده: نتیجهٔ بررسیِ برگشتی «یک‌بار و نهایی» است و تکنسین
+        // نمی‌تواند آن را برگرداند (مثلاً اول «گارانتی/رایگان» تأیید کند و بعد
+        // «رد» بزند — یا برعکس). ارسالِ دوبارهٔ *همان* نتیجه (تلاشِ مجددِ شبکه)
+        // idempotent است؛ ارسالِ نتیجهٔ *متفاوت* با ۴۲۲ رد می‌شود. تغییرِ تصمیم
+        // فقط با بازکردنِ دوبارهٔ کارشناسی توسطِ ادمین ممکن است (که pending را
+        // دوباره true و این فیلدها را ریست می‌کند).
         if (! $order->return_review_pending && $order->return_reviewed_at !== null) {
+            $stored = (bool) $order->return_review_approved;
+            if ($request->has('approved') && $request->boolean('approved') !== $stored) {
+                throw ValidationException::withMessages([
+                    'approved' => 'نتیجهٔ بررسیِ برگشتی قبلاً ثبت شده و قابلِ تغییر نیست. اگر نیاز به اصلاح دارید، با پشتیبانی هماهنگ کنید.',
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'بررسی برگشتی قبلاً ثبت شده بود.',
                 'data' => [
                     'return_review_pending' => false,
-                    'approved' => (bool) $order->return_review_approved,
+                    'approved' => $stored,
                     'days' => $order->return_review_days !== null ? (int) $order->return_review_days : null,
                     'reviewed_at' => $order->return_reviewed_at?->utc()->toIso8601String(),
                 ],

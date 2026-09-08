@@ -150,8 +150,8 @@ class TechReturnReviewTest extends TestCase
         $this->assertNull($order->return_review_days);
     }
 
-    /** کلاینت بعد از خطای شبکه دوباره POST می‌زند — نباید اثرِ دوباره بگذارد. */
-    public function test_a_repeat_submission_is_idempotent(): void
+    /** کلاینت بعد از خطای شبکه *همان* نتیجه را دوباره POST می‌زند — idempotent. */
+    public function test_a_repeat_submission_with_same_result_is_idempotent(): void
     {
         $tech = $this->technician();
         $order = $this->pendingOrder($tech);
@@ -159,16 +159,42 @@ class TechReturnReviewTest extends TestCase
         $this->review($order, $tech, ['approved' => '1', 'days' => 3]);
         $firstReviewedAt = $order->fresh()->return_reviewed_at;
 
-        // تلاشِ دوم — حتی با payload متفاوت — چیزی را عوض نمی‌کند.
-        $json = $this->review($order, $tech, ['approved' => '0']);
+        // تلاشِ دوم با همان نتیجه (تأیید) — بدونِ اثرِ دوباره.
+        $json = $this->review($order, $tech, ['approved' => '1', 'days' => 3]);
 
         $this->assertTrue($json['success']);
         $this->assertTrue($json['data']['approved']);
-        $this->assertSame(3, $json['data']['days']);
         $order->refresh();
         $this->assertTrue((bool) $order->return_review_approved);
         $this->assertTrue($firstReviewedAt->equalTo($order->return_reviewed_at));
         $this->assertSame(1, OrderStatusLog::count());
+    }
+
+    /**
+     * منطقِ اشتباهِ گزارش‌شده: تکنسین اول برگشتی را «تأیید» (گارانتی/رایگان)
+     * می‌کرد و بعد «رد» می‌زد. نتیجهٔ بررسیِ برگشتی یک‌بار و نهایی است و
+     * برگرداندنِ آن باید با خطا مسدود شود — نه اینکه بی‌صدا نادیده گرفته شود.
+     */
+    public function test_cannot_flip_an_already_recorded_return_decision(): void
+    {
+        $tech = $this->technician();
+        $order = $this->pendingOrder($tech);
+
+        // ابتدا تأیید (گارانتی).
+        $this->review($order, $tech, ['approved' => '1', 'days' => 3]);
+
+        // سپس تلاش برای «رد» — باید رد شود و دادهٔ ثبت‌شده دست‌نخورده بماند.
+        try {
+            $this->review($order, $tech, ['approved' => '0']);
+            $this->fail('تغییرِ تصمیمِ برگشتی (تأیید → رد) باید با ValidationException مسدود شود.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertArrayHasKey('approved', $e->errors());
+        }
+
+        $order->refresh();
+        $this->assertTrue((bool) $order->return_review_approved, 'نتیجه باید همان «تأیید» بماند.');
+        $this->assertSame(1, (int) $order->return_type);
+        $this->assertSame(1, OrderStatusLog::count(), 'هیچ لاگِ جدیدی نباید ثبت شود.');
     }
 
     public function test_an_order_that_is_not_pending_is_rejected_cleanly(): void
