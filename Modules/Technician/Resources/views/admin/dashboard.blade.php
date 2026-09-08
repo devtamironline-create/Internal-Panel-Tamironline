@@ -10,7 +10,7 @@
         <div>
             <h1 class="text-xl font-bold text-gray-800 dark:text-white">🧰 داشبورد مدیریتی تکنسین‌ها</h1>
             <p class="text-sm text-gray-500 mt-1">
-                رتبه‌بندی بر اساس تعداد سفارش، وضعیت لحظه‌ای کارها و کامل‌بودن پروفایل —
+                رتبه‌بندی بر اساس تعداد سفارش، وضعیت لحظه‌ای کارها و امتیاز تکنسین —
                 بازه: <b>{{ $ranges[$range] ?? $range }}</b>
             </p>
         </div>
@@ -46,20 +46,12 @@
     </div>
 
     {{-- هشدارهای عملیاتی --}}
-    @if($unassignedOrders > 0 || $summary['incomplete_profiles'] > 0)
+    @if($unassignedOrders > 0)
         <div class="flex flex-wrap gap-2">
-            @if($unassignedOrders > 0)
-                <a href="{{ route('crm.orders.index') }}"
-                   class="flex-1 min-w-[240px] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 rounded-lg p-3 text-sm">
-                    ⚠️ <b>{{ number_format($unassignedOrders) }}</b> سفارش در این بازه هیچ تکنسینی ندارد — صف تخصیص را بررسی کنید.
-                </a>
-            @endif
-            @if($summary['incomplete_profiles'] > 0)
-                <a href="{{ route('technician.admin.dashboard', array_merge(request()->query(), ['sort' => 'profile'])) }}"
-                   class="flex-1 min-w-[240px] bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 rounded-lg p-3 text-sm">
-                    📋 پروفایل <b>{{ number_format($summary['incomplete_profiles']) }}</b> تکنسین کامل نیست — برای دیدن موارد ناقص روی همین کادر بزنید.
-                </a>
-            @endif
+            <a href="{{ route('crm.orders.index') }}"
+               class="flex-1 min-w-[240px] bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 rounded-lg p-3 text-sm">
+                ⚠️ <b>{{ number_format($unassignedOrders) }}</b> سفارش در این بازه هیچ تکنسینی ندارد — صف تخصیص را بررسی کنید.
+            </a>
         </div>
     @endif
 
@@ -100,11 +92,11 @@
             </select>
         </label>
         <label class="block text-xs text-gray-500">وضعیت تکنسین
+            {{-- فقط تکنسین‌های فعال نمایش داده می‌شوند؛ این فیلتر بینِ «همهٔ
+                 فعال‌ها» و «آمادهٔ دریافت» تفکیک می‌کند. --}}
             <select name="status" class="mt-1 px-2 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                <option value="">همه</option>
-                <option value="active" @selected($filters['status'] === 'active')>فعال</option>
+                <option value="">همهٔ فعال‌ها</option>
                 <option value="ready" @selected($filters['status'] === 'ready')>آمادهٔ دریافت سفارش</option>
-                <option value="inactive" @selected($filters['status'] === 'inactive')>غیرفعال</option>
             </select>
         </label>
         <label class="block text-xs text-gray-500">استان
@@ -141,7 +133,7 @@
                         <th class="p-3">لغو/رد</th>
                         <th class="p-3">گردش مالی</th>
                         <th class="p-3">آخرین سفارش</th>
-                        <th class="p-3">پروفایل</th>
+                        <th class="p-3">امتیاز</th>
                         <th class="p-3"></th>
                     </tr>
                 </thead>
@@ -231,14 +223,16 @@
                                 {{ $row['last_at'] ? Jalalian::fromDateTime($row['last_at'])->format('Y/m/d') : '—' }}
                             </td>
                             <td class="p-3 text-center">
-                                <button @click="open = !open" class="inline-flex items-center gap-1">
+                                <div class="inline-flex items-center gap-1" title="{{ $row['rating_enough'] ? 'میانگین امتیاز نظرهای تأییدشده' : 'کمتر از ۱۰ نظر — امتیاز پیش‌فرض ۲.۵' }}">
+                                    <span class="text-amber-400">★</span>
                                     <span @class([
-                                        'text-[11px] font-bold',
-                                        'text-emerald-600' => $row['profile']['percent'] === 100,
-                                        'text-amber-600' => $row['profile']['percent'] < 100 && $row['profile']['percent'] >= 70,
-                                        'text-red-600' => $row['profile']['percent'] < 70,
-                                    ]) dir="ltr">{{ $row['profile']['percent'] }}%</span>
-                                </button>
+                                        'text-[12px] font-black',
+                                        'text-emerald-600' => $row['rating'] >= 4,
+                                        'text-amber-600' => $row['rating'] >= 3 && $row['rating'] < 4,
+                                        'text-red-600' => $row['rating'] < 3,
+                                    ]) dir="ltr">{{ number_format($row['rating'], 1) }}</span>
+                                    <span class="text-[10px] text-gray-400" dir="ltr">({{ number_format($row['rating_count']) }})</span>
+                                </div>
                             </td>
                             <td class="p-3 text-center whitespace-nowrap">
                                 <button @click="open = !open" class="text-[11px] text-brand-600 hover:underline">
@@ -270,16 +264,15 @@
                                         @endif
                                     </div>
                                     <div>
-                                        <div class="text-[11px] font-bold text-gray-600 dark:text-gray-300 mb-2">وضعیت پروفایل</div>
-                                        @if($row['profile']['missing'])
-                                            <div class="text-[11px] text-gray-500 mb-1">موارد تکمیل‌نشده:</div>
-                                            <div class="flex flex-wrap gap-1">
-                                                @foreach($row['profile']['missing'] as $missing)
-                                                    <span class="px-2 py-0.5 rounded-full text-[10px] bg-red-50 text-red-700 border border-red-100 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800">{{ $missing }}</span>
-                                                @endforeach
-                                            </div>
+                                        <div class="text-[11px] font-bold text-gray-600 dark:text-gray-300 mb-2">امتیاز تکنسین</div>
+                                        <div class="flex items-baseline gap-1.5">
+                                            <span class="text-2xl font-black text-amber-500" dir="ltr">{{ number_format($row['rating'], 1) }}</span>
+                                            <span class="text-[11px] text-gray-400">از ۵</span>
+                                        </div>
+                                        @if($row['rating_enough'])
+                                            <p class="text-[11px] text-gray-500 mt-1">میانگینِ {{ number_format($row['rating_count']) }} نظرِ تأییدشدهٔ مشتری.</p>
                                         @else
-                                            <p class="text-[11px] text-emerald-600">پروفایل کامل است ✅</p>
+                                            <p class="text-[11px] text-amber-600 mt-1">کمتر از ۱۰ نظرِ ثبت‌شده ({{ number_format($row['rating_count']) }}) — امتیازِ پیش‌فرضِ ۲.۵ لحاظ شده است.</p>
                                         @endif
                                         <div class="flex gap-2 mt-3">
                                             <a href="{{ route('crm.technicians.show', $tech) }}" class="px-2.5 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-[11px]">پروفایل کامل</a>

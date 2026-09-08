@@ -255,8 +255,10 @@ class TechDeclineReasonsTest extends TestCase
         ]);
     }
 
-    public function test_decline_without_reason_still_requires_free_text_backward_compat(): void
+    public function test_decline_requires_selected_reason_free_text_alone_rejected(): void
     {
+        // ردِ سفارش «فقط انتخابی» است: حتی توضیحِ متنیِ معتبر و بلند هم بدونِ
+        // انتخابِ علت پذیرفته نمی‌شود — تکنسین باید یکی از گزینه‌ها را برگزیند.
         CrmSetting::setJson('technician_decline_reasons', [
             ['label' => 'خارج از تخصص', 'reopen' => true],
         ]);
@@ -266,7 +268,7 @@ class TechDeclineReasonsTest extends TestCase
         $this->expectException(ValidationException::class);
         $this->decline($order, $tech, [
             'status' => OrderStatus::Declined->value,
-            'description' => 'کوتاه',
+            'description' => 'این یک توضیحِ کاملاً بلند و معتبر برای ردِ سفارش است.',
         ]);
     }
 
