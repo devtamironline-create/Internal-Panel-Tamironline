@@ -32,6 +32,7 @@ class CustomerClubAnalyticsTest extends TestCase
             $t->id();
             $t->string('first_name')->nullable();
             $t->string('mobile', 20)->nullable();
+            $t->timestamp('mobile_verified_at')->nullable();
             $t->boolean('is_blocked')->default(false);
             $t->timestamps();
             $t->softDeletes();
@@ -57,7 +58,8 @@ class CustomerClubAnalyticsTest extends TestCase
     {
         return DB::table('crm_customers')->insertGetId(array_merge([
             'first_name' => $name, 'mobile' => $mobile, 'is_blocked' => false,
-            'created_at' => now(), 'updated_at' => now(),
+            // پیش‌فرض: مشتریِ اپ (موبایل تأییدشده). تستِ legacy این را null می‌کند.
+            'mobile_verified_at' => now(), 'created_at' => now(), 'updated_at' => now(),
         ], $attrs));
     }
 
@@ -75,6 +77,9 @@ class CustomerClubAnalyticsTest extends TestCase
         $b = $this->customer('ب', '09120000002');
         $this->customer('ج بدون‌سفارش', '09120000003');
         $this->customer('بلاک‌شده', '09120000004', ['is_blocked' => true]); // نباید شمرده شود
+        // مشتریِ قدیمیِ وردپرس/تلفنی (موبایل تأییدنشده) — نباید شمرده شود.
+        $legacy = $this->customer('قدیمی', '09120000005', ['mobile_verified_at' => null]);
+        $this->order($legacy);
 
         $this->order($a);
         $this->order($a); // تکراری
@@ -82,7 +87,7 @@ class CustomerClubAnalyticsTest extends TestCase
 
         $ov = app(CustomerClubAnalytics::class)->build()['overview'];
 
-        $this->assertSame(3, $ov['total_customers'], 'بلاک‌شده حذف می‌شود.');
+        $this->assertSame(3, $ov['total_customers'], 'بلاک‌شده و مشتریِ تأییدنشدهٔ legacy حذف می‌شوند.');
         $this->assertSame(2, $ov['with_orders']);
         $this->assertSame(1, $ov['without_orders']);
         $this->assertEqualsWithDelta(66.7, $ov['conversion_rate'], 0.1);
