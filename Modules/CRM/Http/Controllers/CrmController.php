@@ -5,10 +5,8 @@ namespace Modules\CRM\Http\Controllers;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Modules\CRM\Enums\OrderStatus;
 use Modules\CRM\Models\Customer;
-use Modules\CRM\Models\Invoice;
 use Modules\CRM\Models\Order;
 use Modules\CRM\Models\Technician;
 use Morilog\Jalali\Jalalian;
@@ -56,7 +54,9 @@ class CrmController extends Controller
         // سفارش‌های بدون introduction
         $introNullCount = Order::query()->realOrders()
             ->whereBetween('created_at', [$fromCarbon, $toCarbon])
-            ->where(function ($q) { $q->whereNull('introduction')->orWhere('introduction', ''); })
+            ->where(function ($q) {
+                $q->whereNull('introduction')->orWhere('introduction', '');
+            })
             ->count();
 
         // ─── 2) پرتکرارترین خدمات (دستگاه‌ها) ─────────────────────
@@ -69,11 +69,11 @@ class CrmController extends Controller
                 SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as completed_count,
                 SUM(CASE WHEN status IN (?, ?) THEN 1 ELSE 0 END) as cancelled_count
             ',
-            [
-                OrderStatus::Completed->value,
-                OrderStatus::Cancelled->value,
-                OrderStatus::Declined->value,
-            ])
+                [
+                    OrderStatus::Completed->value,
+                    OrderStatus::Cancelled->value,
+                    OrderStatus::Declined->value,
+                ])
             ->groupBy('device_id')
             ->orderByDesc('total_count')
             ->limit(5)
@@ -151,7 +151,7 @@ class CrmController extends Controller
 
     /**
      * داده‌های نمودار روند سفارش‌ها — هفتگی (۱۲ هفته اخیر) یا
-     * ماهانه (۶ ماه اخیر). هر point: total / completed / cancelled.
+     * ماهانه (۳ ماه اخیر). هر point: total / completed / cancelled.
      */
     private function buildOrdersChartData(string $period): array
     {
@@ -162,8 +162,8 @@ class CrmController extends Controller
         $cancelled = [];
 
         if ($period === 'month') {
-            // ۶ ماه اخیر (شامل ماه جاری)
-            for ($i = 5; $i >= 0; $i--) {
+            // ۳ ماه اخیر (شامل ماه جاری)
+            for ($i = 2; $i >= 0; $i--) {
                 $start = now()->subMonths($i)->startOfMonth();
                 $end = now()->subMonths($i)->endOfMonth();
                 $labels[] = Jalalian::fromCarbon($start)->format('Y/m');

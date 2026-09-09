@@ -6,10 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Modules\CRM\Models\Technician as CrmTechnician;
 use Modules\SMS\Services\KavenegarService;
 use Modules\Technician\Models\ApplianceCategory;
@@ -1066,8 +1064,9 @@ class TechnicianAdminController extends Controller
      * - فقط زمانی فعال است که promissory_note_status === 'approved'.
      * - اگر در crm_technicians رکوردی با همین موبایل بود، update می‌کند
      *   (بعد از تأیید کاربر در فرم با force=1).
-     * - یک User با نقش crm-technician می‌سازد/متصل می‌کند تا تکنسین
-     *   بتواند به پنل خود وارد شود.
+     * - هیچ اکانتِ پنلِ ادمین (User) برای تکنسین ساخته نمی‌شود؛ تکنسین از
+     *   اپِ تکنسین (مدل Technician با OTP) وارد می‌شود. اتصالِ حسابِ کاربری
+     *   در صورتِ نیاز، اقدامِ جداگانه و دستیِ ادمین است (provisionUser).
      */
     public function registrationConvertToActive(Request $request, $id)
     {
@@ -1095,47 +1094,25 @@ class TechnicianAdminController extends Controller
 
         $payload = $this->mapRegistrationToCrmTechnician($registration);
 
-        $result = DB::transaction(function () use ($registration, $existing, $payload) {
-            // ۱) User با نقش crm-technician (مثل provisionUser در CRM)
-            $user = User::where('mobile', $registration->mobile)->first();
-            $generatedPassword = null;
-
-            if (! $user) {
-                $generatedPassword = Str::random(10);
-                $user = User::create([
-                    'name' => trim(($registration->first_name ?? '').' '.($registration->last_name ?? '')) ?: $registration->mobile,
-                    'first_name' => $registration->first_name,
-                    'mobile' => $registration->mobile,
-                    'password' => Hash::make($generatedPassword),
-                    'is_staff' => true,
-                    'mobile_verified_at' => now(),
-                ]);
-            }
-
-            if (! $user->hasRole('crm-technician')) {
-                $user->assignRole('crm-technician');
-            }
-
-            // ۲) تکنسین CRM
+        $result = DB::transaction(function () use ($existing, $payload) {
+            // فقط رکوردِ تکنسینِ CRM؛ بدونِ ساختِ اکانتِ پنلِ ادمین (User).
+            // user_idِ رکوردِ موجود دست‌نخورده می‌ماند؛ رکوردِ جدید بدونِ کاربر.
             if ($existing) {
-                $existing->fill($payload + ['user_id' => $user->id])->save();
+                $existing->fill($payload)->save();
                 $tech = $existing;
                 $action = 'updated';
             } else {
-                $tech = CrmTechnician::create($payload + ['user_id' => $user->id]);
+                $tech = CrmTechnician::create($payload);
                 $action = 'created';
             }
 
-            return ['tech' => $tech, 'user' => $user, 'password' => $generatedPassword, 'action' => $action];
+            return ['tech' => $tech, 'action' => $action];
         });
 
         $msg = $result['action'] === 'created'
             ? 'تکنسین با موفقیت در لیست تکنسین‌های فعال ساخته شد.'
             : 'تکنسین موجود با اطلاعات ثبت‌نام به‌روزرسانی شد.';
         $msg .= ' (شناسه CRM: '.$result['tech']->id.')';
-        if ($result['password']) {
-            $msg .= ' — رمز اولیه: '.$result['password'].' (یادداشت کنید؛ دیگر نمایش داده نخواهد شد).';
-        }
 
         $this->logActivity(
             $registration,
