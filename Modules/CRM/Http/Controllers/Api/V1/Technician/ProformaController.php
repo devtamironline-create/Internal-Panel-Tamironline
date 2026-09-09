@@ -81,7 +81,7 @@ class ProformaController extends Controller
             throw ValidationException::withMessages([
                 'order_id' => $order->status?->isFinal()
                     ? 'این سفارش بسته شده است و دیگر پیش‌فاکتور نمی‌پذیرد.'
-                    : 'پیش‌فاکتور پس از هماهنگی و شروع کار قابلِ صدور است.',
+                    : 'پیش‌فاکتور پس از هماهنگ‌شدنِ سفارش قابلِ صدور است.',
             ]);
         }
 
