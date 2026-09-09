@@ -20,7 +20,6 @@ use Modules\CRM\Http\Controllers\SmsTemplateController;
 use Modules\CRM\Http\Controllers\SyncSettingsController;
 use Modules\CRM\Http\Controllers\Tech\AuthController as TechAuthController;
 use Modules\CRM\Http\Controllers\Tech\DashboardController as TechPanelDashboardController;
-use Modules\CRM\Http\Controllers\TechDashboardController;
 use Modules\CRM\Http\Controllers\TechnicianController;
 use Modules\CRM\Http\Controllers\TechPanelSettingsController;
 use Modules\CRM\Http\Controllers\TrainingAdminController;
@@ -105,22 +104,13 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
             ->where('segment', 'no-order|vip|at-risk')->where('format', 'xlsx|csv')->name('segments.export');
     });
 
-    // ─── پنل تکنسین ───────────────────────────────────────────────
-    Route::middleware('can:view-tech-dashboard')->prefix('tech')->name('tech.')->group(function () {
-        Route::get('/', [TechDashboardController::class, 'index'])->name('dashboard');
-        Route::get('wallet', [TechDashboardController::class, 'wallet'])->name('wallet');
-        Route::get('invoices', [TechDashboardController::class, 'invoices'])->name('invoices');
-        Route::get('profile', [TechDashboardController::class, 'profile'])->name('profile');
-
-        Route::middleware('can:view-own-orders')->group(function () {
-            Route::get('orders/{order}', [TechDashboardController::class, 'showOrder'])->name('orders.show');
-        });
-        Route::middleware('can:update-own-order-status')->group(function () {
-            Route::post('orders/{order}/status', [TechDashboardController::class, 'updateStatus'])->name('orders.status');
-            // رسیدِ انتقال — ثبت توسطِ تکنسین (فقط وضعیتِ انتقال/تعمیر، در کنترلر گارد می‌شود)
-            Route::post('orders/{order}/transfer-receipt', [TechDashboardController::class, 'storeTransferReceipt'])->name('orders.transfer-receipt');
-        });
-    });
+    // ─── پنل تکنسینِ قدیمی (Blade) — از دسترس خارج شد ──────────────
+    // این پنل با نسخهٔ جدیدِ PWA (مسیرهای tech.* در انتهای همین فایل،
+    // احراز هویتِ جدا با guard=tech روی crm_technicians) جایگزین شده است.
+    // مسیرهای crm.tech.* و crm.orders.my عمداً حذف شده‌اند تا URLهای پنل
+    // قدیمی 404 شوند. کنترلر (TechDashboardController) و ویوهای مرتبط
+    // (Resources/views/tech/* و orders/my.blade.php) به‌عنوان بایگانی در
+    // کد باقی مانده‌اند اما دیگر مسیری به آن‌ها اشاره نمی‌کند.
 
     // ─── تاکسونومی ── برندها ───────────────────────────────────────
     Route::middleware('can:view-crm-taxonomies')->group(function () {
@@ -359,8 +349,9 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     Route::post('impersonate/leave', [ImpersonateController::class, 'leave'])->name('impersonate.leave');
 
     // ─── سفارش‌های تعمیر ─────────────────────────────────────────
-    // داشبورد تکنسین: سفارش‌های خودم
-    Route::get('my-orders', [OrderController::class, 'myOrders'])->name('orders.my');
+    // «سفارش‌های من» (crm.orders.my) بخشی از پنل تکنسینِ قدیمیِ Blade بود و
+    // همراهِ آن از دسترس خارج شد؛ تکنسین‌ها از اپِ PWA (مسیرهای tech.*) استفاده
+    // می‌کنند. متدِ OrderController@myOrders به‌عنوان بایگانی باقی مانده است.
 
     Route::middleware('can:view-crm-orders')->group(function () {
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');

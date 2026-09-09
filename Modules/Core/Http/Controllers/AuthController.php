@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Route;
 use Modules\SMS\Services\OTPService;
 
 class AuthController extends Controller
@@ -44,14 +43,14 @@ class AuthController extends Controller
                 'success' => true,
                 'message' => $result['message'],
                 'expires_in' => $result['expires_in'] ?? 120,
-                'debug_code' => $result['debug_code'] ?? null
+                'debug_code' => $result['debug_code'] ?? null,
             ]);
         }
 
         return response()->json([
             'success' => false,
             'message' => $result['message'],
-            'wait_time' => $result['wait_time'] ?? 0
+            'wait_time' => $result['wait_time'] ?? 0,
         ], 422);
     }
 
@@ -69,10 +68,10 @@ class AuthController extends Controller
 
         $result = $this->otpService->verify($mobile, $code);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return response()->json([
                 'success' => false,
-                'message' => $result['message']
+                'message' => $result['message'],
             ], 422);
         }
 
@@ -80,22 +79,22 @@ class AuthController extends Controller
 
         // Admin login - must be existing staff
         if ($isAdmin) {
-            if (!$user) {
+            if (! $user) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'کاربری با این شماره موبایل یافت نشد'
+                    'message' => 'کاربری با این شماره موبایل یافت نشد',
                 ], 403);
             }
 
-            if (!$user->isStaff()) {
+            if (! $user->isStaff()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'شما دسترسی به پنل مدیریت ندارید'
+                    'message' => 'شما دسترسی به پنل مدیریت ندارید',
                 ], 403);
             }
         } else {
             // Customer login - create user if not exists
-            if (!$user) {
+            if (! $user) {
                 $user = User::create([
                     'mobile' => $mobile,
                     'mobile_verified_at' => now(),
@@ -105,14 +104,14 @@ class AuthController extends Controller
             }
         }
 
-        if (!$user->isMobileVerified()) {
+        if (! $user->isMobileVerified()) {
             $user->update(['mobile_verified_at' => now()]);
         }
 
-        if (!$user->isActive()) {
+        if (! $user->isActive()) {
             return response()->json([
                 'success' => false,
-                'message' => 'حساب کاربری شما غیرفعال شده است'
+                'message' => 'حساب کاربری شما غیرفعال شده است',
             ], 403);
         }
 
@@ -126,20 +125,19 @@ class AuthController extends Controller
             ? route('admin.dashboard')
             : route('panel.dashboard');
 
-        // تکنسین CRM → داشبورد اختصاصی
-        if ($user->isStaff() && $user->hasRole('crm-technician') && Route::has('crm.tech.dashboard')) {
-            $redirectUrl = route('crm.tech.dashboard');
-        }
+        // پنل تکنسینِ قدیمی (crm.tech.dashboard) از دسترس خارج شده؛ تکنسین‌ها
+        // از اپِ PWA (مسیرهای tech.* با guard=tech) وارد می‌شوند، پس دیگر
+        // ریدایرکتِ اختصاصی به پنلِ ادمین انجام نمی‌شود.
 
         // If customer and profile not complete, redirect to profile edit
-        if (!$user->isStaff() && (!$user->first_name || !$user->last_name)) {
+        if (! $user->isStaff() && (! $user->first_name || ! $user->last_name)) {
             $redirectUrl = route('panel.profile.edit');
         }
 
         return response()->json([
             'success' => true,
             'message' => 'ورود موفق',
-            'redirect' => $redirectUrl
+            'redirect' => $redirectUrl,
         ]);
     }
 
@@ -167,35 +165,35 @@ class AuthController extends Controller
             ->orWhere('email', $username)
             ->first();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'کاربری با این مشخصات یافت نشد'
+                'message' => 'کاربری با این مشخصات یافت نشد',
             ], 422);
         }
 
         // Check password
-        if (!$user->password || !\Hash::check($password, $user->password)) {
+        if (! $user->password || ! \Hash::check($password, $user->password)) {
             return response()->json([
                 'success' => false,
-                'message' => 'رمز عبور اشتباه است'
+                'message' => 'رمز عبور اشتباه است',
             ], 422);
         }
 
         // Admin login checks
         if ($isAdmin) {
-            if (!$user->isStaff()) {
+            if (! $user->isStaff()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'شما دسترسی به پنل مدیریت ندارید'
+                    'message' => 'شما دسترسی به پنل مدیریت ندارید',
                 ], 403);
             }
         }
 
-        if (!$user->isActive()) {
+        if (! $user->isActive()) {
             return response()->json([
                 'success' => false,
-                'message' => 'حساب کاربری شما غیرفعال شده است'
+                'message' => 'حساب کاربری شما غیرفعال شده است',
             ], 403);
         }
 
@@ -209,14 +207,13 @@ class AuthController extends Controller
             ? route('admin.dashboard')
             : route('panel.dashboard');
 
-        if ($user->isStaff() && $user->hasRole('crm-technician') && Route::has('crm.tech.dashboard')) {
-            $redirectUrl = route('crm.tech.dashboard');
-        }
+        // پنل تکنسینِ قدیمی (crm.tech.dashboard) از دسترس خارج شده — ریدایرکتِ
+        // اختصاصی حذف شد (تکنسین‌ها از اپِ PWA با guard=tech استفاده می‌کنند).
 
         return response()->json([
             'success' => true,
             'message' => 'ورود موفق',
-            'redirect' => $redirectUrl
+            'redirect' => $redirectUrl,
         ]);
     }
 
@@ -230,6 +227,7 @@ class AuthController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect()->route('login');
     }
 }
