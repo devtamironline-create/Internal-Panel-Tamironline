@@ -18,8 +18,7 @@ class CustomerClubController extends Controller
     public function analytics(Request $request, CustomerClubAnalytics $service)
     {
         $data = $service->build([
-            'range' => $request->string('range')->toString() ?: 'all',
-            'source' => $request->string('source')->toString(),
+            'window' => $request->integer('window'),
             'city_id' => $request->integer('city_id'),
         ]);
 
