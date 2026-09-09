@@ -80,11 +80,14 @@
                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">شماره تماس (موبایل یا ثابت) *</label>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+                        @if($isOrderable) شماره موبایل * <span class="text-xs text-gray-400">(باید با ۰۹ شروع شود)</span>
+                        @else شماره تماس (موبایل یا ثابت) * @endif
+                    </label>
                     {{-- `blur` تا نرمال‌سازیِ سمتِ سرور موقعِ تایپ‌کردن شماره را
                          وسطِ کار عوض نکند. inputmode برای کیبوردِ عددی موبایل. --}}
                     <input type="tel" wire:model.blur="newMobile" maxlength="11" dir="ltr"
-                           inputmode="numeric" placeholder="09123456789 یا 02177612345"
+                           inputmode="numeric" placeholder="{{ $isOrderable ? '09123456789' : '09123456789 یا 02177612345' }}"
                            class="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:text-gray-100
                                   @error('newMobile') border-rose-500 dark:border-rose-500 @else border-gray-300 dark:border-gray-600 @enderror">
                     @error('newMobile')
