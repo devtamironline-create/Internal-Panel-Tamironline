@@ -98,6 +98,13 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         ->middleware('can:view-crm-dashboard')
         ->name('dashboard');
 
+    // ─── باشگاه مشتریان — تحلیلِ ورودی‌ها/سفارش‌ها (فقط‌خواندنی) ──────
+    Route::middleware('can:view-customer-club')->prefix('customer-club')->name('customer-club.')->group(function () {
+        Route::get('analytics', [\Modules\CRM\Http\Controllers\CustomerClubController::class, 'analytics'])->name('analytics');
+        Route::get('segments/{segment}/export/{format}', [\Modules\CRM\Http\Controllers\CustomerClubController::class, 'exportSegment'])
+            ->where('segment', 'no-order|vip|at-risk')->where('format', 'xlsx|csv')->name('segments.export');
+    });
+
     // ─── پنل تکنسین ───────────────────────────────────────────────
     Route::middleware('can:view-tech-dashboard')->prefix('tech')->name('tech.')->group(function () {
         Route::get('/', [TechDashboardController::class, 'index'])->name('dashboard');

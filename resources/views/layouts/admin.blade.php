@@ -963,6 +963,27 @@
                 @endcan
                 @endif
 
+                <!-- باشگاه مشتریان -->
+                @if(Route::has('crm.customer-club.analytics'))
+                @can('view-customer-club')
+                <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.customer-club.*') ? 'true' : 'false' }} }">
+                    <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm6 0a4 4 0 10-3-6.5"/></svg>
+                            باشگاه مشتریان
+                        </span>
+                        <svg class="w-4 h-4 transition-transform duration-200" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div x-show="open" x-collapse class="sidebar-submenu">
+                        <a href="{{ route('crm.customer-club.analytics') }}" class="sidebar-menu-item {{ request()->routeIs('crm.customer-club.analytics') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                            تحلیل ورودی‌ها
+                        </a>
+                    </div>
+                </div>
+                @endcan
+                @endif
+
                 <!-- مدیریت سایت -->
                 @if(Route::has('site.admin.dashboard'))
                 @canany(['manage-site', 'view-site-contact-messages', 'manage-site-contact-messages', 'manage-site-reviews', 'view-site-reviews', 'manage-site-testimonials', 'manage-site-device-reviews', 'view-site-device-reviews', 'manage-site-faqs', 'manage-site-pages', 'manage-site-banners', 'manage-site-settings'])
