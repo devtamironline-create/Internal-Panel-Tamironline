@@ -1231,11 +1231,14 @@ class OrderWizard extends Component
 
     protected function validateStep2Customer(): void
     {
-        // شمارهٔ مشتریِ جدید: برای «سفارشِ واقعی» باید موبایلِ ۰۹ باشد (تخصیص/
-        // پیامک/پیگیری به موبایل نیاز دارد)؛ برای «لید» تلفنِ ثابت هم پذیرفته
-        // است (صرفاً اطلاعات تماس برای گزارش‌گیری). محدودیت فقط روی مسیرِ سفارش.
-        $mobileRule = $this->isOrderable ? MobileNumber::RULE : MobileNumber::PHONE_RULE;
-        $mobileMessage = $this->isOrderable ? MobileNumber::MESSAGE : MobileNumber::PHONE_MESSAGE;
+        // شمارهٔ مشتریِ جدید: اگر این ثبت حداقل یک «سفارشِ واقعی» بسازد (دستگاهِ
+        // اصلی یا هر دستگاهِ اضافه قابلِ سفارش باشد) شماره باید موبایلِ ۰۹ باشد
+        // (تخصیص/پیامک/پیگیری به موبایل نیاز دارد)؛ اگر همه‌چیز لید باشد تلفنِ
+        // ثابت هم پذیرفته است. محدودیت فقط روی مسیرِ سفارش.
+        $createsOrder = $this->isOrderable
+            || collect($this->extraDevices)->contains(fn ($d) => (bool) ($d['is_orderable'] ?? true));
+        $mobileRule = $createsOrder ? MobileNumber::RULE : MobileNumber::PHONE_RULE;
+        $mobileMessage = $createsOrder ? MobileNumber::MESSAGE : MobileNumber::PHONE_MESSAGE;
 
         $rules = $this->showNewCustomerForm
             ? [
