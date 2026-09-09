@@ -169,4 +169,32 @@ class OrderWizardMobileValidationTest extends TestCase
             ->call('next')
             ->assertHasNoErrors(['newMobile']);
     }
+
+    // ─── حالتِ سفارشِ واقعی (isOrderable=true): فقط موبایلِ ۰۹ ─────────────
+
+    private function orderWizard()
+    {
+        // در حالتِ سفارش، آدرس هم الزامی است؛ آن را می‌دهیم تا تنها موضوعِ
+        // تست، شماره بماند.
+        return $this->wizard()
+            ->set('isOrderable', true)
+            ->set('address', 'تهران، خیابان آزادی، پلاک ۱');
+    }
+
+    public function test_order_mode_rejects_a_landline_number(): void
+    {
+        // همان شمارهٔ ثابتی که در حالتِ لید پذیرفته می‌شد، برای سفارش رد می‌شود.
+        $this->orderWizard()
+            ->set('newMobile', '02188776655')
+            ->call('next')
+            ->assertHasErrors(['newMobile']);
+    }
+
+    public function test_order_mode_accepts_a_mobile_number(): void
+    {
+        $this->orderWizard()
+            ->set('newMobile', '09123456789')
+            ->call('next')
+            ->assertHasNoErrors(['newMobile']);
+    }
 }

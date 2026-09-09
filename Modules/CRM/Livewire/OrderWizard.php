@@ -1231,12 +1231,16 @@ class OrderWizard extends Component
 
     protected function validateStep2Customer(): void
     {
+        // شمارهٔ مشتریِ جدید: برای «سفارشِ واقعی» باید موبایلِ ۰۹ باشد (تخصیص/
+        // پیامک/پیگیری به موبایل نیاز دارد)؛ برای «لید» تلفنِ ثابت هم پذیرفته
+        // است (صرفاً اطلاعات تماس برای گزارش‌گیری). محدودیت فقط روی مسیرِ سفارش.
+        $mobileRule = $this->isOrderable ? MobileNumber::RULE : MobileNumber::PHONE_RULE;
+        $mobileMessage = $this->isOrderable ? MobileNumber::MESSAGE : MobileNumber::PHONE_MESSAGE;
+
         $rules = $this->showNewCustomerForm
             ? [
                 'newName' => 'required|string|max:255',
-                // چون این فرم لید هم ثبت می‌کند، مشتری ممکن است با تلفنِ ثابت
-                // تماس گرفته باشد — موبایل یا ثابت با کدِ شهر، هر دو پذیرفته‌اند.
-                'newMobile' => ['required', 'string', MobileNumber::PHONE_RULE],
+                'newMobile' => ['required', 'string', $mobileRule],
                 'newPhone' => 'nullable|string|max:20',
                 'introduction' => 'required|string|max:255',
             ]
@@ -1264,7 +1268,7 @@ class OrderWizard extends Component
             'introduction.required' => 'انتخاب «نحوه آشنایی» الزامی است.',
             'regionId.required' => 'برای این شهر، انتخاب منطقه الزامی است.',
             'newMobile.required' => 'شماره تماس الزامی است.',
-            'newMobile.regex' => MobileNumber::PHONE_MESSAGE,
+            'newMobile.regex' => $mobileMessage,
         ]);
 
         // ─── پوششِ منطقه (فقط سفارش، نه لید) ────────────────────────
