@@ -152,13 +152,13 @@ class TechProformaAndTrainingGateTest extends TestCase
 
     public function test_the_status_rule_opens_only_between_coordination_and_closing(): void
     {
-        // فازِ تماس/هماهنگی — هنوز نه.
-        foreach ([OrderStatus::New, OrderStatus::AwaitingCoordination, OrderStatus::NoAnswer, OrderStatus::Coordinated] as $s) {
+        // فازِ تماس/هماهنگیِ اولیه — هنوز نه.
+        foreach ([OrderStatus::New, OrderStatus::AwaitingCoordination, OrderStatus::NoAnswer] as $s) {
             $this->assertFalse($s->allowsProforma(), $s->value.' نباید پیش‌فاکتور بدهد.');
         }
 
-        // فازِ کار — بله.
-        foreach ([OrderStatus::Open, OrderStatus::AwaitingPart, OrderStatus::AwaitingCustomerApproval, OrderStatus::Suspended] as $s) {
+        // از «هماهنگ‌شده» تا پیش از بسته‌شدن — بله (هماهنگ‌شده اکنون مجاز است).
+        foreach ([OrderStatus::Coordinated, OrderStatus::Open, OrderStatus::AwaitingPart, OrderStatus::AwaitingCustomerApproval, OrderStatus::Suspended] as $s) {
             $this->assertTrue($s->allowsProforma(), $s->value.' باید پیش‌فاکتور بدهد.');
         }
 
@@ -200,19 +200,29 @@ class TechProformaAndTrainingGateTest extends TestCase
         }
     }
 
-    public function test_creating_in_the_coordination_phase_is_rejected_with_a_persian_message(): void
+    public function test_creating_in_the_pre_coordination_phase_is_rejected_with_a_persian_message(): void
+    {
+        $tech = $this->tech();
+        $order = $this->order($tech, OrderStatus::AwaitingCoordination);
+
+        try {
+            $this->callStore($tech, ['order_id' => $order->id, 'items' => $this->items()]);
+            $this->fail('پیش از هماهنگ‌شدن نباید پیش‌فاکتور ساخته شود.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->assertStringContainsString('هماهنگ‌شدنِ سفارش', $e->errors()['order_id'][0]);
+        }
+
+        $this->assertSame(0, Proforma::count());
+    }
+
+    public function test_creating_in_the_coordinated_status_is_allowed(): void
     {
         $tech = $this->tech();
         $order = $this->order($tech, OrderStatus::Coordinated);
 
-        try {
-            $this->callStore($tech, ['order_id' => $order->id, 'items' => $this->items()]);
-            $this->fail('در فازِ هماهنگی نباید پیش‌فاکتور ساخته شود.');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            $this->assertStringContainsString('پس از هماهنگی', $e->errors()['order_id'][0]);
-        }
+        $this->callStore($tech, ['order_id' => $order->id, 'items' => $this->items()]);
 
-        $this->assertSame(0, Proforma::count());
+        $this->assertSame(1, Proforma::count());
     }
 
     public function test_creating_on_a_closed_order_is_rejected(): void
@@ -251,8 +261,11 @@ class TechProformaAndTrainingGateTest extends TestCase
         $open = new TechOrderListResource($this->order($tech, OrderStatus::Open));
         $this->assertTrue($open->toArray($request)['can_create_proforma']);
 
-        $coordinating = new TechOrderListResource($this->order($tech, OrderStatus::Coordinated));
-        $this->assertFalse($coordinating->toArray($request)['can_create_proforma']);
+        $coordinated = new TechOrderListResource($this->order($tech, OrderStatus::Coordinated));
+        $this->assertTrue($coordinated->toArray($request)['can_create_proforma']);
+
+        $preCoordination = new TechOrderListResource($this->order($tech, OrderStatus::AwaitingCoordination));
+        $this->assertFalse($preCoordination->toArray($request)['can_create_proforma']);
 
         $closed = new TechOrderListResource($this->order($tech, OrderStatus::Completed));
         $this->assertFalse($closed->toArray($request)['can_create_proforma']);
