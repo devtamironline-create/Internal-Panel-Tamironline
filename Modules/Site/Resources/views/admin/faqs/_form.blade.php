@@ -4,9 +4,9 @@
     $selT = $selectedTaxonomies ?? [];
     $selTcmp = array_map('intval', $selT);
 
-    // فهرست placeholderهای پشتیبانی‌شده در text/HTML سوال/پاسخ — این‌ها
-    // در PageSectionService::applyPlaceholders() بر اساس صفحه‌ای که FAQ
-    // در آن render می‌شود جایگزین می‌شوند.
+    // فهرست placeholderهای پشتیبانی‌شده در text/HTML سوال/پاسخ — بر اساس
+    // صفحه‌ای که FAQ در آن render می‌شود (device/brand/ترکیبی) سمتِ سرور
+    // جایگزین می‌شوند؛ توکنِ شهر/استان از پوششِ واقعیِ همان خدمت می‌آید.
     $placeholders = [
         ['key' => '{device}',       'label' => 'نام کوتاه دستگاه',  'example' => 'لباس‌شویی', 'available' => 'صفحات device و device×brand'],
         ['key' => '{device_label}', 'label' => 'نام کامل دستگاه',   'example' => 'ماشین لباس‌شویی', 'available' => 'صفحات device و device×brand'],
@@ -14,6 +14,9 @@
         ['key' => '{brand}',        'label' => 'نام برند',          'example' => 'سامسونگ', 'available' => 'صفحات brand و device×brand'],
         ['key' => '{brand_slug}',   'label' => 'slug برند',         'example' => 'samsung', 'available' => 'صفحات brand و device×brand'],
         ['key' => '{page_title}',   'label' => 'تیتر صفحه',         'example' => 'تعمیر لباس‌شویی', 'available' => 'همه‌ی صفحات'],
+        ['key' => '{cities}',       'label' => 'شهرهای تحت پوشش',   'example' => 'تهران، مشهد و کرج', 'available' => 'همه‌ی صفحات (پوشش واقعی)'],
+        ['key' => '{provinces}',    'label' => 'استان‌های تحت پوشش','example' => 'تهران، خراسان رضوی و البرز', 'available' => 'همه‌ی صفحات (پوشش واقعی)'],
+        ['key' => '{city_count}',   'label' => 'تعداد شهرها',       'example' => '۳۰', 'available' => 'همه‌ی صفحات (پوشش واقعی)'],
     ];
 @endphp
 

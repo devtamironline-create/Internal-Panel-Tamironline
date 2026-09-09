@@ -129,7 +129,7 @@ class CatalogBrandController extends Controller
                     ],
                     'faq' => array_merge(
                         ['enabled' => $enabled('faq', true)],
-                        $this->buildFaq($brand, $template),
+                        \Modules\Site\Support\FaqTokens::apply($this->buildFaq($brand, $template)),
                     ),
                     'devices' => [
                         'enabled' => $enabled('devices', true),

@@ -145,7 +145,7 @@ class CatalogDeviceBrandController extends Controller
                     ],
                     'faq' => array_merge(
                         ['enabled' => $enabled('faq', true)],
-                        $this->buildFaq($page, $device, $brand, $template),
+                        \Modules\Site\Support\FaqTokens::apply($this->buildFaq($page, $device, $brand, $template), $device, $brand),
                     ),
                     'brand_other_devices' => [
                         'enabled' => $enabled('brand_other_devices', true),

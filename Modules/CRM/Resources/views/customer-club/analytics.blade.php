@@ -6,58 +6,49 @@
 @php
     $fmt = fn ($n) => number_format((int) $n);
     $pct = fn ($v) => rtrim(rtrim(number_format((float) $v, 1), '0'), '.');
+    $qp = fn (array $extra = []) => array_merge(['window' => $filters['window'], 'city_id' => $filters['city_id']], $extra);
 @endphp
 <div class="p-6 space-y-5" dir="rtl">
 
     <div class="flex items-start justify-between flex-wrap gap-3">
         <div>
             <h1 class="text-xl font-bold text-gray-800 dark:text-white">👥 باشگاه مشتریان — تحلیل ورودی‌ها</h1>
-            <p class="text-sm text-gray-500 mt-1">اکتساب، تبدیل، تقاضا، زمان‌بندی، درآمد و نگه‌داشتِ مشتریان اپ و پنل.</p>
+            <p class="text-sm text-gray-500 mt-1">مشتریانِ واقعی و فعالِ اپ: اکتساب، تبدیل، تقاضا، ساعاتِ اوج و سگمنت‌بندیِ RFM.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            {{-- دکمه‌های بازهٔ فعالیت (روند/ساعات اوج/تقاضا) --}}
+            @foreach($windows as $w => $label)
+                <a href="{{ route('crm.customer-club.analytics', $qp(['window' => $w])) }}"
+                   class="px-3 py-1.5 rounded-lg text-xs font-bold {{ (int) $filters['window'] === $w ? 'bg-brand-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' }}">{{ $label }}</a>
+            @endforeach
         </div>
     </div>
 
-    {{-- فیلترها --}}
-    <form method="GET" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 flex flex-wrap items-end gap-3">
-        <label class="block text-xs text-gray-500">بازهٔ زمانی
-            <select name="range" class="mt-1 px-2 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                @foreach($ranges as $key => $label)
-                    <option value="{{ $key }}" @selected($filters['range'] === $key)>{{ $label }}</option>
-                @endforeach
-            </select>
-        </label>
-        @if($sources)
-        <label class="block text-xs text-gray-500">منبع سفارش
-            <select name="source" class="mt-1 px-2 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
-                <option value="">همه</option>
-                @foreach($sources as $s)
-                    <option value="{{ $s }}" @selected($filters['source'] === $s)>{{ $s }}</option>
-                @endforeach
-            </select>
-        </label>
-        @endif
-        @if($cities)
+    @if($cities)
+    <form method="GET" class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 flex items-end gap-3">
+        <input type="hidden" name="window" value="{{ $filters['window'] }}">
         <label class="block text-xs text-gray-500">شهر
-            <select name="city_id" class="mt-1 px-2 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
+            <select name="city_id" onchange="this.form.submit()" class="mt-1 px-2 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-lg text-sm">
                 <option value="">همهٔ شهرها</option>
                 @foreach($cities as $c)
                     <option value="{{ $c['id'] }}" @selected((string) $filters['city_id'] === (string) $c['id'])>{{ $c['name'] }}</option>
                 @endforeach
             </select>
         </label>
-        @endif
-        <button class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-bold">اعمال</button>
-        <a href="{{ route('crm.customer-club.analytics') }}" class="px-3 py-2 text-gray-500 text-sm">پاک‌کردن</a>
+        <span class="text-[11px] text-gray-400 pb-2">فیلترِ شهر روی تقاضا/روند/ساعاتِ اوج اعمال می‌شود.</span>
     </form>
+    @endif
 
-    {{-- کارت‌های KPI --}}
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+    {{-- کارت‌های نمای کلی (مادام‌العمر، مشتریانِ واقعی) --}}
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        @php($ov = $overview)
         @php($cards = [
-            ['label' => 'کل مشتریان', 'value' => $fmt($acquisition['total']), 'sub' => $fmt($acquisition['new_in_range']).' ثبت‌نام در این بازه', 'tone' => 'gray'],
-            ['label' => 'نرخ تبدیل به سفارش', 'value' => $pct($conversion['rate']).'٪', 'sub' => $fmt($conversion['with_orders']).' سفارش داده · '.$fmt($conversion['without_orders']).' نداده', 'tone' => 'blue'],
-            ['label' => 'نرخ خرید تکراری', 'value' => $pct($retention['repeat_rate']).'٪', 'sub' => $fmt($retention['repeat']).' تکراری از '.$fmt($retention['with_orders']), 'tone' => 'purple'],
-            ['label' => 'میانگین ارزش سفارش', 'value' => $fmt($revenue['aov']), 'sub' => 'تومان (AOV)', 'tone' => 'emerald'],
-            ['label' => 'درآمدِ انجام‌شده', 'value' => $fmt($revenue['total_revenue']), 'sub' => $fmt($revenue['completed_orders']).' سفارشِ انجام‌شده', 'tone' => 'emerald'],
-            ['label' => 'میانگین تا اولین سفارش', 'value' => $conversion['avg_days_to_first_order'] === null ? '—' : $pct($conversion['avg_days_to_first_order']), 'sub' => 'روز پس از ثبت‌نام', 'tone' => 'amber'],
+            ['label' => 'کل مشتریان', 'value' => $fmt($ov['total_customers']), 'sub' => 'حساب‌های واقعی (بدون بلاک/حذف)', 'tone' => 'gray'],
+            ['label' => 'مشتریانِ فعال', 'value' => $fmt($ov['active_customers']), 'sub' => 'سفارش در ۹۰ روزِ اخیر', 'tone' => 'emerald'],
+            ['label' => 'نرخ تبدیل', 'value' => $pct($ov['conversion_rate']).'٪', 'sub' => $fmt($ov['with_orders']).' دارای سفارش · '.$fmt($ov['without_orders']).' بدون', 'tone' => 'blue'],
+            ['label' => 'نرخ خرید تکراری', 'value' => $pct($ov['repeat_rate']).'٪', 'sub' => $fmt($ov['repeat']).' مشتری با ۲+ سفارش', 'tone' => 'purple'],
+            ['label' => 'VIP', 'value' => $fmt($segments['vip']), 'sub' => $segments['vip_limit'].' نفرِ برتر بر اساسِ مبلغ خرید', 'tone' => 'amber'],
+            ['label' => 'در خطرِ ریزش', 'value' => $fmt($segments['at_risk']), 'sub' => $segments['churn_days'].' روز بدونِ سفارش', 'tone' => 'rose'],
         ])
         @foreach($cards as $card)
             <div @class([
@@ -67,6 +58,7 @@
                 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800' => $card['tone'] === 'purple',
                 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' => $card['tone'] === 'amber',
                 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800' => $card['tone'] === 'emerald',
+                'bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' => $card['tone'] === 'rose',
             ])>
                 <div class="text-xs text-gray-500 dark:text-gray-400">{{ $card['label'] }}</div>
                 <div class="text-2xl font-black text-gray-800 dark:text-gray-100 mt-1" dir="ltr">{{ $card['value'] }}</div>
@@ -79,8 +71,8 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         @php($segCards = [
             ['key' => 'no-order', 'title' => 'بدونِ سفارش', 'count' => $segments['no_order'], 'desc' => 'ثبت‌نام کرده‌اند ولی هرگز سفارش نداده‌اند.', 'tone' => 'amber'],
-            ['key' => 'vip', 'title' => 'مشتریانِ VIP', 'count' => $segments['vip'], 'desc' => 'حداقل ۳ سفارش — ارزشمندترین‌ها.', 'tone' => 'emerald'],
-            ['key' => 'at-risk', 'title' => 'در خطرِ ریزش', 'count' => $segments['at_risk'], 'desc' => 'آخرین سفارش بینِ ۹۰ تا ۳۶۵ روزِ پیش.', 'tone' => 'rose'],
+            ['key' => 'vip', 'title' => 'VIP (۳۰ نفرِ برتر)', 'count' => $segments['vip'], 'desc' => 'بیشترین مجموعِ مبلغِ خرید.', 'tone' => 'emerald'],
+            ['key' => 'at-risk', 'title' => 'در خطرِ ریزش', 'count' => $segments['at_risk'], 'desc' => $segments['churn_days'].' روز از آخرین سفارش گذشته.', 'tone' => 'rose'],
         ])
         @foreach($segCards as $s)
             <div @class([
@@ -104,18 +96,22 @@
         @endforeach
     </div>
 
-    {{-- روندِ ثبت‌نام + روندِ سفارش (۱۲ ماه) --}}
+    {{-- روندِ ثبت‌نام + سفارش (در بازهٔ انتخابی) --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        @foreach([['عنوان' => 'روندِ ثبت‌نامِ مشتریان (۱۲ ماه)', 'data' => $acquisition['trend'], 'color' => 'bg-blue-500'], ['عنوان' => 'روندِ سفارش‌ها (۱۲ ماه)', 'data' => $temporal['monthly'], 'color' => 'bg-emerald-500']] as $chart)
-        @php($maxV = max(1, collect($chart['data'])->max('count')))
+        @foreach([['t' => 'روندِ ثبت‌نامِ مشتریان', 'd' => $acquisition_trend, 'color' => 'bg-blue-500'], ['t' => 'روندِ سفارش‌ها', 'd' => $order_trend, 'color' => 'bg-emerald-500']] as $chart)
+        @php($maxV = max(1, collect($chart['d']['points'])->max('count')))
+        @php($gran = ['day' => 'روزانه', 'week' => 'هفتگی', 'month' => 'ماهانه'][$chart['d']['granularity']] ?? '')
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">{{ $chart['عنوان'] }}</div>
-            <div class="flex items-end gap-1 h-40">
-                @foreach($chart['data'] as $pt)
-                    <div class="flex-1 flex flex-col items-center justify-end h-full" title="{{ $pt['label'] }}: {{ $fmt($pt['count']) }}">
-                        <span class="text-[9px] text-gray-500" dir="ltr">{{ $pt['count'] ? $fmt($pt['count']) : '' }}</span>
+            <div class="flex justify-between items-center mb-3">
+                <div class="text-sm font-bold text-gray-700 dark:text-gray-200">{{ $chart['t'] }}</div>
+                <div class="text-[10px] text-gray-400">{{ $windows[$filters['window']] ?? '' }} · {{ $gran }}</div>
+            </div>
+            <div class="flex items-end gap-0.5 h-40 overflow-x-auto">
+                @foreach($chart['d']['points'] as $pt)
+                    <div class="flex-1 min-w-[8px] flex flex-col items-center justify-end h-full" title="{{ $pt['label'] }}: {{ $fmt($pt['count']) }}">
+                        <span class="text-[8px] text-gray-500" dir="ltr">{{ $pt['count'] ? $fmt($pt['count']) : '' }}</span>
                         <div class="w-full {{ $chart['color'] }} rounded-t" style="height: {{ (int) round($pt['count'] / $maxV * 100) }}%; min-height: {{ $pt['count'] > 0 ? '3px' : '0' }};"></div>
-                        <span class="text-[8px] text-gray-400 mt-1 whitespace-nowrap" dir="ltr">{{ $pt['label'] }}</span>
+                        <span class="text-[7px] text-gray-400 mt-1 whitespace-nowrap" dir="ltr">{{ $pt['label'] }}</span>
                     </div>
                 @endforeach
             </div>
@@ -123,76 +119,74 @@
         @endforeach
     </div>
 
-    {{-- Top دستگاه / برند / شهر --}}
+    {{-- Top دستگاه / برند / شهر (در بازهٔ انتخابی) --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        @foreach([['عنوان' => 'بیشترین سفارش بر اساس دستگاه', 'data' => $demand['top_devices']], ['عنوان' => 'بر اساس برند', 'data' => $demand['top_brands']], ['عنوان' => 'بر اساس شهر', 'data' => $demand['top_cities']]] as $tbl)
-        @php($maxV = max(1, collect($tbl['data'])->max('count')))
+        @php($devMax = max(1, collect($demand['top_devices'])->max('count')))
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">{{ $tbl['عنوان'] }}</div>
-            @forelse($tbl['data'] as $row)
+            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">بیشترین سفارش بر اساس دستگاه</div>
+            @forelse($demand['top_devices'] as $row)
                 <div class="mb-2">
-                    <div class="flex justify-between text-[12px] text-gray-600 dark:text-gray-300">
-                        <span>{{ $row['name'] }}</span><span dir="ltr" class="font-bold">{{ $fmt($row['count']) }}</span>
-                    </div>
-                    <div class="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-0.5">
-                        <div class="h-full bg-brand-500 rounded-full" style="width: {{ (int) round($row['count'] / $maxV * 100) }}%"></div>
-                    </div>
+                    <div class="flex justify-between text-[12px] text-gray-600 dark:text-gray-300"><span>{{ $row['name'] }}</span><span dir="ltr" class="font-bold">{{ $fmt($row['count']) }}</span></div>
+                    <div class="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-0.5"><div class="h-full bg-brand-500 rounded-full" style="width: {{ (int) round($row['count'] / $devMax * 100) }}%"></div></div>
                 </div>
-            @empty
-                <p class="text-[12px] text-gray-400">داده‌ای در این بازه نیست.</p>
-            @endforelse
+            @empty <p class="text-[12px] text-gray-400">داده‌ای در این بازه نیست.</p> @endforelse
         </div>
-        @endforeach
-    </div>
 
-    {{-- فانلِ وضعیت + منبع سفارش --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">سفارش‌ها به تفکیک وضعیت</div>
-            <div class="flex flex-wrap gap-2">
-                @forelse($demand['status_funnel'] as $s)
-                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs {{ $s['badge'] }}">
-                        <span>{{ $s['label'] }}</span><span class="font-black" dir="ltr">{{ $fmt($s['count']) }}</span>
-                    </span>
-                @empty
-                    <p class="text-[12px] text-gray-400">داده‌ای در این بازه نیست.</p>
-                @endforelse
-            </div>
-        </div>
+        @php($brMax = max(1, collect($demand['top_brands']['items'])->max('count') ?: 1))
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">منبعِ سفارش</div>
-            @forelse($demand['source_split'] as $s)
-                <div class="flex justify-between text-[12px] text-gray-600 dark:text-gray-300 mb-1.5">
-                    <span>{{ $s['source'] }}</span><span dir="ltr" class="font-bold">{{ $fmt($s['count']) }}</span>
+            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">بر اساس برند (برندهای واقعی)</div>
+            @forelse($demand['top_brands']['items'] as $row)
+                <div class="mb-2">
+                    <div class="flex justify-between text-[12px] text-gray-600 dark:text-gray-300"><span>{{ $row['name'] }}</span><span dir="ltr" class="font-bold">{{ $fmt($row['count']) }}</span></div>
+                    <div class="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-0.5"><div class="h-full bg-indigo-500 rounded-full" style="width: {{ (int) round($row['count'] / $brMax * 100) }}%"></div></div>
                 </div>
-            @empty
-                <p class="text-[12px] text-gray-400">ستونِ منبع موجود نیست یا داده‌ای نیست.</p>
-            @endforelse
+            @empty <p class="text-[12px] text-gray-400">برندِ واقعی‌ای در این بازه نیست.</p> @endforelse
+            @if($demand['top_brands']['unspecified'] > 0)
+                <div class="mt-3 pt-2 border-t border-dashed border-gray-200 dark:border-gray-700 text-[11px] text-amber-700 dark:text-amber-300">
+                    بدونِ برندِ مشخص: <b dir="ltr">{{ $fmt($demand['top_brands']['unspecified']) }}</b>
+                    <div class="text-[10px] text-gray-400 mt-0.5">{{ $demand['top_brands']['unspecified_note'] }}</div>
+                </div>
+            @endif
+        </div>
+
+        @php($ctMax = max(1, collect($demand['top_cities'])->max('count') ?: 1))
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">بر اساس شهر</div>
+            @forelse($demand['top_cities'] as $row)
+                <div class="mb-2">
+                    <div class="flex justify-between text-[12px] text-gray-600 dark:text-gray-300"><span>{{ $row['name'] }}</span><span dir="ltr" class="font-bold">{{ $fmt($row['count']) }}</span></div>
+                    <div class="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-0.5"><div class="h-full bg-cyan-500 rounded-full" style="width: {{ (int) round($row['count'] / $ctMax * 100) }}%"></div></div>
+                </div>
+            @empty <p class="text-[12px] text-gray-400">داده‌ای در این بازه نیست.</p> @endforelse
         </div>
     </div>
 
-    {{-- Heatmap ساعت × روزِ هفته --}}
+    {{-- فانلِ وضعیت --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+        <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">سفارش‌ها به تفکیک وضعیت (در بازه)</div>
+        <div class="flex flex-wrap gap-2">
+            @forelse($demand['status_funnel'] as $s)
+                <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs {{ $s['badge'] }}"><span>{{ $s['label'] }}</span><span class="font-black" dir="ltr">{{ $fmt($s['count']) }}</span></span>
+            @empty <p class="text-[12px] text-gray-400">داده‌ای در این بازه نیست.</p> @endforelse
+        </div>
+    </div>
+
+    {{-- Heatmap ساعت × روزِ هفته (در بازه) --}}
     <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 overflow-x-auto">
-        <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">ساعاتِ اوجِ سفارش (ساعت × روزِ هفته)</div>
+        <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">ساعاتِ اوجِ سفارش (ساعت × روزِ هفته) — {{ $windows[$filters['window']] ?? '' }}</div>
         <table class="text-[10px] border-collapse">
-            <thead>
-                <tr>
-                    <th class="p-1 text-gray-400 sticky right-0 bg-white dark:bg-gray-800"></th>
-                    @for($h = 0; $h < 24; $h++)
-                        <th class="p-1 text-gray-400 font-normal" dir="ltr">{{ $h }}</th>
-                    @endfor
-                    <th class="p-1 text-gray-500">جمع</th>
-                </tr>
-            </thead>
+            <thead><tr><th class="p-1 sticky right-0 bg-white dark:bg-gray-800"></th>
+                @for($h = 0; $h < 24; $h++)<th class="p-1 text-gray-400 font-normal" dir="ltr">{{ $h }}</th>@endfor
+                <th class="p-1 text-gray-500">جمع</th></tr></thead>
             <tbody>
-                @foreach($temporal['heatmap'] as $row)
+                @foreach($heatmap['rows'] as $row)
                     <tr>
                         <td class="p-1 font-bold text-gray-600 dark:text-gray-300 whitespace-nowrap sticky right-0 bg-white dark:bg-gray-800">{{ $row['weekday'] }}</td>
-                        @foreach($row['hours'] as $count)
-                            @php($op = $temporal['heatmap_max'] > 0 ? round($count / $temporal['heatmap_max'], 2) : 0)
+                        @foreach($row['hours'] as $hh => $count)
+                            @php($op = $heatmap['max'] > 0 ? round($count / $heatmap['max'], 2) : 0)
                             <td class="w-6 h-6 text-center align-middle rounded" dir="ltr"
                                 style="background: rgba(0,80,157,{{ $op }}); color: {{ $op > 0.5 ? '#fff' : '#6b7280' }};"
-                                title="{{ $row['weekday'] }} ساعت {{ $loop->index }}: {{ $fmt($count) }}">{{ $count ?: '' }}</td>
+                                title="{{ $row['weekday'] }} ساعت {{ $hh }}: {{ $fmt($count) }}">{{ $count ?: '' }}</td>
                         @endforeach
                         <td class="p-1 font-black text-gray-700 dark:text-gray-200" dir="ltr">{{ $fmt($row['total']) }}</td>
                     </tr>
@@ -201,52 +195,46 @@
         </table>
     </div>
 
-    {{-- نگه‌داشت: توزیع سفارش + RFM + درآمد بر دستگاه --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">توزیعِ تعدادِ سفارش به‌ازای مشتری</div>
-            @php($distMax = max(1, max($retention['distribution'])))
-            @foreach($retention['distribution'] as $bucket => $count)
-                <div class="mb-2">
-                    <div class="flex justify-between text-[12px] text-gray-600 dark:text-gray-300">
-                        <span>{{ $bucket }} سفارش</span><span dir="ltr" class="font-bold">{{ $fmt($count) }}</span>
-                    </div>
-                    <div class="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-0.5">
-                        <div class="h-full bg-purple-500 rounded-full" style="width: {{ (int) round($count / $distMax * 100) }}%"></div>
-                    </div>
-                </div>
-            @endforeach
+    {{-- RFM: ماتریسِ R×F + سگمنت‌ها --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 overflow-x-auto">
+            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-1">ماتریسِ RFM (تازگی × تکرار)</div>
+            <div class="text-[10px] text-gray-400 mb-3">هر خانه = تعدادِ مشتری با آن امتیازِ تازگی (R) و تکرار (F). امتیاز ۱ تا ۵ بر پایهٔ چارک‌پنجم.</div>
+            @php($mMax = 0)@foreach($rfm['matrix'] as $fr)@foreach($fr as $v)@php($mMax = max($mMax, $v))@endforeach @endforeach
+            <table class="text-[11px] border-collapse mx-auto">
+                <thead><tr><th class="p-1 text-gray-400">R\F</th>@for($f = 1; $f <= 5; $f++)<th class="p-1 text-gray-500 w-12" dir="ltr">F{{ $f }}</th>@endfor</tr></thead>
+                <tbody>
+                    @for($r = 5; $r >= 1; $r--)
+                        <tr>
+                            <td class="p-1 font-bold text-gray-500" dir="ltr">R{{ $r }}</td>
+                            @for($f = 1; $f <= 5; $f++)
+                                @php($v = $rfm['matrix'][$r][$f] ?? 0)
+                                @php($op = $mMax > 0 ? round($v / $mMax, 2) : 0)
+                                <td class="w-12 h-9 text-center align-middle rounded font-bold" dir="ltr"
+                                    style="background: rgba(124,58,237,{{ $op }}); color: {{ $op > 0.5 ? '#fff' : '#6b7280' }};">{{ $v ?: '' }}</td>
+                            @endfor
+                        </tr>
+                    @endfor
+                </tbody>
+            </table>
+            <div class="text-[10px] text-gray-400 mt-2">R۵ = تازه‌ترین خرید · F۵ = بیشترین تکرار · تعدادِ کلِ مشتریانِ دارای سفارش: <b dir="ltr">{{ $fmt($rfm['count']) }}</b></div>
         </div>
         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">سگمنت‌بندیِ RFM</div>
-            @php($segLabels = ['champions' => 'قهرمانان', 'loyal' => 'وفادار', 'new' => 'تازه‌وارد', 'at_risk' => 'در خطرِ ریزش', 'dormant' => 'خفته', 'others' => 'سایر'])
-            @foreach($segLabels as $k => $label)
-                <div class="flex justify-between text-[12px] text-gray-600 dark:text-gray-300 mb-1.5">
-                    <span>{{ $label }}</span><span dir="ltr" class="font-bold">{{ $fmt($retention['segments'][$k] ?? 0) }}</span>
+            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">سگمنت‌های RFM</div>
+            @php($segMax = max(1, collect($rfm['segments'])->max('count') ?: 1))
+            @forelse($rfm['segments'] as $seg)
+                <div class="mb-1.5">
+                    <div class="flex justify-between text-[12px] text-gray-600 dark:text-gray-300"><span>{{ $seg['label'] }}</span><span dir="ltr" class="font-bold">{{ $fmt($seg['count']) }}</span></div>
+                    <div class="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-0.5"><div class="h-full bg-violet-500 rounded-full" style="width: {{ (int) round($seg['count'] / $segMax * 100) }}%"></div></div>
                 </div>
-            @endforeach
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div class="text-sm font-bold text-gray-700 dark:text-gray-200 mb-3">درآمد بر اساس دستگاه</div>
-            @php($revMax = max(1, collect($revenue['top_devices_by_revenue'])->max('total')))
-            @forelse($revenue['top_devices_by_revenue'] as $row)
-                <div class="mb-2">
-                    <div class="flex justify-between text-[12px] text-gray-600 dark:text-gray-300">
-                        <span>{{ $row['name'] }}</span><span dir="ltr" class="font-bold">{{ $fmt($row['total']) }}</span>
-                    </div>
-                    <div class="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-0.5">
-                        <div class="h-full bg-emerald-500 rounded-full" style="width: {{ (int) round($row['total'] / $revMax * 100) }}%"></div>
-                    </div>
-                </div>
-            @empty
-                <p class="text-[12px] text-gray-400">داده‌ای در این بازه نیست.</p>
-            @endforelse
+            @empty <p class="text-[12px] text-gray-400">هنوز مشتریِ دارای سفارشی نیست.</p> @endforelse
         </div>
     </div>
 
     <p class="text-[11px] text-gray-400 leading-5">
-        نکته: تفکیکِ «کانالِ ثبت‌نام» (اپ/وب) در سطحِ مشتری در دیتابیس نگه‌داری نمی‌شود؛ تفکیکِ منبع از روی «منبعِ سفارش» است.
-        ساعت/روزِ هفته به وقتِ محلی محاسبه شده است.
+        همهٔ متریک‌ها فقط مشتریانِ «واقعی» (بدونِ حساب‌های بلاک/حذف‌شده) را می‌شمارند و محورِ باشگاه، مشتریانِ اپ‌اند.
+        کارت‌های «کل/تبدیل/تکراری/VIP/ریزش/RFM» مادام‌العمرند؛ «روند/تقاضا/ساعاتِ اوج» در بازهٔ انتخابیِ بالا.
+        ساعت/روزِ هفته به وقتِ محلی است.
     </p>
 </div>
 @endsection

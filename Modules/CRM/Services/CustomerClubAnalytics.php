@@ -8,134 +8,128 @@ use Illuminate\Support\Facades\Schema;
 use Modules\CRM\Enums\OrderStatus;
 
 /**
- * تحلیلِ «باشگاه مشتریان» — اکتساب، تبدیل، تقاضا، زمان‌بندی، درآمد و نگه‌داشت.
+ * تحلیلِ «باشگاه مشتریان» — با محوریتِ مشتریانِ «واقعی و فعالِ» اپ.
  *
- * همهٔ محاسبات با چند کوئریِ گروهیِ ثابت انجام می‌شود (بدونِ N+1) و فقط
- * می‌خوانَد (هیچ نوشتنی در دیتابیس نیست). ستون‌های اختیاری با Schema::hasColumn
- * محافظت می‌شوند تا روی هر نسخهٔ اسکیمای پروداکشن امن بماند.
- *
- * نکتهٔ ساعت/روز: فرض بر این است که created_at به وقتِ محلی (Asia/Tehran)
- * ذخیره می‌شود (تنظیمِ پروژه)، پس HOUR()/DAYOFWEEK() محلی‌اند.
+ * «واقعی» = حذفِ حساب‌های soft-deleted و بلاک‌شده. متریک‌های سطحِ‌مشتری
+ * (کل، تبدیل، خریدِ تکراری، VIP، ریزش، RFM) مادام‌العمرند؛ متریک‌های فعالیت
+ * (روندِ ثبت‌نام/سفارش، ساعاتِ اوج، تقاضا) در «پنجره»ی انتخابی (۱/۳/۶/۱۲ ماه،
+ * پیش‌فرض ۳) محاسبه می‌شوند. فقط می‌خوانَد؛ توابعِ MySQL به‌شکلِ driver-aware
+ * اجرا می‌شوند تا روی SQLite (تست) هم کار کنند.
  */
 class CustomerClubAnalytics
 {
-    public const RANGES = [
-        'all' => 'کل دوره',
-        '30' => '۳۰ روز اخیر',
-        '90' => '۹۰ روز اخیر',
-        '365' => 'یک سال اخیر',
+    /** پنجره‌های فعالیت (ماه). */
+    public const WINDOWS = [1 => '۱ ماه', 3 => '۳ ماه', 6 => '۶ ماه', 12 => 'یک سال'];
+
+    private const CHURN_DAYS = 90;
+
+    private const VIP_LIMIT = 30;
+
+    private const ACTIVE_DAYS = 90;
+
+    /** برندهایی که «نامشخص» محسوب می‌شوند و در نمودارِ برند جدا شمرده می‌شوند. */
+    private const UNSPECIFIED_BRANDS = ['سایر', 'متفرقه', 'نامشخص', 'سایر برندها'];
+
+    /** برچسب‌های سگمنتِ RFM. */
+    public const RFM_LABELS = [
+        'champions' => 'قهرمانان',
+        'loyal' => 'وفادار',
+        'potential_loyalist' => 'وفادارِ بالقوه',
+        'new' => 'تازه‌وارد',
+        'promising' => 'امیدوارکننده',
+        'need_attention' => 'نیازمندِ توجه',
+        'about_to_sleep' => 'در آستانهٔ خواب',
+        'at_risk' => 'در خطرِ ریزش',
+        'cant_lose' => 'نباید از دست داد',
+        'hibernating' => 'خفته',
+        'lost' => 'از‌دست‌رفته',
     ];
 
-    /** آستانه‌های سگمنت‌بندی (روز / تعداد سفارش). */
-    private const AT_RISK_MIN_DAYS = 90;
-
-    private const AT_RISK_MAX_DAYS = 365;
-
-    private const VIP_MIN_ORDERS = 3;
-
     /**
-     * @param  array{range?:string,source?:string,city_id?:int|string}  $filters
+     * @param  array{window?:int|string,city_id?:int|string}  $filters
      * @return array<string, mixed>
      */
     public function build(array $filters = []): array
     {
-        $range = (string) ($filters['range'] ?? 'all');
-        $since = $this->since($range);
-        $source = trim((string) ($filters['source'] ?? ''));
+        $window = (int) ($filters['window'] ?? 3);
+        if (! isset(self::WINDOWS[$window])) {
+            $window = 3;
+        }
         $cityId = (int) ($filters['city_id'] ?? 0);
+        $since = now()->copy()->subMonthsNoOverflow($window)->startOfDay();
 
         return [
-            'filters' => ['range' => $range, 'source' => $source, 'city_id' => $cityId ?: ''],
-            'ranges' => self::RANGES,
-            'sources' => $this->distinctSources(),
+            'filters' => ['window' => $window, 'city_id' => $cityId ?: ''],
+            'windows' => self::WINDOWS,
             'cities' => $this->cityOptions(),
-            'acquisition' => $this->acquisition($since),
-            'conversion' => $this->conversion(),
-            'demand' => $this->demand($since, $source, $cityId),
-            'temporal' => $this->temporal($since, $source, $cityId),
-            'revenue' => $this->revenue($since, $source, $cityId),
-            'retention' => $this->retention(),
+            'overview' => $this->overview(),
+            'acquisition_trend' => $this->trend('crm_customers', $window, $since, 0),
+            'order_trend' => $this->trend('crm_orders', $window, $since, $cityId),
+            'demand' => $this->demand($since, $cityId),
+            'heatmap' => $this->heatmap($since, $cityId),
+            'rfm' => $this->rfm(),
             'segments' => $this->segmentCounts(),
+            'window' => $window,
         ];
     }
 
-    // ─────────────────────────── کمک‌ها ───────────────────────────
-
-    private function since(string $range): ?string
-    {
-        return match ($range) {
-            '30' => now()->subDays(30)->toDateTimeString(),
-            '90' => now()->subDays(90)->toDateTimeString(),
-            '365' => now()->subDays(365)->toDateTimeString(),
-            default => null,
-        };
-    }
-
-    /** عبارتِ مبلغِ سفارش، هم‌راستا با بقیهٔ محاسباتِ مالی. */
-    private function amountExpr(): string
-    {
-        $cols = [];
-        foreach (['price_customer', 'total_invoice', 'final_price'] as $c) {
-            if (Schema::hasColumn('crm_orders', $c)) {
-                $cols[] = "NULLIF({$c}, 0)";
-            }
-        }
-
-        return $cols === [] ? '0' : 'COALESCE('.implode(', ', $cols).', 0)';
-    }
-
-    private function hasSource(): bool
-    {
-        return Schema::hasColumn('crm_orders', 'source');
-    }
+    // ─────────────────────────── کمک‌های عمومی ───────────────────────────
 
     private function isSqlite(): bool
     {
         return DB::connection()->getDriverName() === 'sqlite';
     }
 
-    /** عبارتِ «سالِ-ماه» (YYYY-MM) مستقل از درایور. */
-    private function monthExpr(string $col): string
-    {
-        return $this->isSqlite() ? "strftime('%Y-%m', {$col})" : "DATE_FORMAT({$col}, '%Y-%m')";
-    }
-
-    /** ساعتِ روز (0..23) مستقل از درایور. */
     private function hourExpr(string $col): string
     {
         return $this->isSqlite() ? "CAST(strftime('%H', {$col}) AS INTEGER)" : "HOUR({$col})";
     }
 
-    /** روزِ هفته به‌سبکِ MySQL (1=یکشنبه..7=شنبه) مستقل از درایور. */
     private function dowExpr(string $col): string
     {
         return $this->isSqlite() ? "(CAST(strftime('%w', {$col}) AS INTEGER) + 1)" : "DAYOFWEEK({$col})";
     }
 
-    /** اختلافِ روزِ بینِ دو تاریخ (a - b) مستقل از درایور. */
-    private function daysBetweenExpr(string $a, string $b): string
+    private function amountExpr(string $prefix = ''): string
     {
-        return $this->isSqlite() ? "(julianday({$a}) - julianday({$b}))" : "DATEDIFF({$a}, {$b})";
-    }
-
-    /** اعمالِ فیلترهای بازه/منبع/شهر روی یک کوئریِ crm_orders. */
-    private function scopeOrders($q, ?string $since, string $source = '', int $cityId = 0)
-    {
-        return $q
-            ->when($since, fn ($qq) => $qq->where('crm_orders.created_at', '>=', $since))
-            ->when($source !== '' && $this->hasSource(), fn ($qq) => $qq->where('crm_orders.source', $source))
-            ->when($cityId > 0, fn ($qq) => $qq->where('crm_orders.city_id', $cityId));
-    }
-
-    /** @return array<int, string> */
-    private function distinctSources(): array
-    {
-        if (! $this->hasSource()) {
-            return [];
+        $cols = [];
+        foreach (['price_customer', 'total_invoice', 'final_price'] as $c) {
+            if (Schema::hasColumn('crm_orders', $c)) {
+                $cols[] = "NULLIF({$prefix}{$c}, 0)";
+            }
         }
 
-        return DB::table('crm_orders')->select('source')->whereNotNull('source')
-            ->where('source', '!=', '')->distinct()->orderBy('source')->pluck('source')->all();
+        return $cols === [] ? '0' : 'COALESCE('.implode(', ', $cols).', 0)';
+    }
+
+    private function hasBlock(): bool
+    {
+        return Schema::hasColumn('crm_customers', 'is_blocked');
+    }
+
+    /** فیلترِ «مشتریِ واقعی»: نه حذف‌شده، نه بلاک‌شده. */
+    private function realCustomers($q, string $alias = 'crm_customers')
+    {
+        $q->whereNull("{$alias}.deleted_at");
+        if ($this->hasBlock()) {
+            $q->where(fn ($w) => $w->where("{$alias}.is_blocked", false)->orWhereNull("{$alias}.is_blocked"));
+        }
+
+        return $q;
+    }
+
+    /** آمارِ هر مشتریِ واقعیِ دارایِ سفارش: تعداد، آخرین سفارش، مجموعِ مبلغ. */
+    private function perCustomer()
+    {
+        $amount = $this->amountExpr('o.');
+
+        return $this->realCustomers(
+            DB::table('crm_orders as o')->join('crm_customers as c', 'c.id', '=', 'o.customer_id'),
+            'c'
+        )
+            ->whereNotNull('o.customer_id')
+            ->groupBy('o.customer_id')
+            ->selectRaw("o.customer_id, COUNT(*) as freq, MAX(o.created_at) as last_at, SUM({$amount}) as monetary");
     }
 
     /** @return array<int, array{id:int,name:string}> */
@@ -147,122 +141,184 @@ class CustomerClubAnalytics
 
         return DB::table('crm_orders')
             ->join('crm_cities', 'crm_cities.id', '=', 'crm_orders.city_id')
-            ->select('crm_cities.id', 'crm_cities.name')
-            ->selectRaw('COUNT(*) as c')
-            ->groupBy('crm_cities.id', 'crm_cities.name')
-            ->orderByDesc('c')
-            ->limit(60)
-            ->get()
-            ->map(fn ($r) => ['id' => (int) $r->id, 'name' => (string) $r->name])
-            ->all();
+            ->selectRaw('crm_cities.id, crm_cities.name, COUNT(*) as c')
+            ->groupBy('crm_cities.id', 'crm_cities.name')->orderByDesc('c')->limit(60)->get()
+            ->map(fn ($r) => ['id' => (int) $r->id, 'name' => (string) $r->name])->all();
     }
 
-    // ─────────────────────────── ۱) اکتساب ───────────────────────────
+    // ─────────────────────────── نمای کلی (مادام‌العمر) ───────────────────────────
 
     /** @return array<string, mixed> */
-    private function acquisition(?string $since): array
+    private function overview(): array
     {
-        $total = (int) DB::table('crm_customers')->whereNull('deleted_at')->count();
-        $new = (int) DB::table('crm_customers')->whereNull('deleted_at')
-            ->when($since, fn ($q) => $q->where('created_at', '>=', $since))->count();
+        $total = (int) $this->realCustomers(DB::table('crm_customers'))->count();
 
-        // روندِ ماهانهٔ ثبت‌نام — ۱۲ ماهِ اخیر.
-        $from = now()->copy()->subMonths(11)->startOfMonth();
-        $rows = DB::table('crm_customers')->whereNull('deleted_at')
-            ->where('created_at', '>=', $from->toDateTimeString())
-            ->selectRaw($this->monthExpr('created_at').' as ym, COUNT(*) as c')
-            ->groupBy('ym')->pluck('c', 'ym');
-
-        $trend = [];
-        for ($m = $from->copy(); $m <= now(); $m->addMonth()) {
-            $ym = $m->format('Y-m');
-            $trend[] = [
-                'label' => $this->jMonth($ym),
-                'count' => (int) ($rows[$ym] ?? 0),
-            ];
-        }
-
-        return ['total' => $total, 'new_in_range' => $new, 'trend' => $trend];
-    }
-
-    // ─────────────────────────── ۲) تبدیل ───────────────────────────
-
-    /** @return array<string, mixed> */
-    private function conversion(): array
-    {
-        $total = (int) DB::table('crm_customers')->whereNull('deleted_at')->count();
-        $withOrders = (int) DB::table('crm_orders')->distinct()->count('customer_id');
+        $withOrders = (int) $this->realCustomers(
+            DB::table('crm_orders as o')->join('crm_customers as c', 'c.id', '=', 'o.customer_id'), 'c'
+        )->distinct()->count('o.customer_id');
         $withOrders = min($withOrders, $total);
-        $without = max(0, $total - $withOrders);
 
-        // میانگینِ فاصلهٔ ثبت‌نام تا اولین سفارش (روز).
-        $avgDays = null;
-        try {
-            $first = DB::table('crm_orders')->selectRaw('customer_id, MIN(created_at) as first_at')->groupBy('customer_id');
-            $row = DB::table('crm_customers as c')
-                ->joinSub($first, 'fo', fn ($j) => $j->on('fo.customer_id', '=', 'c.id'))
-                ->whereNull('c.deleted_at')
-                ->selectRaw('AVG('.$this->daysBetweenExpr('fo.first_at', 'c.created_at').') as avg_days')
-                ->first();
-            $avgDays = $row && $row->avg_days !== null ? round((float) $row->avg_days, 1) : null;
-        } catch (\Throwable $e) {
-        }
+        // خریدِ تکراری = مشتریانی که حداقل ۲ سفارش دارند.
+        $repeat = (int) DB::query()->fromSub($this->perCustomer(), 'pc')->where('pc.freq', '>=', 2)->count();
+
+        // فعال و واقعی = مشتریِ واقعی که در ۹۰ روزِ اخیر سفارش داده.
+        $active = (int) $this->realCustomers(
+            DB::table('crm_orders as o')->join('crm_customers as c', 'c.id', '=', 'o.customer_id'), 'c'
+        )->where('o.created_at', '>=', now()->subDays(self::ACTIVE_DAYS)->toDateTimeString())
+            ->distinct()->count('o.customer_id');
 
         return [
-            'total' => $total,
+            'total_customers' => $total,
             'with_orders' => $withOrders,
-            'without_orders' => $without,
-            'rate' => $total > 0 ? round($withOrders / $total * 100, 1) : 0.0,
-            'avg_days_to_first_order' => $avgDays,
+            'without_orders' => max(0, $total - $withOrders),
+            'conversion_rate' => $total > 0 ? round($withOrders / $total * 100, 1) : 0.0,
+            'repeat' => $repeat,
+            'repeat_rate' => $withOrders > 0 ? round($repeat / $withOrders * 100, 1) : 0.0,
+            'active_customers' => $active,
         ];
     }
 
-    // ─────────────────────────── ۳) تقاضا ───────────────────────────
+    // ─────────────────────────── روند (پنجره‌ای) ───────────────────────────
+
+    /**
+     * روندِ شمارشِ رکوردها در پنجره، با دانه‌بندیِ مناسبِ طول پنجره:
+     * ۱ ماه → روزانه، ۳ ماه → هفتگی، ۶/۱۲ ماه → ماهانه.
+     *
+     * @return array{granularity:string, points: array<int, array{label:string,count:int}>}
+     */
+    private function trend(string $table, int $window, Carbon $since, int $cityId): array
+    {
+        $q = DB::table($table)->where('created_at', '>=', $since->toDateTimeString());
+        if ($table === 'crm_customers') {
+            $this->realCustomers($q);
+        } elseif ($cityId > 0) {
+            $q->where('city_id', $cityId);
+        }
+        $daily = $q->selectRaw('DATE(created_at) as d, COUNT(*) as c')->groupBy('d')->pluck('c', 'd');
+
+        $granularity = $window <= 1 ? 'day' : ($window <= 3 ? 'week' : 'month');
+        $buckets = [];
+
+        if ($granularity === 'month') {
+            $start = $since->copy()->startOfMonth();
+            for ($m = $start->copy(); $m <= now(); $m->addMonth()) {
+                $sum = 0;
+                foreach ($daily as $d => $c) {
+                    if (str_starts_with((string) $d, $m->format('Y-m'))) {
+                        $sum += (int) $c;
+                    }
+                }
+                $buckets[] = ['label' => $this->jDate($m, 'Y/m'), 'count' => $sum];
+            }
+        } elseif ($granularity === 'week') {
+            for ($w = $since->copy(); $w <= now(); $w->addDays(7)) {
+                $end = $w->copy()->addDays(7);
+                $sum = 0;
+                foreach ($daily as $d => $c) {
+                    $dt = Carbon::parse($d);
+                    if ($dt >= $w && $dt < $end) {
+                        $sum += (int) $c;
+                    }
+                }
+                $buckets[] = ['label' => $this->jDate($w, 'm/d'), 'count' => $sum];
+            }
+        } else { // day
+            for ($d = $since->copy(); $d <= now(); $d->addDay()) {
+                $buckets[] = ['label' => $this->jDate($d, 'm/d'), 'count' => (int) ($daily[$d->format('Y-m-d')] ?? 0)];
+            }
+        }
+
+        return ['granularity' => $granularity, 'points' => $buckets];
+    }
+
+    // ─────────────────────────── تقاضا (پنجره‌ای) ───────────────────────────
 
     /** @return array<string, mixed> */
-    private function demand(?string $since, string $source, int $cityId): array
+    private function demand(Carbon $since, int $cityId): array
     {
         return [
-            'top_devices' => $this->topBy('crm_devices', 'device_id', $since, $source, $cityId),
-            'top_brands' => $this->topBy('crm_brands', 'brand_id', $since, $source, $cityId),
-            'top_cities' => $this->topBy('crm_cities', 'city_id', $since, $source, $cityId),
-            'status_funnel' => $this->statusFunnel($since, $source, $cityId),
-            'source_split' => $this->sourceSplit($since, $cityId),
+            'top_devices' => $this->topBy('crm_devices', 'device_id', $since, $cityId),
+            'top_brands' => $this->topBrands($since, $cityId),
+            'top_cities' => $this->topBy('crm_cities', 'city_id', $since, $cityId),
+            'status_funnel' => $this->statusFunnel($since, $cityId),
         ];
+    }
+
+    private function scopeWindow($q, Carbon $since, int $cityId)
+    {
+        return $q->where('crm_orders.created_at', '>=', $since->toDateTimeString())
+            ->when($cityId > 0, fn ($qq) => $qq->where('crm_orders.city_id', $cityId));
     }
 
     /** @return array<int, array{name:string,count:int}> */
-    private function topBy(string $table, string $fk, ?string $since, string $source, int $cityId): array
+    private function topBy(string $table, string $fk, Carbon $since, int $cityId): array
     {
         if (! Schema::hasTable($table)) {
             return [];
         }
 
-        return $this->scopeOrders(DB::table('crm_orders'), $since, $source, $cityId)
+        return $this->scopeWindow(DB::table('crm_orders'), $since, $cityId)
             ->join($table, "{$table}.id", '=', "crm_orders.{$fk}")
             ->whereNotNull("crm_orders.{$fk}")
             ->selectRaw("{$table}.name as name, COUNT(*) as c")
-            ->groupBy("{$table}.name")
-            ->orderByDesc('c')
-            ->limit(10)
-            ->get()
-            ->map(fn ($r) => ['name' => (string) ($r->name ?: '—'), 'count' => (int) $r->c])
-            ->all();
+            ->groupBy("{$table}.name")->orderByDesc('c')->limit(15)->get()
+            ->map(fn ($r) => ['name' => (string) ($r->name ?: '—'), 'count' => (int) $r->c])->all();
     }
 
-    /** @return array<int, array{label:string,badge:string,count:int,group:string}> */
-    private function statusFunnel(?string $since, string $source, int $cityId): array
+    /**
+     * برندها با تفکیکِ «نامشخص»: برندِ بدون مقدار (null) یا برندهایی مثلِ «سایر»
+     * جدا شمرده می‌شوند تا نمودارِ برند واقعی و خوانا بماند.
+     *
+     * @return array{items: array<int, array{name:string,count:int}>, unspecified:int, unspecified_note:string}
+     */
+    private function topBrands(Carbon $since, int $cityId): array
     {
-        $rows = $this->scopeOrders(DB::table('crm_orders'), $since, $source, $cityId)
+        $hasBrands = Schema::hasTable('crm_brands');
+
+        // «نامشخص» = سفارشِ بدونِ برند (null) + برندهای عمومی (سایر/متفرقه/…).
+        $nullCount = (int) $this->scopeWindow(DB::table('crm_orders'), $since, $cityId)
+            ->whereNull('brand_id')->count();
+
+        $items = [];
+        $unspecifiedNamed = 0;
+        if ($hasBrands) {
+            $rows = $this->scopeWindow(DB::table('crm_orders'), $since, $cityId)
+                ->join('crm_brands', 'crm_brands.id', '=', 'crm_orders.brand_id')
+                ->whereNotNull('crm_orders.brand_id')
+                ->selectRaw('crm_brands.name as name, COUNT(*) as c')
+                ->groupBy('crm_brands.name')->orderByDesc('c')->get();
+
+            foreach ($rows as $r) {
+                $name = (string) ($r->name ?: '—');
+                if (in_array(trim($name), self::UNSPECIFIED_BRANDS, true)) {
+                    $unspecifiedNamed += (int) $r->c;
+
+                    continue;
+                }
+                $items[] = ['name' => $name, 'count' => (int) $r->c];
+            }
+            $items = array_slice($items, 0, 15);
+        }
+
+        return [
+            'items' => $items,
+            'unspecified' => $nullCount + $unspecifiedNamed,
+            'unspecified_note' => 'سفارش‌های بدونِ برندِ مشخص (برندِ خالی یا «سایر») — معمولاً ورودیِ قدیمی/سینک یا ثبتِ تلفنی.',
+        ];
+    }
+
+    /** @return array<int, array{label:string,badge:string,count:int}> */
+    private function statusFunnel(Carbon $since, int $cityId): array
+    {
+        $rows = $this->scopeWindow(DB::table('crm_orders'), $since, $cityId)
             ->selectRaw('status, COUNT(*) as c')->groupBy('status')->pluck('c', 'status');
 
         $out = [];
         foreach ($rows as $value => $count) {
-            $status = OrderStatus::tryFrom((string) $value);
+            $s = OrderStatus::tryFrom((string) $value);
             $out[] = [
-                'label' => $status?->label() ?? (string) $value,
-                'badge' => $status?->badgeClass() ?? 'bg-gray-100 text-gray-800',
-                'group' => $status?->group() ?? 'waiting',
+                'label' => $s?->label() ?? (string) $value,
+                'badge' => $s?->badgeClass() ?? 'bg-gray-100 text-gray-800',
                 'count' => (int) $count,
             ];
         }
@@ -271,217 +327,217 @@ class CustomerClubAnalytics
         return $out;
     }
 
-    /** @return array<int, array{source:string,count:int}> */
-    private function sourceSplit(?string $since, int $cityId): array
-    {
-        if (! $this->hasSource()) {
-            return [];
-        }
-
-        return $this->scopeOrders(DB::table('crm_orders'), $since, '', $cityId)
-            ->selectRaw("COALESCE(NULLIF(source, ''), 'نامشخص') as src, COUNT(*) as c")
-            ->groupBy('src')->orderByDesc('c')->get()
-            ->map(fn ($r) => ['source' => (string) $r->src, 'count' => (int) $r->c])->all();
-    }
-
-    // ─────────────────────────── ۴) زمان‌بندی ───────────────────────────
+    // ─────────────────────────── ساعاتِ اوج (پنجره‌ای) ───────────────────────────
 
     /** @return array<string, mixed> */
-    private function temporal(?string $since, string $source, int $cityId): array
+    private function heatmap(Carbon $since, int $cityId): array
     {
-        // DAYOFWEEK: 1=یکشنبه..7=شنبه → به ترتیبِ هفتهٔ ایران می‌چینیم.
-        $rows = $this->scopeOrders(DB::table('crm_orders'), $since, $source, $cityId)
+        $rows = $this->scopeWindow(DB::table('crm_orders'), $since, $cityId)
             ->selectRaw($this->dowExpr('created_at').' as dow, '.$this->hourExpr('created_at').' as h, COUNT(*) as c')
             ->groupBy('dow', 'h')->get();
 
-        // ترتیبِ نمایش: شنبه..جمعه
         $order = [7 => 'شنبه', 1 => 'یکشنبه', 2 => 'دوشنبه', 3 => 'سه‌شنبه', 4 => 'چهارشنبه', 5 => 'پنجشنبه', 6 => 'جمعه'];
         $matrix = [];
-        $weekdayTotals = [];
-        foreach ($order as $dow => $name) {
+        $totals = [];
+        foreach ($order as $dow => $n) {
             $matrix[$dow] = array_fill(0, 24, 0);
-            $weekdayTotals[$dow] = 0;
+            $totals[$dow] = 0;
         }
         $max = 0;
         foreach ($rows as $r) {
             $dow = (int) $r->dow;
-            $h = (int) $r->h;
             if (! isset($matrix[$dow])) {
                 continue;
             }
-            $matrix[$dow][$h] = (int) $r->c;
-            $weekdayTotals[$dow] += (int) $r->c;
+            $matrix[$dow][(int) $r->h] = (int) $r->c;
+            $totals[$dow] += (int) $r->c;
             $max = max($max, (int) $r->c);
         }
 
-        $heatmap = [];
-        foreach ($order as $dow => $name) {
-            $heatmap[] = ['weekday' => $name, 'hours' => $matrix[$dow], 'total' => $weekdayTotals[$dow]];
+        $out = [];
+        foreach ($order as $dow => $n) {
+            $out[] = ['weekday' => $n, 'hours' => $matrix[$dow], 'total' => $totals[$dow]];
         }
 
-        // روندِ ماهانهٔ سفارش — ۱۲ ماهِ اخیر.
-        $from = now()->copy()->subMonths(11)->startOfMonth();
-        $monthlyRows = $this->scopeOrders(DB::table('crm_orders'), $from->toDateTimeString(), $source, $cityId)
-            ->selectRaw($this->monthExpr('created_at').' as ym, COUNT(*) as c')->groupBy('ym')->pluck('c', 'ym');
-        $monthly = [];
-        for ($m = $from->copy(); $m <= now(); $m->addMonth()) {
-            $ym = $m->format('Y-m');
-            $monthly[] = ['label' => $this->jMonth($ym), 'count' => (int) ($monthlyRows[$ym] ?? 0)];
-        }
-
-        return ['heatmap' => $heatmap, 'heatmap_max' => $max, 'monthly' => $monthly];
+        return ['rows' => $out, 'max' => $max];
     }
 
-    // ─────────────────────────── ۵) درآمد ───────────────────────────
+    // ─────────────────────────── RFM (مادام‌العمر، ماتریسِ کامل) ───────────────────────────
 
     /** @return array<string, mixed> */
-    private function revenue(?string $since, string $source, int $cityId): array
+    private function rfm(): array
     {
-        $amount = $this->amountExpr();
-        $completed = OrderStatus::Completed->value;
-
-        $row = $this->scopeOrders(DB::table('crm_orders'), $since, $source, $cityId)
-            ->where('status', $completed)
-            ->selectRaw("COUNT(*) as c, SUM({$amount}) as total")->first();
-
-        $count = (int) ($row->c ?? 0);
-        $total = (int) ($row->total ?? 0);
-
-        $byDevice = [];
-        if (Schema::hasTable('crm_devices')) {
-            $byDevice = $this->scopeOrders(DB::table('crm_orders'), $since, $source, $cityId)
-                ->where('status', $completed)
-                ->join('crm_devices', 'crm_devices.id', '=', 'crm_orders.device_id')
-                ->whereNotNull('crm_orders.device_id')
-                ->selectRaw("crm_devices.name as name, SUM({$amount}) as total")
-                ->groupBy('crm_devices.name')->orderByDesc('total')->limit(10)->get()
-                ->map(fn ($r) => ['name' => (string) ($r->name ?: '—'), 'total' => (int) $r->total])->all();
-        }
-
-        return [
-            'total_revenue' => $total,
-            'completed_orders' => $count,
-            'aov' => $count > 0 ? (int) round($total / $count) : 0,
-            'top_devices_by_revenue' => $byDevice,
-        ];
-    }
-
-    // ─────────────────────────── ۶) نگه‌داشت + RFM ───────────────────────────
-
-    /** @return array<string, mixed> */
-    private function retention(): array
-    {
-        $amount = $this->amountExpr();
-        // یک ردیف به‌ازای هر مشتریِ دارای سفارش: تعداد، آخرین سفارش، مجموعِ مبلغ.
-        $rows = DB::table('crm_orders')
-            ->selectRaw("customer_id, COUNT(*) as freq, MAX(created_at) as last_at, SUM({$amount}) as monetary")
-            ->whereNotNull('customer_id')
-            ->groupBy('customer_id')->get();
-
-        $dist = ['1' => 0, '2' => 0, '3' => 0, '4+' => 0];
-        $segments = ['champions' => 0, 'loyal' => 0, 'new' => 0, 'at_risk' => 0, 'dormant' => 0, 'others' => 0];
-        $repeat = 0;
         $now = now();
-
-        foreach ($rows as $r) {
-            $freq = (int) $r->freq;
-            $recency = $r->last_at ? $now->diffInDays(Carbon::parse($r->last_at)) : 99999;
-
-            $dist[$freq >= 4 ? '4+' : (string) $freq]++;
-            if ($freq >= 2) {
-                $repeat++;
-            }
-
-            if ($recency > self::AT_RISK_MAX_DAYS) {
-                $segments['dormant']++;
-            } elseif ($recency > self::AT_RISK_MIN_DAYS) {
-                $segments['at_risk']++;
-            } elseif ($freq >= self::VIP_MIN_ORDERS && $recency <= 60) {
-                $segments['champions']++;
-            } elseif ($freq >= 2 && $recency <= 120) {
-                $segments['loyal']++;
-            } elseif ($freq === 1 && $recency <= 30) {
-                $segments['new']++;
-            } else {
-                $segments['others']++;
-            }
+        $R = [];
+        $F = [];
+        $M = [];
+        $customers = [];
+        foreach ($this->perCustomer()->get() as $row) {
+            $recency = $row->last_at ? (int) $now->diffInDays(Carbon::parse($row->last_at)) : 99999;
+            $freq = (int) $row->freq;
+            $monetary = (int) $row->monetary;
+            $customers[] = [$recency, $freq, $monetary];
+            $R[] = $recency;
+            $F[] = $freq;
+            $M[] = $monetary;
         }
 
-        $withOrders = $rows->count();
+        $n = count($customers);
+        if ($n === 0) {
+            return ['count' => 0, 'segments' => [], 'matrix' => $this->emptyMatrix(), 'thresholds' => []];
+        }
+
+        $rCuts = $this->quintileCuts($R);
+        $fCuts = $this->quintileCuts($F);
+        $mCuts = $this->quintileCuts($M);
+
+        $matrix = $this->emptyMatrix();
+        $segCounts = array_fill_keys(array_keys(self::RFM_LABELS), 0);
+
+        foreach ($customers as [$recency, $freq, $monetary]) {
+            $rScore = 6 - $this->scoreAsc($recency, $rCuts); // recency کمتر = بهتر
+            $fScore = $this->scoreAsc($freq, $fCuts);
+            $matrix[$rScore][$fScore]++;
+            $segCounts[$this->segmentFor($rScore, $fScore)]++;
+        }
+
+        $segments = [];
+        foreach (self::RFM_LABELS as $key => $label) {
+            $segments[] = ['key' => $key, 'label' => $label, 'count' => $segCounts[$key]];
+        }
+        usort($segments, fn ($a, $b) => $b['count'] <=> $a['count']);
 
         return [
-            'with_orders' => $withOrders,
-            'repeat' => $repeat,
-            'one_time' => $withOrders - $repeat,
-            'repeat_rate' => $withOrders > 0 ? round($repeat / $withOrders * 100, 1) : 0.0,
-            'distribution' => $dist,
+            'count' => $n,
             'segments' => $segments,
+            'matrix' => $matrix,
+            'thresholds' => [
+                'recency_days' => $rCuts,
+                'frequency' => $fCuts,
+                'monetary' => $mCuts,
+            ],
         ];
     }
 
-    /** شمارشِ سگمنت‌های اکشن‌پذیر (برای کارت‌ها و خروجیِ اکسل). */
+    /** نقاطِ برشِ چارک‌پنجم (۲۰/۴۰/۶۰/۸۰٪) از آرایهٔ مقادیر. */
+    private function quintileCuts(array $values): array
+    {
+        sort($values);
+        $n = count($values);
+        $cuts = [];
+        foreach ([0.2, 0.4, 0.6, 0.8] as $p) {
+            $idx = (int) floor($p * ($n - 1));
+            $cuts[] = $values[$idx] ?? end($values);
+        }
+
+        return $cuts;
+    }
+
+    /** امتیازِ صعودی ۱..۵ بر اساسِ نقاطِ برش (بزرگ‌تر = امتیازِ بیشتر). */
+    private function scoreAsc($value, array $cuts): int
+    {
+        $score = 1;
+        foreach ($cuts as $cut) {
+            if ($value > $cut) {
+                $score++;
+            }
+        }
+
+        return max(1, min(5, $score));
+    }
+
+    /** نگاشتِ استانداردِ شبکهٔ R×F (۱..۵) به سگمنت. */
+    private function segmentFor(int $r, int $f): string
+    {
+        $grid = [
+            5 => ['new', 'potential_loyalist', 'potential_loyalist', 'loyal', 'champions'],
+            4 => ['promising', 'potential_loyalist', 'potential_loyalist', 'loyal', 'champions'],
+            3 => ['about_to_sleep', 'need_attention', 'need_attention', 'loyal', 'loyal'],
+            2 => ['hibernating', 'hibernating', 'at_risk', 'at_risk', 'cant_lose'],
+            1 => ['lost', 'lost', 'at_risk', 'cant_lose', 'cant_lose'],
+        ];
+
+        return $grid[$r][$f - 1] ?? 'need_attention';
+    }
+
+    /** @return array<int, array<int, int>> ماتریسِ ۵×۵ صفر (R 1..5 × F 1..5). */
+    private function emptyMatrix(): array
+    {
+        $m = [];
+        for ($r = 1; $r <= 5; $r++) {
+            $m[$r] = array_fill(1, 5, 0);
+        }
+
+        return $m;
+    }
+
+    // ─────────────────────────── سگمنت‌های اکشن‌پذیر ───────────────────────────
+
     private function segmentCounts(): array
     {
         return [
-            'no_order' => $this->noOrderQuery()->count(),
-            'vip' => $this->vipQuery()->count(),
-            'at_risk' => $this->atRiskQuery()->count(),
+            'no_order' => (int) $this->noOrderQuery()->count(),
+            'vip' => (int) DB::query()->fromSub($this->vipBase(), 'v')->count(),
+            'at_risk' => (int) DB::query()->fromSub($this->atRiskBase(), 'a')->count(),
+            'vip_limit' => self::VIP_LIMIT,
+            'churn_days' => self::CHURN_DAYS,
         ];
     }
 
-    // ─────────── کوئری‌های سگمنت (هم برای شمارش، هم برای خروجی) ───────────
-
-    /** مشتریانِ بدونِ هیچ سفارش. */
+    /** مشتریانِ واقعیِ بدونِ هیچ سفارش. */
     public function noOrderQuery()
     {
-        return DB::table('crm_customers as c')
-            ->whereNull('c.deleted_at')
+        return $this->realCustomers(DB::table('crm_customers as c'), 'c')
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('crm_orders as o')->whereColumn('o.customer_id', 'c.id'))
             ->select('c.id', 'c.first_name', 'c.mobile', 'c.created_at');
     }
 
-    /** مشتریانِ VIP — حداقل VIP_MIN_ORDERS سفارش. */
+    /** پایهٔ VIP: هر مشتریِ واقعیِ دارایِ سفارش با مجموعِ مبلغ. */
+    private function vipBase()
+    {
+        $amount = $this->amountExpr('o.');
+
+        return $this->realCustomers(
+            DB::table('crm_customers as c')->join('crm_orders as o', 'o.customer_id', '=', 'c.id'), 'c'
+        )->groupBy('c.id', 'c.first_name', 'c.mobile')
+            ->havingRaw("SUM({$amount}) > 0")
+            ->selectRaw("c.id, c.first_name, c.mobile, COUNT(*) as freq, SUM({$amount}) as monetary");
+    }
+
+    /** VIP = ۳۰ مشتریِ بابیشترین مجموعِ مبلغِ خرید. */
     public function vipQuery()
     {
-        $amount = $this->amountExpr();
-
-        return DB::table('crm_customers as c')
-            ->whereNull('c.deleted_at')
-            ->joinSub(
-                DB::table('crm_orders')->selectRaw("customer_id, COUNT(*) as freq, SUM({$amount}) as monetary")
-                    ->whereNotNull('customer_id')->groupBy('customer_id'),
-                'o', fn ($j) => $j->on('o.customer_id', '=', 'c.id')
-            )
-            ->where('o.freq', '>=', self::VIP_MIN_ORDERS)
-            ->orderByDesc('o.monetary')
-            ->select('c.id', 'c.first_name', 'c.mobile', 'o.freq', 'o.monetary');
+        return DB::query()->fromSub($this->vipBase(), 'v')
+            ->orderByDesc('v.monetary')->limit(self::VIP_LIMIT)
+            ->select('v.id', 'v.first_name', 'v.mobile', 'v.freq', 'v.monetary');
     }
 
-    /** مشتریانِ در خطرِ ریزش — آخرین سفارش بینِ ۹۰ تا ۳۶۵ روزِ پیش. */
+    /** پایهٔ ریزش: مشتریِ واقعیِ دارایِ سفارش که آخرین سفارشش > CHURN_DAYS پیش بوده. */
+    private function atRiskBase()
+    {
+        $amount = $this->amountExpr('o.');
+
+        return $this->realCustomers(
+            DB::table('crm_customers as c')->join('crm_orders as o', 'o.customer_id', '=', 'c.id'), 'c'
+        )->groupBy('c.id', 'c.first_name', 'c.mobile')
+            ->havingRaw('MAX(o.created_at) < ?', [now()->subDays(self::CHURN_DAYS)->toDateTimeString()])
+            ->selectRaw("c.id, c.first_name, c.mobile, COUNT(*) as freq, MAX(o.created_at) as last_at, SUM({$amount}) as monetary");
+    }
+
+    /** مشتریانِ در خطرِ ریزش (۹۰ روز بدونِ سفارش) — پرارزش‌ها اول. */
     public function atRiskQuery()
     {
-        $amount = $this->amountExpr();
-
-        return DB::table('crm_customers as c')
-            ->whereNull('c.deleted_at')
-            ->joinSub(
-                DB::table('crm_orders')->selectRaw("customer_id, COUNT(*) as freq, MAX(created_at) as last_at, SUM({$amount}) as monetary")
-                    ->whereNotNull('customer_id')->groupBy('customer_id'),
-                'o', fn ($j) => $j->on('o.customer_id', '=', 'c.id')
-            )
-            ->whereRaw('o.last_at < ?', [now()->subDays(self::AT_RISK_MIN_DAYS)->toDateTimeString()])
-            ->whereRaw('o.last_at >= ?', [now()->subDays(self::AT_RISK_MAX_DAYS)->toDateTimeString()])
-            ->orderByDesc('o.monetary')
-            ->select('c.id', 'c.first_name', 'c.mobile', 'o.freq', 'o.last_at', 'o.monetary');
+        return DB::query()->fromSub($this->atRiskBase(), 'a')
+            ->orderByDesc('a.monetary')
+            ->select('a.id', 'a.first_name', 'a.mobile', 'a.freq', 'a.last_at', 'a.monetary');
     }
 
-    /** برچسبِ ماهِ شمسی از 'Y-m'. */
-    private function jMonth(string $ym): string
+    private function jDate(Carbon $c, string $format): string
     {
         try {
-            return \Morilog\Jalali\Jalalian::fromCarbon(Carbon::parse($ym.'-01'))->format('Y/m');
+            return \Morilog\Jalali\Jalalian::fromCarbon($c)->format($format);
         } catch (\Throwable $e) {
-            return $ym;
+            return $c->format($format);
         }
     }
 }
