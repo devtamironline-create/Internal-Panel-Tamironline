@@ -5,6 +5,8 @@ namespace Modules\CRM\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Modules\CRM\Concerns\AlertsOnSoftDelete;
+use Modules\CRM\Concerns\SoftDeletesIfSupported;
 use Modules\Seo\Concerns\HasSeoMeta;
 use Modules\Seo\Models\Concerns\HasStatusWorkflow;
 
@@ -19,10 +21,22 @@ use Modules\Seo\Models\Concerns\HasStatusWorkflow;
  */
 class CityPage extends Model
 {
+    use AlertsOnSoftDelete;
     use HasSeoMeta;
     use HasStatusWorkflow;
+    use SoftDeletesIfSupported;
 
     protected $table = 'crm_city_pages';
+
+    /** توصیف‌گرِ موجودیت برای هشدارِ حذف و سطلِ بازیافت. */
+    public function seoDeletionDescriptor(): array
+    {
+        return [
+            'type' => 'صفحهٔ شهر',
+            'name' => (string) ($this->title ?: $this->h1 ?: ('#'.$this->id)),
+            'slug' => (string) $this->path,
+        ];
+    }
 
     public const TYPE_CITY = 'city';
 
