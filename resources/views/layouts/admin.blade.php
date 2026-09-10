@@ -310,6 +310,11 @@
     <style>@keyframes spin{to{transform:rotate(360deg)}} .dark #page-loader{background:#111827} .dark #page-loader p{color:#9ca3af} .dark #page-loader div>div{border-color:#374151;border-top-color:#465fff}</style>
     <script>window.addEventListener('load',function(){var l=document.getElementById('page-loader');if(l){l.style.opacity='0';setTimeout(function(){l.remove()},300)}})</script>
 
+    {{-- تأییدِ تایپیِ حذفِ محتوای سایت: کاربر باید اسلاگ/مسیرِ دقیق را تایپ کند.
+         به‌صورتِ onsubmit روی فرم‌های حذف استفاده می‌شود؛ مقدار در ورودیِ
+         مخفیِ confirm_slug گذاشته و سمتِ سرور هم بررسی می‌شود. --}}
+    <script>window.seoConfirmDelete=function(form,expected,label){var v=window.prompt('حذفِ «'+label+'» بازگشت‌پذیر است (به سطل بازیافت می‌رود).\nبرای تأیید، این مقدار را دقیقاً تایپ کنید:\n\n'+expected);if(v===null){return false;}var inp=form.querySelector('input[name=confirm_slug]');if(inp){inp.value=v;}if(String(v).trim()!==String(expected).trim()){window.alert('مقدارِ واردشده مطابقت ندارد؛ حذف انجام نشد.');return false;}return true;};</script>
+
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <aside
@@ -1111,6 +1116,12 @@
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                             محتوای صفحات دستگاه
                         </a>
+                        @can('delete-seo-content')
+                        <a href="{{ route('crm.seo-trash.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.seo-trash.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                            سطل بازیافت
+                        </a>
+                        @endcan
                         @endcan
                         @endif
 

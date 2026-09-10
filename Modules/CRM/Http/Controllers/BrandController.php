@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Modules\CRM\Concerns\ConfirmsSeoDeletion;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceBrandPage;
@@ -17,6 +18,8 @@ use Modules\Site\Models\Taxonomy;
 
 class BrandController extends Controller
 {
+    use ConfirmsSeoDeletion;
+
     public function index(Request $request)
     {
         $query = Brand::query();
@@ -182,13 +185,19 @@ class BrandController extends Controller
         ];
     }
 
-    public function destroy(Brand $brand)
+    public function destroy(Request $request, Brand $brand)
     {
-        $this->deleteStoredImage($brand->logo);
+        // حذفِ غیرساده: باید اسلاگِ برند دقیقاً تایپ شود.
+        if ($this->seoDeletionNotConfirmed($request, (string) $brand->slug)) {
+            return redirect()->route('crm.brands.index')
+                ->with('error', 'برای حذف باید اسلاگِ برند («'.$brand->slug.'») را دقیقاً تایپ کنید.');
+        }
+
+        // soft-delete؛ فایلِ لوگو عمداً پاک نمی‌شود تا بازگردانی کامل باشد.
         $brand->delete();
 
         return redirect()->route('crm.brands.index')
-            ->with('success', 'برند حذف شد.');
+            ->with('success', 'برند به سطلِ بازیافت منتقل شد (قابلِ بازگردانی).');
     }
 
     /**

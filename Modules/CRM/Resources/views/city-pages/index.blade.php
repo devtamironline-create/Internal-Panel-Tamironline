@@ -105,11 +105,14 @@
                                         <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">انتشار</button>
                                     @endif
                                 </form>
+                                @can('delete-seo-content')
                                 <form action="{{ route('crm.city-pages.destroy', $page) }}" method="POST" class="inline"
-                                      onsubmit="return confirm('این صفحه حذف شود؟ (با همگام‌سازیِ بعدی دوباره ساخته می‌شود)');">
+                                      onsubmit="return window.seoConfirmDelete(this, @js($page->path), 'صفحهٔ شهر {{ $page->path }}');">
                                     @csrf @method('DELETE')
+                                    <input type="hidden" name="confirm_slug" value="">
                                     <button type="submit" class="text-red-500 hover:text-red-700 text-sm">حذف</button>
                                 </form>
+                                @endcan
                             </div>
                         </td>
                     </tr>

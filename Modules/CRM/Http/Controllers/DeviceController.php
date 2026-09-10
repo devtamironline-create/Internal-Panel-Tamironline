@@ -7,6 +7,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Modules\CRM\Concerns\ConfirmsSeoDeletion;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceBrandPage;
@@ -18,6 +19,8 @@ use Modules\Site\Models\Taxonomy;
 
 class DeviceController extends Controller
 {
+    use ConfirmsSeoDeletion;
+
     public function index(Request $request)
     {
         $query = Device::query();
@@ -222,13 +225,19 @@ class DeviceController extends Controller
         ];
     }
 
-    public function destroy(Device $device)
+    public function destroy(Request $request, Device $device)
     {
-        $this->deleteStoredImage($device->thumbnail);
+        // حذفِ غیرساده: باید اسلاگِ دستگاه دقیقاً تایپ شود.
+        if ($this->seoDeletionNotConfirmed($request, (string) $device->slug)) {
+            return redirect()->route('crm.devices.index')
+                ->with('error', 'برای حذف باید اسلاگِ دستگاه («'.$device->slug.'») را دقیقاً تایپ کنید.');
+        }
+
+        // soft-delete؛ تصویرِ شاخص عمداً پاک نمی‌شود تا بازگردانی کامل باشد.
         $device->delete();
 
         return redirect()->route('crm.devices.index')
-            ->with('success', 'دستگاه حذف شد.');
+            ->with('success', 'دستگاه به سطلِ بازیافت منتقل شد (قابلِ بازگردانی).');
     }
 
     public function toggle(Request $request, Device $device, string $flag)

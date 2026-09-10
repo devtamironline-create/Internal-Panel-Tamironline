@@ -87,9 +87,13 @@
                     <td class="px-4 py-3 flex gap-2">
                         @can('manage-crm-devices')
                         <a href="{{ route('crm.device-brand-pages.edit', $p->id) }}" class="text-blue-600 hover:underline">ویرایش</a>
+                        @endcan
+                        @can('delete-seo-content')
+                        @php($comboSlug = trim(($p->device?->slug ?? '').'/'.($p->brand?->slug ?? ''), '/'))
                         <form method="POST" action="{{ route('crm.device-brand-pages.destroy', $p->id) }}"
-                              onsubmit="return confirm('حذف این صفحه‌ی ترکیبی؟');">
+                              onsubmit="return window.seoConfirmDelete(this, @js($comboSlug), 'صفحهٔ ترکیبی {{ $comboSlug }}');">
                             @csrf @method('DELETE')
+                            <input type="hidden" name="confirm_slug" value="">
                             <button class="text-red-600 hover:underline">حذف</button>
                         </form>
                         @endcan

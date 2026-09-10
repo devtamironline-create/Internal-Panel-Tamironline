@@ -4,6 +4,7 @@ namespace Modules\CRM\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\CRM\Concerns\ConfirmsSeoDeletion;
 use Modules\CRM\Models\Brand;
 use Modules\CRM\Models\Device;
 use Modules\CRM\Models\DeviceBrandPage;
@@ -18,6 +19,8 @@ use Modules\Site\Models\Taxonomy;
  */
 class DeviceBrandPageController extends Controller
 {
+    use ConfirmsSeoDeletion;
+
     public function index(Request $request)
     {
         $query = DeviceBrandPage::query()
@@ -104,11 +107,22 @@ class DeviceBrandPageController extends Controller
             ->with('success', 'صفحه‌ی ترکیبی به‌روز شد.');
     }
 
-    public function destroy(DeviceBrandPage $devicebrandpage)
+    public function destroy(Request $request, DeviceBrandPage $devicebrandpage)
     {
+        $devicebrandpage->loadMissing(['device:id,slug', 'brand:id,slug']);
+        $expected = trim(($devicebrandpage->device?->slug ?? '').'/'.($devicebrandpage->brand?->slug ?? ''), '/');
+
+        // حذفِ غیرساده: باید مسیرِ «device/brand» دقیقاً تایپ شود.
+        if ($this->seoDeletionNotConfirmed($request, $expected)) {
+            return redirect()->route('crm.device-brand-pages.index')
+                ->with('error', 'برای حذف باید مسیرِ ترکیب («'.$expected.'») را دقیقاً تایپ کنید.');
+        }
+
+        // soft-delete؛ قابلِ بازگردانی از سطلِ بازیافت.
         $devicebrandpage->delete();
 
-        return redirect()->route('crm.device-brand-pages.index')->with('success', 'صفحه حذف شد.');
+        return redirect()->route('crm.device-brand-pages.index')
+            ->with('success', 'صفحهٔ ترکیبی به سطلِ بازیافت منتقل شد (قابلِ بازگردانی).');
     }
 
     /**
