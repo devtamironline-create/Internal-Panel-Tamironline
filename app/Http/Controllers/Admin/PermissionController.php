@@ -269,6 +269,7 @@ class PermissionController extends Controller
             'view-crm-taxonomies' => 'مشاهده داده‌های پایه (برند، دستگاه، استان، شهر)',
             'manage-crm-brands' => 'مدیریت برندها',
             'manage-crm-devices' => 'مدیریت دستگاه‌ها',
+            'delete-seo-content' => 'حذف محتوای سایت (برند/دستگاه/صفحهٔ ترکیبی/صفحهٔ شهر) + سطل بازیافت',
             'manage-crm-provinces' => 'مدیریت استان‌ها',
             'manage-crm-cities' => 'مدیریت شهرها',
             'manage-crm-settings' => 'مدیریت تنظیمات CRM',
