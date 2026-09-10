@@ -5,15 +5,25 @@ namespace Modules\CRM\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\CRM\Concerns\AlertsOnSoftDelete;
+use Modules\CRM\Concerns\SoftDeletesIfSupported;
 use Modules\Seo\Concerns\HasSeoMeta;
 use Modules\Site\Models\Concerns\HasMedia;
 
 class Device extends Model
 {
+    use AlertsOnSoftDelete;
     use HasMedia;
     use HasSeoMeta;
+    use SoftDeletesIfSupported;
 
     protected $table = 'crm_devices';
+
+    /** توصیف‌گرِ موجودیت برای هشدارِ حذف و سطلِ بازیافت. */
+    public function seoDeletionDescriptor(): array
+    {
+        return ['type' => 'دستگاه', 'name' => (string) $this->name, 'slug' => (string) $this->slug];
+    }
 
     protected $fillable = [
         'wp_id',

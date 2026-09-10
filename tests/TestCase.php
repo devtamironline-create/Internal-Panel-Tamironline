@@ -28,5 +28,9 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         \Modules\CRM\Models\TechnicianPushToken::flushSchemaCache();
+
+        // کشِ «deleted_at دارد؟» بینِ کلاس‌های تست نشت می‌کند (جدول‌های دستیِ
+        // in-memory). پاک می‌شود تا هر تست با schemaِ خودش سنجیده شود.
+        \Modules\CRM\Support\SoftDeleteColumnCache::flush();
     }
 }

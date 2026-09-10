@@ -33,6 +33,12 @@ class AppServiceProvider extends ServiceProvider
             if (in_array($ability, ['view-crm-costs', 'manage-crm-costs'], true)) {
                 return null;
             }
+            // استثنا: حذفِ محتوای سایت (برند/دستگاه/صفحه) از bypass سوپر-ادمین
+            // خارج است — حتی نقشِ admin باید این دسترسی را صریحاً داشته باشد تا
+            // فقط یک نفر بتواند صفحات را حذف کند.
+            if ($ability === 'delete-seo-content') {
+                return null;
+            }
             if ($user->hasRole('admin')) {
                 return true;
             }

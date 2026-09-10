@@ -4,6 +4,7 @@ namespace Modules\CRM\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Modules\CRM\Concerns\ConfirmsSeoDeletion;
 use Modules\CRM\Models\City;
 use Modules\CRM\Models\CityPage;
 use Modules\CRM\Services\CityPageGenerator;
@@ -19,6 +20,8 @@ use Modules\Site\Models\Taxonomy;
  */
 class CityPageController extends Controller
 {
+    use ConfirmsSeoDeletion;
+
     /** فهرستِ شهرهایِ اصلی + شمارشِ صفحات (نقطهٔ ورود). */
     public function overview(Request $request)
     {
@@ -257,13 +260,21 @@ class CityPageController extends Controller
         return view('crm::city-pages.preview', compact('cityPage'));
     }
 
-    public function destroy(CityPage $cityPage)
+    public function destroy(Request $request, CityPage $cityPage)
     {
         $cityId = $cityPage->city_id;
+
+        // حذفِ غیرساده: باید مسیرِ صفحه دقیقاً تایپ شود.
+        if ($this->seoDeletionNotConfirmed($request, (string) $cityPage->path)) {
+            return redirect()->route('crm.cities.pages.index', $cityId)
+                ->with('error', 'برای حذف باید مسیرِ صفحه («'.$cityPage->path.'») را دقیقاً تایپ کنید.');
+        }
+
+        // soft-delete؛ قابلِ بازگردانی از سطلِ بازیافت.
         $cityPage->delete();
 
         return redirect()
             ->route('crm.cities.pages.index', $cityId)
-            ->with('success', 'صفحه حذف شد.');
+            ->with('success', 'صفحهٔ شهر به سطلِ بازیافت منتقل شد (قابلِ بازگردانی).');
     }
 }

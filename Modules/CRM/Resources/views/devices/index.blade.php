@@ -196,9 +196,12 @@
                         <div class="flex items-center gap-3">
                             @can('manage-crm-devices')
                             <a href="{{ route('crm.devices.edit', $device) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
-                            <form action="{{ route('crm.devices.destroy', $device) }}" method="POST" class="inline" onsubmit="return confirm('حذف این دستگاه انجام شود؟');">
+                            @endcan
+                            @can('delete-seo-content')
+                            <form action="{{ route('crm.devices.destroy', $device) }}" method="POST" class="inline" onsubmit="return window.seoConfirmDelete(this, @js($device->slug), 'دستگاه {{ $device->name }}');">
                                 @csrf
                                 @method('DELETE')
+                                <input type="hidden" name="confirm_slug" value="">
                                 <button type="submit" class="text-red-600 hover:text-red-800 text-sm">حذف</button>
                             </form>
                             @endcan

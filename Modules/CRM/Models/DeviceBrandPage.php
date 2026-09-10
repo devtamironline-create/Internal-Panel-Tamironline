@@ -5,6 +5,8 @@ namespace Modules\CRM\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Modules\CRM\Concerns\AlertsOnSoftDelete;
+use Modules\CRM\Concerns\SoftDeletesIfSupported;
 use Modules\Seo\Concerns\HasSeoMeta;
 
 /**
@@ -17,9 +19,27 @@ use Modules\Seo\Concerns\HasSeoMeta;
  */
 class DeviceBrandPage extends Model
 {
+    use AlertsOnSoftDelete;
     use HasSeoMeta;
+    use SoftDeletesIfSupported;
 
     protected $table = 'crm_device_brand_pages';
+
+    /** توصیف‌گرِ موجودیت برای هشدارِ حذف و سطلِ بازیافت. */
+    public function seoDeletionDescriptor(): array
+    {
+        $this->loadMissing(['device:id,name,slug', 'brand:id,name,slug']);
+        $dn = $this->device?->name ?? ('#'.$this->device_id);
+        $bn = $this->brand?->name ?? ('#'.$this->brand_id);
+        $ds = $this->device?->slug;
+        $bs = $this->brand?->slug;
+
+        return [
+            'type' => 'صفحهٔ ترکیبی',
+            'name' => trim($dn.' '.$bn),
+            'slug' => ($ds && $bs) ? ($ds.'/'.$bs) : null,
+        ];
+    }
 
     protected $fillable = [
         'device_id',
@@ -117,9 +137,25 @@ class DeviceBrandPage extends Model
      */
     public static function ensureForPair(int $deviceId, int $brandId): self
     {
-        return static::firstOrCreate(
-            ['device_id' => $deviceId, 'brand_id' => $brandId],
-            ['is_active' => false]
-        );
+        // trash-aware: اگر رکوردِ این جفت soft-delete شده بود، به‌جای INSERTِ
+        // تکراری (که unique(device_id,brand_id) را می‌شکند) همان را بازمی‌گرداند.
+        $existing = static::withTrashed()
+            ->where('device_id', $deviceId)
+            ->where('brand_id', $brandId)
+            ->first();
+
+        if ($existing) {
+            if ($existing->trashed()) {
+                $existing->restore();
+            }
+
+            return $existing;
+        }
+
+        return static::create([
+            'device_id' => $deviceId,
+            'brand_id' => $brandId,
+            'is_active' => false,
+        ]);
     }
 }
