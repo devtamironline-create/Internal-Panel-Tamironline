@@ -94,6 +94,21 @@
         <canvas id="leadsChart" style="max-height: 280px;"></canvas>
     </div>
 
+    {{-- نمودار ساعتی — پرترافیک‌ترین ساعت‌های ورود لید (در بازهٔ انتخاب‌شده) --}}
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-gray-700 dark:text-gray-200">ساعت‌های اوجِ ورود لید</h2>
+            @if(!is_null($hourlyData['peak_hour']) && $hourlyData['peak_count'] > 0)
+                <span class="text-xs bg-rose-50 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300 rounded-full px-3 py-1">
+                    بیشترین: ساعت {{ str_replace(['0','1','2','3','4','5','6','7','8','9'], ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'], sprintf('%02d', $hourlyData['peak_hour'])) }}
+                    ({{ number_format($hourlyData['peak_count']) }} لید)
+                </span>
+            @endif
+        </div>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">تعداد لید بر اساس ساعتِ ثبت (۰ تا ۲۳) در همین بازهٔ تاریخِ انتخاب‌شده.</p>
+        <canvas id="leadsHourlyChart" style="max-height: 260px;"></canvas>
+    </div>
+
     {{-- دلایل عدم سفارش --}}
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
@@ -260,6 +275,41 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+    });
+})();
+</script>
+<script>
+(function () {
+    const ctx = document.getElementById('leadsHourlyChart');
+    if (! ctx) return;
+    const data = @json($hourlyData);
+    const peak = data.peak_hour;
+    // ساعتِ اوج پررنگ‌تر، بقیه کم‌رنگ‌تر — تا در نگاهِ اول دیده شود.
+    const colors = data.counts.map((_, h) => h === peak ? 'rgb(244, 63, 94)' : 'rgba(244, 63, 94, 0.35)');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'تعداد لید',
+                data: data.counts,
+                backgroundColor: colors,
+                borderRadius: 4,
+                maxBarThickness: 26,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { title: (items) => 'ساعت ' + items[0].label } }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, ticks: { precision: 0 } }
+            }
         }
     });
 })();
