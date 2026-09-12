@@ -5,6 +5,7 @@ namespace Modules\CRM\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Modules\CRM\Models\Order;
 use Morilog\Jalali\CalendarUtils;
 use Morilog\Jalali\Jalalian;
@@ -107,6 +108,10 @@ class LeadDashboardController extends Controller
         // ─── نمودار روند زمانی ────────────────────────────────
         $chartData = $this->buildChartData($chartPeriod);
 
+        // ─── نمودار ساعتی — چه ساعت‌هایی لید بیشتر می‌آید ──────
+        // بر اساسِ همان بازهٔ انتخاب‌شده (from/to)، نه یک دورهٔ ثابت.
+        $hourlyData = $this->buildHourlyData($fromCarbon, $toCarbon);
+
         // ─── معرف‌ها ──────────────────────────────────────────
         $introBreakdown = (clone $baseQuery())
             ->whereNotNull('introduction')
@@ -123,8 +128,57 @@ class LeadDashboardController extends Controller
             'reasonBreakdown', 'reasonNullCount',
             'topDevices', 'topBrands', 'topCities', 'topRegions',
             'introBreakdown',
-            'chartData',
+            'chartData', 'hourlyData',
         ));
+    }
+
+    /**
+     * توزیعِ ساعتیِ لیدها در بازهٔ انتخاب‌شده — ۲۴ سطل (۰ تا ۲۳) بر اساسِ
+     * ساعتِ ثبت (created_at). ساعتِ اوج هم برگردانده می‌شود.
+     * SQL به تفکیکِ درایور (MySQL: HOUR، SQLite: strftime) تا تست هم کار کند.
+     *
+     * @return array{labels: array<int,string>, counts: array<int,int>, peak_hour: ?int, peak_count: int}
+     */
+    protected function buildHourlyData(Carbon $from, Carbon $to): array
+    {
+        $hourExpr = DB::connection()->getDriverName() === 'sqlite'
+            ? "CAST(strftime('%H', created_at) AS INTEGER)"
+            : 'HOUR(created_at)';
+
+        $rows = Order::query()->leads()
+            ->whereBetween('created_at', [$from, $to])
+            ->selectRaw($hourExpr.' as h, COUNT(*) as cnt')
+            ->groupBy('h')
+            ->pluck('cnt', 'h');
+
+        $map = [];
+        foreach ($rows as $h => $c) {
+            $map[(int) $h] = (int) $c;
+        }
+
+        $latinDigits = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+        $persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+
+        $labels = [];
+        $counts = [];
+        $peakHour = null;
+        $peakCount = 0;
+        for ($h = 0; $h < 24; $h++) {
+            $labels[] = str_replace($latinDigits, $persianDigits, sprintf('%02d', $h));
+            $c = $map[$h] ?? 0;
+            $counts[] = $c;
+            if ($c > $peakCount) {
+                $peakCount = $c;
+                $peakHour = $h;
+            }
+        }
+
+        return [
+            'labels' => $labels,
+            'counts' => $counts,
+            'peak_hour' => $peakHour,
+            'peak_count' => $peakCount,
+        ];
     }
 
     /**
