@@ -144,6 +144,7 @@
                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">مشتری</th>
                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">دستگاه</th>
                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">محل</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">نحوه آشنایی</th>
                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">دلیل</th>
                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">تاریخ ثبت</th>
                     <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">عملیات</th>
@@ -172,6 +173,13 @@
                                 ])));
                             @endphp
                             {{ $loc !== '' ? $loc : '—' }}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
+                            @if(filled($lead->introduction))
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">{{ $lead->introduction }}</span>
+                            @else
+                                —
+                            @endif
                         </td>
                         <td class="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                             <div class="font-medium">{{ $lead->leadReason?->name ?: '—' }}</div>
@@ -208,7 +216,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="px-4 py-16 text-center text-sm text-gray-500">
+                        <td colspan="8" class="px-4 py-16 text-center text-sm text-gray-500">
                             هیچ لیدی با این فیلترها پیدا نشد.
                         </td>
                     </tr>
