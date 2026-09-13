@@ -175,6 +175,19 @@ class ActivityRegistry
      */
     public static function titleOf(Model $model): ?string
     {
+        // مدل می‌تواند عنوانِ اختصاصیِ لاگ بدهد (مثلِ صفحهٔ ترکیبی که ستونِ
+        // name/slug ندارد و باید «device/brand» نمایش داده شود).
+        if (method_exists($model, 'activityLogTitle')) {
+            try {
+                $custom = $model->activityLogTitle();
+                if (is_string($custom) && trim($custom) !== '') {
+                    return Str::limit(trim($custom), 120, '');
+                }
+            } catch (\Throwable) {
+                // اگر خطا داد، به روالِ عادیِ خواندنِ attribute برمی‌گردیم.
+            }
+        }
+
         $raw = $model->getAttributes();
 
         foreach ([
