@@ -76,7 +76,7 @@ class RoleController extends Controller
     public function update(Request $request, Role $role)
     {
         $request->validate([
-            'name' => 'required|string|max:50|unique:roles,name,' . $role->id,
+            'name' => 'required|string|max:50|unique:roles,name,'.$role->id,
             'permissions' => 'nullable|array',
             'permissions.*' => 'exists:permissions,name',
         ]);
@@ -85,7 +85,22 @@ class RoleController extends Controller
             'name' => $request->name,
         ]);
 
+        $permsBefore = $role->permissions->pluck('name')->sort()->values()->all();
         $role->syncPermissions($request->input('permissions', []));
+        $permsAfter = $role->permissions()->pluck('name')->sort()->values()->all();
+
+        // تغییرِ دسترسی‌های نقش pivot است و رویدادِ Eloquent ندارد → صریح ثبت می‌شود.
+        if ($permsBefore !== $permsAfter) {
+            \App\Support\ActivityLog\ActivityLog::record('updated', 'تغییر دسترسی‌های نقش', [
+                'entity' => \Spatie\Permission\Models\Role::class,
+                'entity_label' => 'نقش',
+                'entity_id' => $role->getKey(),
+                'entity_title' => $role->name,
+                'changes' => [
+                    'permissions' => ['old' => implode('، ', $permsBefore) ?: '—', 'new' => implode('، ', $permsAfter) ?: '—'],
+                ],
+            ]);
+        }
 
         return redirect()->route('admin.roles.index')
             ->with('success', 'نقش با موفقیت بروزرسانی شد');
@@ -123,35 +138,84 @@ class RoleController extends Controller
             $name = $permission->name;
 
             // CRM — همه permissionهای شامل crm را در گروه‌های فرعی CRM
-            if (str_contains($name, 'crm-reports') || str_contains($name, 'crm-orphan') || str_contains($name, 'crm-legacy')) return 'CRM — گزارش‌ها و ابزارها';
-            if (str_contains($name, 'crm-financial') || str_contains($name, 'crm-wallet') || str_contains($name, 'crm-invoice') || str_contains($name, 'crm-payment') || str_contains($name, 'wallet-transaction') || $name === 'correct-invoices') return 'CRM — مالی و فاکتور';
-            if (str_contains($name, 'crm-tickets') || str_contains($name, 'reply-crm')) return 'CRM — تیکت‌های تکنسین';
+            if (str_contains($name, 'crm-reports') || str_contains($name, 'crm-orphan') || str_contains($name, 'crm-legacy')) {
+                return 'CRM — گزارش‌ها و ابزارها';
+            }
+            if (str_contains($name, 'crm-financial') || str_contains($name, 'crm-wallet') || str_contains($name, 'crm-invoice') || str_contains($name, 'crm-payment') || str_contains($name, 'wallet-transaction') || $name === 'correct-invoices') {
+                return 'CRM — مالی و فاکتور';
+            }
+            if (str_contains($name, 'crm-tickets') || str_contains($name, 'reply-crm')) {
+                return 'CRM — تیکت‌های تکنسین';
+            }
             // view-tech-suggestions برای ادمین/اپراتور در صفحهٔ جزئیات
             // سفارش استفاده می‌شود (نه پنل تکنسین) — قبل از گروه پنل
             // تکنسین بررسی می‌شود تا در گروه درست (سفارش‌ها و داشبورد)
             // بنشیند.
-            if (str_contains($name, 'tech-suggestion')) return 'CRM — سفارش‌ها و داشبورد';
-            if (str_contains($name, 'tech-dashboard') || str_contains($name, 'own-orders') || str_contains($name, 'own-order') || str_contains($name, 'own-wallet') || str_contains($name, 'own-invoices')) return 'CRM — پنل تکنسین';
-            if (str_contains($name, 'crm-taxonomies') || str_contains($name, 'crm-brands') || str_contains($name, 'crm-devices') || str_contains($name, 'crm-provinces') || str_contains($name, 'crm-cities') || str_contains($name, 'crm-settings') || str_contains($name, 'crm-sms-templates') || str_contains($name, 'crm-sync')) return 'CRM — پیکربندی';
-            if (str_contains($name, 'crm-internal')) return 'CRM — سفارش‌های داخلی';
-            if (str_contains($name, 'crm-customers')) return 'CRM — مشتری‌ها';
-            if (str_contains($name, 'crm-technicians')) return 'CRM — تکنسین‌ها';
-            if (str_contains($name, 'crm-costs')) return 'CRM — هزینه‌ها';
-            if (str_contains($name, 'crm-happycall')) return 'CRM — HappyCall';
-            if (str_contains($name, 'crm-dashboard') || str_contains($name, 'crm-orders')) return 'CRM — سفارش‌ها و داشبورد';
+            if (str_contains($name, 'tech-suggestion')) {
+                return 'CRM — سفارش‌ها و داشبورد';
+            }
+            if (str_contains($name, 'tech-dashboard') || str_contains($name, 'own-orders') || str_contains($name, 'own-order') || str_contains($name, 'own-wallet') || str_contains($name, 'own-invoices')) {
+                return 'CRM — پنل تکنسین';
+            }
+            if (str_contains($name, 'crm-taxonomies') || str_contains($name, 'crm-brands') || str_contains($name, 'crm-devices') || str_contains($name, 'crm-provinces') || str_contains($name, 'crm-cities') || str_contains($name, 'crm-settings') || str_contains($name, 'crm-sms-templates') || str_contains($name, 'crm-sync')) {
+                return 'CRM — پیکربندی';
+            }
+            if (str_contains($name, 'crm-internal')) {
+                return 'CRM — سفارش‌های داخلی';
+            }
+            if (str_contains($name, 'crm-customers')) {
+                return 'CRM — مشتری‌ها';
+            }
+            if (str_contains($name, 'crm-technicians')) {
+                return 'CRM — تکنسین‌ها';
+            }
+            if (str_contains($name, 'crm-costs')) {
+                return 'CRM — هزینه‌ها';
+            }
+            if (str_contains($name, 'crm-happycall')) {
+                return 'CRM — HappyCall';
+            }
+            if (str_contains($name, 'crm-dashboard') || str_contains($name, 'crm-orders')) {
+                return 'CRM — سفارش‌ها و داشبورد';
+            }
 
-            if (str_contains($name, 'staff')) return 'پرسنل';
-            if (str_contains($name, 'attendance')) return 'حضور و غیاب';
-            if (str_contains($name, 'leave')) return 'مرخصی';
-            if (str_contains($name, 'task')) return 'تسک';
-            if (str_contains($name, 'team')) return 'تیم';
-            if (str_contains($name, 'report')) return 'گزارش';
-            if (str_contains($name, 'okr')) return 'OKR';
-            if (str_contains($name, 'salary')) return 'حقوق';
-            if (str_contains($name, 'warehouse')) return 'انبار';
-            if (str_contains($name, 'technician')) return 'تکنسین';
-            if (str_contains($name, 'messenger')) return 'پیام‌رسان';
-            if (str_contains($name, 'setting') || str_contains($name, 'permission')) return 'تنظیمات';
+            if (str_contains($name, 'staff')) {
+                return 'پرسنل';
+            }
+            if (str_contains($name, 'attendance')) {
+                return 'حضور و غیاب';
+            }
+            if (str_contains($name, 'leave')) {
+                return 'مرخصی';
+            }
+            if (str_contains($name, 'task')) {
+                return 'تسک';
+            }
+            if (str_contains($name, 'team')) {
+                return 'تیم';
+            }
+            if (str_contains($name, 'report')) {
+                return 'گزارش';
+            }
+            if (str_contains($name, 'okr')) {
+                return 'OKR';
+            }
+            if (str_contains($name, 'salary')) {
+                return 'حقوق';
+            }
+            if (str_contains($name, 'warehouse')) {
+                return 'انبار';
+            }
+            if (str_contains($name, 'technician')) {
+                return 'تکنسین';
+            }
+            if (str_contains($name, 'messenger')) {
+                return 'پیام‌رسان';
+            }
+            if (str_contains($name, 'setting') || str_contains($name, 'permission')) {
+                return 'تنظیمات';
+            }
+
             return 'سایر';
         });
     }

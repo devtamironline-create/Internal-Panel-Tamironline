@@ -69,7 +69,12 @@ class ActivityLog
         // عملیاتِ دسته‌ایِ کنسول (همگام‌سازی ووکامرس، seeder، migration، کران)
         // هزاران رکورد می‌سازد؛ پیش‌فرض فقط اکشنِ کاربرانِ پنل ثبت می‌شود.
         // (ثبت‌های صریح با record() از این قاعده مستثنا هستند.)
-        if (app()->runningInConsole() && ! config('activity-log.log_console', false)) {
+        // استثنا: رویدادهای حذف/بازگردانی همیشه حیاتی‌اند و باید حتی از کنسول/
+        // tinker هم ثبت شوند — تا حذفِ یک رکورد هیچ‌وقت بدونِ «چه‌کسی/چه‌زمانی»
+        // نماند. (ایجاد/ویرایشِ کنسولی همچنان برای جلوگیری از شلوغی رد می‌شود.)
+        if (app()->runningInConsole()
+            && ! config('activity-log.log_console', false)
+            && ! in_array($action, ['deleted', 'force_deleted', 'restored'], true)) {
             return;
         }
 

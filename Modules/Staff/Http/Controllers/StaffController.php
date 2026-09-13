@@ -187,8 +187,19 @@ class StaffController extends Controller
             $staff->update(['password' => Hash::make($validated['password'])]);
         }
 
-        // Sync role
+        // Sync role — تغییرِ نقش pivot است و رویدادِ Eloquent ندارد → صریح ثبت می‌شود.
+        $roleBefore = $staff->roles->pluck('name')->sort()->values()->implode('، ');
         $staff->syncRoles($validated['role'] ?? 'staff');
+        $roleAfter = $staff->roles()->pluck('name')->sort()->values()->implode('، ');
+        if ($roleBefore !== $roleAfter) {
+            \App\Support\ActivityLog\ActivityLog::record('updated', 'تغییر نقشِ پرسنل', [
+                'entity' => \App\Models\User::class,
+                'entity_label' => 'دسترسی کاربر',
+                'entity_id' => $staff->getKey(),
+                'entity_title' => trim(($staff->name ?? '').' '.($staff->mobile ?? '')) ?: (string) $staff->getKey(),
+                'changes' => ['role' => ['old' => $roleBefore ?: '—', 'new' => $roleAfter ?: '—']],
+            ]);
+        }
 
         return redirect()->route('admin.staff.index')->with('success', 'اطلاعات بروزرسانی شد');
     }

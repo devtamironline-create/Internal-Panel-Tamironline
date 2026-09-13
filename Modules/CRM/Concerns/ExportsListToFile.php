@@ -42,12 +42,24 @@ trait ExportsListToFile
         $format = strtolower($format);
         abort_unless(in_array($format, ['csv', 'xlsx'], true), 404, 'Format must be csv or xlsx.');
 
+        // ثبتِ خروجی‌گرفتن در گزارشِ فعالیت — «چه کسی چه لیستی را دانلود کرد».
+        // (فایل حاویِ دادهٔ مشتری/مالی است؛ ردیابیِ آن مهم است.)
+        try {
+            \App\Support\ActivityLog\ActivityLog::record('export', 'خروجی گرفتن از لیست', [
+                'entity_label' => 'خروجی',
+                'entity_title' => $baseFilename,
+                'meta' => ['format' => $format, 'filters' => request()?->query() ?: null],
+            ]);
+        } catch (\Throwable) {
+            // ثبتِ لاگ نباید دانلود را مختل کند.
+        }
+
         // برای لیست‌های بزرگ
         @set_time_limit(0);
         @ini_set('memory_limit', '1024M');
         ignore_user_abort(true);
 
-        $filename = $baseFilename . '.' . $format;
+        $filename = $baseFilename.'.'.$format;
 
         if ($format === 'csv') {
             return $this->streamCsv($filename, $headers, $rowsCallback);
@@ -89,9 +101,9 @@ trait ExportsListToFile
             @fflush($out);
             fclose($out);
         }, $filename, [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'X-Accel-Buffering'   => 'no',  // disable nginx buffering
-            'Cache-Control'       => 'no-store, no-cache, must-revalidate',
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'X-Accel-Buffering' => 'no',  // disable nginx buffering
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
         ]);
     }
 
@@ -110,7 +122,7 @@ trait ExportsListToFile
             }
 
             try {
-                $spreadsheet = new Spreadsheet();
+                $spreadsheet = new Spreadsheet;
                 $sheet = $spreadsheet->getActiveSheet();
                 $sheet->setRightToLeft(true);
 
@@ -120,7 +132,7 @@ trait ExportsListToFile
                 // هدر
                 foreach ($headers as $i => $h) {
                     $col = Coordinate::stringFromColumnIndex($i + 1);
-                    $sheet->setCellValue($col . '1', (string) $h);
+                    $sheet->setCellValue($col.'1', (string) $h);
                 }
                 $sheet->getStyle("A1:{$lastCol}1")->getFont()->setBold(true);
                 $sheet->getStyle("A1:{$lastCol}1")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
@@ -131,7 +143,7 @@ trait ExportsListToFile
                     foreach ($values as $v) {
                         $col = Coordinate::stringFromColumnIndex($colIdx++);
                         $sheet->setCellValueExplicit(
-                            $col . $row,
+                            $col.$row,
                             $this->stringifyCell($v),
                             \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
                         );
@@ -155,16 +167,16 @@ trait ExportsListToFile
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::error('XLSX export failed', [
                     'filename' => $filename,
-                    'error'    => $e->getMessage(),
+                    'error' => $e->getMessage(),
                 ]);
                 // در stream نمی‌توان وضعیت HTTP عوض کرد؛ پیام در body
-                echo "خطا در ساخت فایل اکسل: " . $e->getMessage() . "\n"
-                    . "برای لیست‌های بزرگ از خروجی CSV استفاده کنید.";
+                echo 'خطا در ساخت فایل اکسل: '.$e->getMessage()."\n"
+                    .'برای لیست‌های بزرگ از خروجی CSV استفاده کنید.';
             }
         }, $filename, [
-            'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'X-Accel-Buffering'   => 'no',
-            'Cache-Control'       => 'no-store, no-cache, must-revalidate',
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'X-Accel-Buffering' => 'no',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
         ]);
     }
 
@@ -187,6 +199,7 @@ trait ExportsListToFile
         if (is_array($value) || is_object($value)) {
             return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         }
+
         return (string) $value;
     }
 }

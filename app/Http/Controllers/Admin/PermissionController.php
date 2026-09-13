@@ -152,11 +152,29 @@ class PermissionController extends Controller
             'permissions.*' => 'exists:permissions,name',
         ]);
 
+        // وضعیتِ قبل — برای ثبتِ «چه چیزی عوض شد» در گزارشِ فعالیت.
+        $rolesBefore = $user->roles->pluck('name')->sort()->values()->all();
+        $permsBefore = $user->getDirectPermissions()->pluck('name')->sort()->values()->all();
+
         // Sync roles
         $user->syncRoles($request->input('roles', []));
 
         // Sync direct permissions (those not from roles)
         $user->syncPermissions($request->input('permissions', []));
+
+        // تغییرِ نقش/دسترسی رویدادِ Eloquent تولید نمی‌کند (pivot)، پس صریح ثبت می‌شود.
+        $rolesAfter = $user->roles()->pluck('name')->sort()->values()->all();
+        $permsAfter = $user->getDirectPermissions()->pluck('name')->sort()->values()->all();
+        \App\Support\ActivityLog\ActivityLog::record('updated', 'تغییر نقش/دسترسیِ کاربر', [
+            'entity' => \App\Models\User::class,
+            'entity_label' => 'دسترسی کاربر',
+            'entity_id' => $user->getKey(),
+            'entity_title' => trim(($user->name ?? '').' '.($user->mobile ?? '')) ?: (string) $user->getKey(),
+            'changes' => array_filter([
+                'roles' => $rolesBefore !== $rolesAfter ? ['old' => implode('، ', $rolesBefore) ?: '—', 'new' => implode('، ', $rolesAfter) ?: '—'] : null,
+                'permissions' => $permsBefore !== $permsAfter ? ['old' => implode('، ', $permsBefore) ?: '—', 'new' => implode('، ', $permsAfter) ?: '—'] : null,
+            ]),
+        ]);
 
         return redirect()->route('admin.permissions.index')
             ->with('success', 'دسترسی‌های کاربر با موفقیت بروزرسانی شد');

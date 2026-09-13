@@ -63,6 +63,23 @@ class ActivityLogTest extends TestCase
         $this->assertContains('deleted', $actions);
     }
 
+    public function test_deletions_are_logged_even_when_console_logging_is_off(): void
+    {
+        // شبیه‌سازیِ حذف از کنسول/tinker: لاگِ کنسول خاموش است.
+        config(['activity-log.log_console' => false]);
+
+        $user = $this->makeUser('09120000099');
+        $user->update(['first_name' => 'x']);
+        $user->delete();
+
+        $actions = array_column($this->entries(), 'action');
+        // ایجاد/ویرایشِ کنسولی ثبت نمی‌شوند…
+        $this->assertNotContains('created', $actions);
+        $this->assertNotContains('updated', $actions);
+        // …اما حذف باید همیشه ثبت شود.
+        $this->assertContains('deleted', $actions, 'حذف باید حتی با خاموش‌بودنِ لاگِ کنسول ثبت شود.');
+    }
+
     public function test_log_file_is_json_lines_named_by_date(): void
     {
         $this->makeUser('09120000011');
