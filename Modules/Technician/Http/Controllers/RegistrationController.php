@@ -527,12 +527,24 @@ class RegistrationController extends Controller
             ], 422);
         }
 
-        // وضعیتِ قبل — برای ثبتِ انتقال در تاریخچه (باگِ قبلی: ثبتِ مجددِ اپ
-        // وضعیت را بی‌صدا از rejected/approved به pending برمی‌گرداند و در
-        // تاریخچه دیده نمی‌شد؛ حالا لاگ می‌شود).
         $previousStatus = $registration->status;
 
-        // به‌روزرسانی اطلاعات
+        // وضعیت‌های نهایی: رد/بایگانی/تأییدشده. متقاضی نمی‌تواند با ثبتِ مجددِ اپ
+        // خودش را دوباره به صفِ بررسی برگرداند — «رد» یعنی پایانِ کار مگر اینکه
+        // ادمینِ کل دستی فعالش کند. پس هیچ تغییری اعمال نمی‌شود.
+        if (in_array($previousStatus, ['rejected', 'archived', 'approved'], true)) {
+            $message = $previousStatus === 'approved'
+                ? 'درخواستِ شما قبلاً تأیید شده است.'
+                : 'درخواستِ شما بررسی و بسته شده است. برای بررسیِ مجدد لطفاً با پشتیبانی تماس بگیرید.';
+
+            return response()->json([
+                'success' => false,
+                'message' => $message,
+                'status' => $previousStatus,
+            ], 422);
+        }
+
+        // به‌روزرسانی اطلاعات (فقط برای وضعیت‌های incomplete/pending)
         $registration->update([
             'activity_type' => $request->activity_type,
             'appliance_categories' => $request->appliance_categories,
@@ -544,16 +556,15 @@ class RegistrationController extends Controller
             'status' => 'pending',
         ]);
 
-        // ثبتِ انتقالِ وضعیت در تاریخچه هنگامی که ثبتِ مجدد، وضعیت را عوض می‌کند
-        // (مثلاً rejected → pending). changed_by null است چون اقدام‌کننده خودِ
-        // متقاضی از اپ است، نه کاربرِ پنل.
+        // ثبتِ انتقالِ وضعیت در تاریخچه وقتی ثبتِ مجدد آن را عوض می‌کند
+        // (مثلاً incomplete → pending). اقدام‌کننده خودِ متقاضی است (changed_by null).
         if ($previousStatus !== 'pending') {
             TechnicianRegistrationLog::create([
                 'registration_id' => $registration->id,
                 'action' => 'status_change',
                 'from_value' => (string) $previousStatus,
                 'to_value' => 'pending',
-                'description' => 'ثبت/ویرایشِ مجددِ اطلاعات توسط متقاضی از اپلیکیشن',
+                'description' => 'تکمیل/ثبتِ اطلاعات توسط متقاضی از اپلیکیشن',
                 'changed_by_user_id' => null,
                 'created_at' => now(),
             ]);
