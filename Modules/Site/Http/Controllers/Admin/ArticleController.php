@@ -118,6 +118,11 @@ class ArticleController extends Controller
             'brand_id' => 'nullable|integer|exists:crm_brands,id',
         ]);
 
+        // حذفِ گروهی مثلِ حذفِ تکی فقط برای نقشِ admin (delete-site-content).
+        if ($data['action'] === 'delete') {
+            abort_unless(auth()->user()?->can('delete-site-content'), 403, 'حذف فقط با دسترسیِ مدیر سیستم امکان‌پذیر است.');
+        }
+
         $articles = Article::query()->whereIn('id', $data['ids'])->get();
         $count = $articles->count();
 

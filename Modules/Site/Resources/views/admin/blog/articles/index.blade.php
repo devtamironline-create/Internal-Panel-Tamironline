@@ -56,7 +56,7 @@
             <option value="publish">انتشار</option>
             <option value="unpublish">پیش‌نویس کردن</option>
             <option value="attach">اتصال طبقه‌بندی (تاپیک/دستگاه/برند)</option>
-            <option value="delete">حذف</option>
+            @can('delete-site-content')<option value="delete">حذف</option>@endcan
         </select>
 
         <template x-if="action === 'attach'">

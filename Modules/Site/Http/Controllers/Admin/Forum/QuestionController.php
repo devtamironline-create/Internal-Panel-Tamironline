@@ -54,10 +54,9 @@ class QuestionController extends Controller
      */
     private function checkDelete(): void
     {
-        $u = auth()->user();
-        if (! $u || (! $u->can('delete-forum-questions') && ! $u->can('manage-forum-questions') && ! $u->can('manage-site') && ! $u->can('manage-permissions'))) {
-            abort(403);
-        }
+        // حذف (تکی/گروهی/پاسخ) فقط برای نقشِ admin — طبق سیاستِ «حذفِ محتوای
+        // سایت فقط مدیر سیستم».
+        abort_unless(auth()->user()?->can('delete-site-content'), 403);
     }
 
     /**
