@@ -19,10 +19,12 @@
         </div>
     </form>
 
-    <form method="POST" action="{{ route('site.admin.reviews.destroy', $review->id) }}"
+    @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.reviews.destroy', $review->id) }}"
           onsubmit="return confirm('حذف کامل این مورد؟');" class="mt-4">
         @csrf @method('DELETE')
         <button type="submit" class="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm">حذف این مورد</button>
     </form>
+@endcan
 </div>
 @endsection

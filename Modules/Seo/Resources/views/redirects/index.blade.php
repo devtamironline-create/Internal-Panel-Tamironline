@@ -52,10 +52,12 @@
                         @csrf @method('PUT')
                         <button class="text-xs text-gray-600 hover:underline">{{ $c['redirect']->is_active ? 'غیرفعال‌سازی' : 'فعال‌سازی' }}</button>
                     </form>
-                    <form method="POST" action="{{ route('seo.admin.redirects.destroy', $c['redirect']) }}" class="inline" onsubmit="return confirm('حذف این ریدایرکت؟');">
+                    @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('seo.admin.redirects.destroy', $c['redirect']) }}" class="inline" onsubmit="return confirm('حذف این ریدایرکت؟');">
                         @csrf @method('DELETE')
                         <button class="text-xs text-rose-600 hover:underline">حذف</button>
                     </form>
+@endcan
                 </li>
                 @endforeach
             </ul>
@@ -131,10 +133,12 @@
                         </form>
                     </td>
                     <td class="px-3 py-2">
-                        <form method="POST" action="{{ route('seo.admin.redirects.destroy', $r) }}" onsubmit="return confirm('حذف این ریدایرکت؟');">
+                        @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('seo.admin.redirects.destroy', $r) }}" onsubmit="return confirm('حذف این ریدایرکت؟');">
                             @csrf @method('DELETE')
                             <button class="text-rose-600 hover:underline">حذف</button>
                         </form>
+@endcan
                     </td>
                 </tr>
                 @empty

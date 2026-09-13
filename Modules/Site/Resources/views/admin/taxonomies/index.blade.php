@@ -132,10 +132,12 @@
                             </button>
                         </form>
                         <button type="button" @click="editing = true" class="text-sm text-blue-600 hover:underline">ویرایش</button>
-                        <form method="POST" action="{{ route('site.admin.taxonomies.destroy', [$type, $t->id]) }}" onsubmit="return confirm('این دسته حذف شود؟ (سوالاتِ داخلش حذف نمی‌شوند، فقط از این دسته خارج می‌شوند)');">
+                        @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.taxonomies.destroy', [$type, $t->id]) }}" onsubmit="return confirm('این دسته حذف شود؟ (سوالاتِ داخلش حذف نمی‌شوند، فقط از این دسته خارج می‌شوند)');">
                             @csrf @method('DELETE')
                             <button type="submit" class="text-sm text-rose-600 hover:underline">حذف</button>
                         </form>
+@endcan
                     </div>
                 </div>
 

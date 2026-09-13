@@ -33,16 +33,17 @@ class AppServiceProvider extends ServiceProvider
             if (in_array($ability, ['view-crm-costs', 'manage-crm-costs'], true)) {
                 return null;
             }
-            // استثنا: حذفِ محتوای سایت (برند/دستگاه/صفحه) از bypass سوپر-ادمین
-            // خارج است — حتی نقشِ admin باید این دسترسی را صریحاً داشته باشد تا
-            // فقط یک نفر بتواند صفحات را حذف کند.
-            if ($ability === 'delete-seo-content') {
-                return null;
-            }
             if ($user->hasRole('admin')) {
                 return true;
             }
         });
+
+        // حذفِ همهٔ موارد بخشِ «مدیریت سایت» فقط در اختیارِ نقشِ admin (مدیر
+        // سیستم) است — نه هیچ نقش/دسترسیِ دیگری (حتی manage-permissions).
+        // admin از طریقِ Gate::before بالا مجاز می‌شود؛ برای بقیه این closure
+        // اجرا و false برمی‌گرداند. در بلید هم @can('delete-site-content') دکمهٔ
+        // حذف را فقط برای admin نشان می‌دهد.
+        Gate::define('delete-site-content', fn ($user) => $user->hasRole('admin'));
 
         // Force HTTPS in production
         if ($this->app->environment('production') || isset($_SERVER['HTTPS'])) {

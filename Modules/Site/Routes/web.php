@@ -34,7 +34,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/', [ContactMessageController::class, 'index'])->name('index');
         Route::get('/{id}', [ContactMessageController::class, 'show'])->name('show');
         Route::put('/{id}/status', [ContactMessageController::class, 'updateStatus'])->name('update-status');
-        Route::delete('/{id}', [ContactMessageController::class, 'destroy'])->name('destroy');
+        Route::delete('/{id}', [ContactMessageController::class, 'destroy'])->middleware('can:delete-site-content')->name('destroy');
     });
 
     // نظرات و توصیه‌نامه‌ها (یکپارچه — audio + text)
@@ -48,7 +48,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::put('/{id}/status', [AdminReviewController::class, 'updateStatus'])->whereAlphaNumeric('id')->name('update-status');
         Route::put('/{id}/toggle-publish', [AdminReviewController::class, 'togglePublish'])->whereAlphaNumeric('id')->name('toggle-publish');
         Route::post('/{id}/reply', [AdminReviewController::class, 'reply'])->whereAlphaNumeric('id')->name('reply');
-        Route::delete('/{id}', [AdminReviewController::class, 'destroy'])->whereAlphaNumeric('id')->name('destroy');
+        Route::delete('/{id}', [AdminReviewController::class, 'destroy'])->middleware('can:delete-site-content')->whereAlphaNumeric('id')->name('destroy');
     });
 
     // Redirectهای backward-compat برای URLهای قدیمی
@@ -67,7 +67,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/{id}', [AdminCommentController::class, 'show'])->whereNumber('id')->name('show');
         Route::put('/{id}/status', [AdminCommentController::class, 'updateStatus'])->whereNumber('id')->name('update-status');
         Route::post('/{id}/reply', [AdminCommentController::class, 'reply'])->whereNumber('id')->name('reply');
-        Route::delete('/{id}', [AdminCommentController::class, 'destroy'])->whereNumber('id')->name('destroy');
+        Route::delete('/{id}', [AdminCommentController::class, 'destroy'])->middleware('can:delete-site-content')->whereNumber('id')->name('destroy');
     });
 
     // هوش مصنوعی (AI) — رجیستریِ مدل‌ها + تنظیماتِ مودریشن + اجرای مودریشن
@@ -78,7 +78,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::put('/reply-settings', [$ai, 'saveReplySettings'])->name('reply-settings');
         Route::post('/models', [$ai, 'storeModel'])->name('models.store');
         Route::put('/models/{model}', [$ai, 'updateModel'])->whereNumber('model')->name('models.update');
-        Route::delete('/models/{model}', [$ai, 'destroyModel'])->whereNumber('model')->name('models.destroy');
+        Route::delete('/models/{model}', [$ai, 'destroyModel'])->middleware('can:delete-site-content')->whereNumber('model')->name('models.destroy');
         Route::post('/models/{model}/test', [$ai, 'testModel'])->whereNumber('model')->name('models.test');
         Route::post('/moderate/comment/{comment}', [$ai, 'moderateComment'])->whereNumber('comment')->name('moderate.comment');
         Route::post('/moderate/question/{question}', [$ai, 'moderateQuestion'])->whereNumber('question')->name('moderate.question');
@@ -94,14 +94,14 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::prefix('reports')->name('reports.')->group(function () {
             Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\ReportController::class, 'index'])->name('index');
             Route::put('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\ReportController::class, 'update'])->whereNumber('id')->name('update');
-            Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\ReportController::class, 'destroy'])->whereNumber('id')->name('destroy');
+            Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\ReportController::class, 'destroy'])->middleware('can:delete-site-content')->whereNumber('id')->name('destroy');
         });
 
         // لیست بن
         Route::prefix('banlist')->name('banlist.')->group(function () {
             Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\BanlistController::class, 'index'])->name('index');
             Route::post('/', [\Modules\Site\Http\Controllers\Admin\Forum\BanlistController::class, 'store'])->name('store');
-            Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\BanlistController::class, 'destroy'])->whereNumber('id')->name('destroy');
+            Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\BanlistController::class, 'destroy'])->middleware('can:delete-site-content')->whereNumber('id')->name('destroy');
         });
 
         // مدیریت برچسب‌ها
@@ -109,7 +109,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::get('/', [\Modules\Site\Http\Controllers\Admin\Forum\TagsController::class, 'index'])->name('index');
             Route::put('/rename', [\Modules\Site\Http\Controllers\Admin\Forum\TagsController::class, 'rename'])->name('rename');
             Route::put('/merge', [\Modules\Site\Http\Controllers\Admin\Forum\TagsController::class, 'merge'])->name('merge');
-            Route::delete('/destroy', [\Modules\Site\Http\Controllers\Admin\Forum\TagsController::class, 'destroy'])->name('destroy');
+            Route::delete('/destroy', [\Modules\Site\Http\Controllers\Admin\Forum\TagsController::class, 'destroy'])->middleware('can:delete-site-content')->name('destroy');
         });
 
         // تنظیمات سراسری انجمن
@@ -122,7 +122,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::post('/', [\Modules\Site\Http\Controllers\Admin\Forum\TopicController::class, 'store'])->name('store');
             Route::put('/{topic}', [\Modules\Site\Http\Controllers\Admin\Forum\TopicController::class, 'update'])->whereNumber('topic')->name('update');
             Route::put('/{topic}/toggle', [\Modules\Site\Http\Controllers\Admin\Forum\TopicController::class, 'toggle'])->whereNumber('topic')->name('toggle');
-            Route::delete('/{topic}', [\Modules\Site\Http\Controllers\Admin\Forum\TopicController::class, 'destroy'])->whereNumber('topic')->name('destroy');
+            Route::delete('/{topic}', [\Modules\Site\Http\Controllers\Admin\Forum\TopicController::class, 'destroy'])->middleware('can:delete-site-content')->whereNumber('topic')->name('destroy');
         });
 
         Route::prefix('questions')->name('questions.')->group(function () {
@@ -134,10 +134,10 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::put('/{id}/toggle/{flag}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'toggleFlag'])->whereNumber('id')->whereIn('flag', ['is_hot', 'is_featured'])->name('toggle-flag');
             Route::put('/{id}/topic', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'updateTopic'])->whereNumber('id')->name('update-topic');
             Route::post('/{id}/admin-reply', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'adminReply'])->whereNumber('id')->name('admin-reply');
-            Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'destroy'])->whereNumber('id')->name('destroy');
+            Route::delete('/{id}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'destroy'])->middleware('can:delete-site-content')->whereNumber('id')->name('destroy');
             // پاسخ‌های nested
             Route::put('/{id}/answers/{answerId}/status', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'answerUpdateStatus'])->whereNumber('id')->whereNumber('answerId')->name('answers.update-status');
-            Route::delete('/{id}/answers/{answerId}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'answerDestroy'])->whereNumber('id')->whereNumber('answerId')->name('answers.destroy');
+            Route::delete('/{id}/answers/{answerId}', [\Modules\Site\Http\Controllers\Admin\Forum\QuestionController::class, 'answerDestroy'])->middleware('can:delete-site-content')->whereNumber('id')->whereNumber('answerId')->name('answers.destroy');
         });
         // کارشناسان
         Route::prefix('experts')->name('experts.')->group(function () {
@@ -146,7 +146,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::post('/', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'store'])->name('store');
             Route::get('/{expert}/edit', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'edit'])->name('edit');
             Route::put('/{expert}', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'update'])->name('update');
-            Route::delete('/{expert}', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'destroy'])->name('destroy');
+            Route::delete('/{expert}', [\Modules\Site\Http\Controllers\Admin\Forum\ExpertController::class, 'destroy'])->middleware('can:delete-site-content')->name('destroy');
         });
     });
 
@@ -159,7 +159,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::post('/', [BlogTopicController::class, 'store'])->name('store');
             Route::get('/{topic}/edit', [BlogTopicController::class, 'edit'])->name('edit');
             Route::put('/{topic}', [BlogTopicController::class, 'update'])->name('update');
-            Route::delete('/{topic}', [BlogTopicController::class, 'destroy'])->name('destroy');
+            Route::delete('/{topic}', [BlogTopicController::class, 'destroy'])->middleware('can:delete-site-content')->name('destroy');
         });
 
         // مقالات
@@ -175,7 +175,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::put('/{article}/quick-classify', [ArticleController::class, 'quickClassify'])->name('quick-classify');
             Route::put('/{article}/device/{device}/toggle-active', [ArticleController::class, 'toggleDeviceActive'])->name('device.toggle-active');
             Route::put('/{article}/brand/{brand}/toggle-active', [ArticleController::class, 'toggleBrandActive'])->name('brand.toggle-active');
-            Route::delete('/{article}', [ArticleController::class, 'destroy'])->name('destroy');
+            Route::delete('/{article}', [ArticleController::class, 'destroy'])->middleware('can:delete-site-content')->name('destroy');
         });
     });
 
@@ -186,7 +186,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::post('/', [PageController::class, 'store'])->name('store');
         Route::get('/{id}/edit', [PageController::class, 'edit'])->name('edit');
         Route::put('/{id}', [PageController::class, 'update'])->name('update');
-        Route::delete('/{id}', [PageController::class, 'destroy'])->name('destroy');
+        Route::delete('/{id}', [PageController::class, 'destroy'])->middleware('can:delete-site-content')->name('destroy');
     });
 
     // محتوای صفحات سایت — section-based
@@ -208,9 +208,9 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/{id}', [MediaController::class, 'show'])->whereNumber('id')->name('show');
         Route::put('/{id}', [MediaController::class, 'update'])->whereNumber('id')->name('update');
         Route::post('/{id}/rebuild-variants', [MediaController::class, 'rebuildVariants'])->whereNumber('id')->name('rebuild-variants');
-        Route::delete('/{id}', [MediaController::class, 'destroy'])->whereNumber('id')->name('destroy');
+        Route::delete('/{id}', [MediaController::class, 'destroy'])->middleware('can:delete-site-content')->whereNumber('id')->name('destroy');
         Route::post('/tags', [MediaController::class, 'storeTag'])->name('tags.store');
-        Route::delete('/tags/{id}', [MediaController::class, 'destroyTag'])->whereNumber('id')->name('tags.destroy');
+        Route::delete('/tags/{id}', [MediaController::class, 'destroyTag'])->middleware('can:delete-site-content')->whereNumber('id')->name('tags.destroy');
     });
 
     // بنرها و اسلایدر
@@ -220,7 +220,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::post('/', [BannerController::class, 'store'])->name('store');
         Route::get('/{id}/edit', [BannerController::class, 'edit'])->name('edit');
         Route::put('/{id}', [BannerController::class, 'update'])->name('update');
-        Route::delete('/{id}', [BannerController::class, 'destroy'])->name('destroy');
+        Route::delete('/{id}', [BannerController::class, 'destroy'])->middleware('can:delete-site-content')->name('destroy');
     });
 
     // سوالات متداول (مخزن)
@@ -232,7 +232,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::get('/{id}/edit', [FaqController::class, 'edit'])->name('edit');
         Route::put('/{id}', [FaqController::class, 'update'])->name('update');
         Route::post('/{id}/duplicate', [FaqController::class, 'duplicate'])->name('duplicate');
-        Route::delete('/{id}', [FaqController::class, 'destroy'])->name('destroy');
+        Route::delete('/{id}', [FaqController::class, 'destroy'])->middleware('can:delete-site-content')->name('destroy');
     });
 
     // آمار صفحه‌ی About
@@ -242,7 +242,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
         Route::post('/', [AboutStatController::class, 'store'])->name('store');
         Route::get('/{id}/edit', [AboutStatController::class, 'edit'])->whereNumber('id')->name('edit');
         Route::put('/{id}', [AboutStatController::class, 'update'])->whereNumber('id')->name('update');
-        Route::delete('/{id}', [AboutStatController::class, 'destroy'])->whereNumber('id')->name('destroy');
+        Route::delete('/{id}', [AboutStatController::class, 'destroy'])->middleware('can:delete-site-content')->whereNumber('id')->name('destroy');
     });
 
     // دسته‌بندی‌های FAQ و Testimonial (تب در فرانت)
@@ -253,7 +253,7 @@ Route::middleware(['auth'])->prefix('admin/site')->name('site.admin.')->group(fu
             Route::post('/', [TaxonomyController::class, 'store'])->name('store');
             Route::put('/{id}', [TaxonomyController::class, 'update'])->whereNumber('id')->name('update');
             Route::put('/{id}/toggle', [TaxonomyController::class, 'toggle'])->whereNumber('id')->name('toggle');
-            Route::delete('/{id}', [TaxonomyController::class, 'destroy'])->whereNumber('id')->name('destroy');
+            Route::delete('/{id}', [TaxonomyController::class, 'destroy'])->middleware('can:delete-site-content')->whereNumber('id')->name('destroy');
         });
 
     // تنظیمات عمومی سایت

@@ -57,9 +57,11 @@
         <form method="POST" action="{{ route('site.admin.forum.questions.toggle-flag', [$question->id, 'is_featured']) }}">
             @csrf @method('PUT')<button class="px-3 py-1.5 rounded-lg text-sm bg-violet-50 text-violet-700 hover:bg-violet-100">{{ $question->is_featured ? 'حذف ویژه' : '⭐ ویژه' }}</button>
         </form>
-        <form method="POST" action="{{ route('site.admin.forum.questions.destroy', $question->id) }}" onsubmit="return confirm('حذف کامل سوال؟');" class="ml-auto">
+        @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.forum.questions.destroy', $question->id) }}" onsubmit="return confirm('حذف کامل سوال؟');" class="ml-auto">
             @csrf @method('DELETE')<button class="px-3 py-1.5 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700">حذف سوال</button>
         </form>
+@endcan
     </div>
 
     {{-- انتسابِ موضوع (برای فیلترِ «بر اساس موضوع» سایت) --}}
@@ -126,9 +128,11 @@
                                 <button class="text-red-600 hover:underline">اسپم</button>
                             </form>
                         @endif
-                        <form method="POST" action="{{ route('site.admin.forum.questions.answers.destroy', [$question->id, $a->id]) }}" onsubmit="return confirm('حذف پاسخ؟');">
+                        @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.forum.questions.answers.destroy', [$question->id, $a->id]) }}" onsubmit="return confirm('حذف پاسخ؟');">
                             @csrf @method('DELETE')<button class="text-red-700 hover:underline">حذف</button>
                         </form>
+@endcan
                     </span>
                     @endcanany
                 </div>

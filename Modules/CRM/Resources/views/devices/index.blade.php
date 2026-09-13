@@ -197,7 +197,7 @@
                             @can('manage-crm-devices')
                             <a href="{{ route('crm.devices.edit', $device) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
                             @endcan
-                            @can('manage-permissions')
+                            @can('delete-site-content')
                             <form action="{{ route('crm.devices.destroy', $device) }}" method="POST" class="inline" onsubmit="return window.seoConfirmDelete(this, @js($device->slug), 'دستگاه {{ $device->name }}');">
                                 @csrf
                                 @method('DELETE')

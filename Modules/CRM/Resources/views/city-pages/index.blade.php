@@ -105,7 +105,7 @@
                                         <button type="submit" class="text-green-600 hover:text-green-800 text-sm font-medium">انتشار</button>
                                     @endif
                                 </form>
-                                @can('manage-permissions')
+                                @can('delete-site-content')
                                 <form action="{{ route('crm.city-pages.destroy', $page) }}" method="POST" class="inline"
                                       onsubmit="return window.seoConfirmDelete(this, @js($page->path), 'صفحهٔ شهر {{ $page->path }}');">
                                     @csrf @method('DELETE')

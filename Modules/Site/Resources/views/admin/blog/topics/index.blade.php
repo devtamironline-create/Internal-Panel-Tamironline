@@ -76,9 +76,11 @@
                     </td>
                     <td class="px-4 py-3 flex gap-2">
                         <a href="{{ route('site.admin.blog.topics.edit', $t->id) }}" class="text-blue-600 hover:underline">ویرایش</a>
-                        <form method="POST" action="{{ route('site.admin.blog.topics.destroy', $t->id) }}" onsubmit="return confirm('حذف؟');">
+                        @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.blog.topics.destroy', $t->id) }}" onsubmit="return confirm('حذف؟');">
                             @csrf @method('DELETE')<button class="text-red-600 hover:underline">حذف</button>
                         </form>
+@endcan
                     </td>
                 </tr>
                 @empty

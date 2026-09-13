@@ -88,7 +88,7 @@
                         @can('manage-crm-devices')
                         <a href="{{ route('crm.device-brand-pages.edit', $p->id) }}" class="text-blue-600 hover:underline">ویرایش</a>
                         @endcan
-                        @can('manage-permissions')
+                        @can('delete-site-content')
                         @php($comboSlug = trim(($p->device?->slug ?? '').'/'.($p->brand?->slug ?? ''), '/'))
                         <form method="POST" action="{{ route('crm.device-brand-pages.destroy', $p->id) }}"
                               onsubmit="return window.seoConfirmDelete(this, @js($comboSlug), 'صفحهٔ ترکیبی {{ $comboSlug }}');">

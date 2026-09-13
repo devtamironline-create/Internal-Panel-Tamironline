@@ -58,9 +58,11 @@
                 </div>
                 <div class="flex flex-col gap-2 text-sm shrink-0">
                     <a href="{{ route('site.admin.banners.edit', $b->id) }}" class="text-blue-600 hover:underline">ویرایش</a>
-                    <form method="POST" action="{{ route('site.admin.banners.destroy', $b->id) }}" onsubmit="return confirm('حذف؟');">
+                    @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.banners.destroy', $b->id) }}" onsubmit="return confirm('حذف؟');">
                         @csrf @method('DELETE')<button class="text-red-600 hover:underline">حذف</button>
                     </form>
+@endcan
                 </div>
             </div>
         @empty

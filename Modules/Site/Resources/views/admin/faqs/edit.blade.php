@@ -16,11 +16,13 @@
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">ویرایش سوال</h1>
                 <p class="text-sm text-gray-500 mt-0.5 truncate">{{ $faq->question }}</p>
             </div>
-            <form method="POST" action="{{ route('site.admin.faqs.destroy', $faq->id) }}"
+            @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.faqs.destroy', $faq->id) }}"
                   onsubmit="return confirm('این سوال حذف شود؟');">
                 @csrf @method('DELETE')
                 <button class="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg">حذف</button>
             </form>
+@endcan
         </div>
     </div>
 

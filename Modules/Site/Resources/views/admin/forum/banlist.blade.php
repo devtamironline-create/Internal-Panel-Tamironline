@@ -153,11 +153,13 @@
                                         </td>
                                         <td class="px-4 py-3">
                                             @canany(['moderate-forum-questions', 'manage-forum-questions', 'manage-site'])
-                                            <form method="POST" action="{{ route('site.admin.forum.banlist.destroy', $entry->id) }}"
+                                            @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.forum.banlist.destroy', $entry->id) }}"
                                                   onsubmit="return confirm('حذف از لیست بن؟')">
                                                 @csrf @method('DELETE')
                                                 <button class="text-xs text-red-600 hover:underline">حذف</button>
                                             </form>
+@endcan
                                             @endcanany
                                         </td>
                                     </tr>
