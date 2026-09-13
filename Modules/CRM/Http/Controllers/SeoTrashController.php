@@ -13,7 +13,8 @@ use Modules\CRM\Models\DeviceBrandPage;
  * سطلِ بازیافتِ محتوای سایت — فهرستِ موجودیت‌های soft-delete‌شده
  * (برند/دستگاه/صفحهٔ ترکیبی/صفحهٔ شهر) و بازگردانیِ آن‌ها.
  *
- * حذفِ دائمی عمداً وجود ندارد؛ فقط بازگردانی. دسترسی: delete-seo-content.
+ * حذفِ دائمی عمداً وجود ندارد؛ فقط بازگردانی. دسترسی: manage-permissions
+ * (ادمینِ کل) — همان دسترسیِ لازم برای حذف.
  */
 class SeoTrashController extends Controller
 {
