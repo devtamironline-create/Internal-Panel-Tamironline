@@ -85,11 +85,13 @@
                 <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded text-sm">به‌روزرسانی وضعیت</button>
             </form>
 
-            <form method="POST" action="{{ route('site.admin.reviews.destroy', $review->id) }}"
+            @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.reviews.destroy', $review->id) }}"
                   onsubmit="return confirm('حذف کامل این نظر؟');" class="mr-auto">
                 @csrf @method('DELETE')
                 <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded text-sm">حذف</button>
             </form>
+@endcan
         </div>
         @endcan
     </div>

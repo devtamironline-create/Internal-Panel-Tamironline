@@ -80,9 +80,11 @@
                 <button class="px-3 py-1.5 rounded-lg text-sm bg-{{ $color }}-50 text-{{ $color }}-700 hover:bg-{{ $color }}-100">تغییر به {{ $lbl }}</button>
             </form>
         @endforeach
-        <form method="POST" action="{{ route('site.admin.comments.destroy', $comment->id) }}" onsubmit="return confirm('حذف کامل این کامنت؟');" class="ml-auto">
+        @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.comments.destroy', $comment->id) }}" onsubmit="return confirm('حذف کامل این کامنت؟');" class="ml-auto">
             @csrf @method('DELETE')<button class="px-3 py-1.5 rounded-lg text-sm bg-red-600 text-white hover:bg-red-700">حذف</button>
         </form>
+@endcan
     </div>
     @endcan
 

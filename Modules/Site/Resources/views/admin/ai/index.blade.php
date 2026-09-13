@@ -112,7 +112,9 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <form method="POST" action="{{ route('site.admin.ai.models.test', $m) }}">@csrf<button class="text-xs text-blue-600 hover:underline">تستِ اتصال</button></form>
-                        <form method="POST" action="{{ route('site.admin.ai.models.destroy', $m) }}" onsubmit="return confirm('حذف شود؟')">@csrf @method('DELETE')<button class="text-xs text-rose-600 hover:underline">حذف</button></form>
+                        @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.ai.models.destroy', $m) }}" onsubmit="return confirm('حذف شود؟')">@csrf @method('DELETE')<button class="text-xs text-rose-600 hover:underline">حذف</button></form>
+@endcan
                     </div>
                 </div>
                 <details class="border-t border-gray-100 dark:border-gray-700">

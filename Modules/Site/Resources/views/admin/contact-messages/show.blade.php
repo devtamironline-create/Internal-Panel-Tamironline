@@ -70,12 +70,14 @@
                 <button type="submit" class="px-3 py-1 bg-blue-600 text-white rounded text-sm">ذخیره</button>
             </form>
 
-            <form method="POST" action="{{ route('site.admin.contact-messages.destroy', $message->id) }}"
+            @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.contact-messages.destroy', $message->id) }}"
                   onsubmit="return confirm('پیام به‌طور کامل حذف شود؟');">
                 @csrf
                 @method('DELETE')
                 <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded text-sm">حذف پیام</button>
             </form>
+@endcan
         </div>
         @endcan
     </div>

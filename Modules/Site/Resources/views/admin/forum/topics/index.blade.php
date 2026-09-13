@@ -87,9 +87,11 @@
                             <form method="POST" action="{{ route('site.admin.forum.topics.toggle', $t->id) }}">@csrf @method('PUT')
                                 <button class="px-2 py-1 rounded bg-amber-50 text-amber-700 text-xs hover:bg-amber-100">{{ $t->is_active ? 'غیرفعال' : 'فعال' }}</button>
                             </form>
-                            <form method="POST" action="{{ route('site.admin.forum.topics.destroy', $t->id) }}" onsubmit="return confirm('حذف موضوع؟ سوال‌های منتسب بدون موضوع می‌شوند.');">@csrf @method('DELETE')
+                            @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.forum.topics.destroy', $t->id) }}" onsubmit="return confirm('حذف موضوع؟ سوال‌های منتسب بدون موضوع می‌شوند.');">@csrf @method('DELETE')
                                 <button class="px-2 py-1 rounded bg-red-50 text-red-700 text-xs hover:bg-red-100">حذف</button>
                             </form>
+@endcan
                         </div>
                     </td>
                 </tr>

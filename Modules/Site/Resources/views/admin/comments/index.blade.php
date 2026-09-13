@@ -194,9 +194,11 @@
                                                 <button class="text-red-600 hover:underline">اسپم</button>
                                             </form>
                                         @endif
-                                        <form method="POST" action="{{ route('site.admin.comments.destroy', $c->id) }}" class="inline" onsubmit="return confirm('حذف؟');">
+                                        @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.comments.destroy', $c->id) }}" class="inline" onsubmit="return confirm('حذف؟');">
                                             @csrf @method('DELETE')<button class="text-red-700 hover:underline">حذف</button>
                                         </form>
+@endcan
                                     @endcan
                                     @can('manage-ai')
                                         @if(Route::has('site.admin.ai.moderate.comment'))

@@ -48,10 +48,12 @@
                     <td class="px-4 py-3 text-gray-500">{{ \Morilog\Jalali\Jalalian::fromDateTime($p->updated_at)->format('Y/m/d H:i') }}</td>
                     <td class="px-4 py-3 flex gap-2">
                         <a href="{{ route('site.admin.pages.edit', $p->id) }}" class="text-blue-600 hover:underline">ویرایش</a>
-                        <form method="POST" action="{{ route('site.admin.pages.destroy', $p->id) }}" onsubmit="return confirm('حذف شود؟');">
+                        @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.pages.destroy', $p->id) }}" onsubmit="return confirm('حذف شود؟');">
                             @csrf @method('DELETE')
                             <button type="submit" class="text-red-600 hover:underline">حذف</button>
                         </form>
+@endcan
                     </td>
                 </tr>
                 @empty

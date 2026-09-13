@@ -79,12 +79,14 @@
                                     <div class="flex items-center gap-2">
                                         <button type="button" @click="showRename = @js($tag); renameValue = @js($tag)"
                                                 class="px-2 py-1 text-xs bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded hover:bg-blue-100">تغییر نام</button>
-                                        <form method="POST" action="{{ route('site.admin.forum.tags.destroy') }}" class="inline"
+                                        @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.forum.tags.destroy') }}" class="inline"
                                               onsubmit="return confirm('حذف برچسب «{{ $tag }}» از {{ $count }} سوال؟')">
                                             @csrf @method('DELETE')
                                             <input type="hidden" name="tag" value="{{ $tag }}">
                                             <button class="px-2 py-1 text-xs bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 rounded hover:bg-red-100">حذف</button>
                                         </form>
+@endcan
                                     </div>
                                 </td>
                             </tr>

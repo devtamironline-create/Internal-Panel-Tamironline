@@ -37,16 +37,16 @@ Route::middleware(['auth', 'can:manage-seo'])
         Route::get('/redirects/export', [RedirectController::class, 'export'])->name('redirects.export');
         Route::post('/redirects/import', [RedirectController::class, 'import'])->name('redirects.import');
         Route::put('/redirects/{redirect}/toggle', [RedirectController::class, 'toggle'])->name('redirects.toggle');
-        Route::delete('/redirects/{redirect}', [RedirectController::class, 'destroy'])->name('redirects.destroy');
+        Route::delete('/redirects/{redirect}', [RedirectController::class, 'destroy'])->middleware('can:delete-site-content')->name('redirects.destroy');
 
         // مانیتور ۴۰۴
         Route::get('/404', [NotFoundController::class, 'index'])->name('not-found.index');
         // مسیرهای ثابت پیش از binding پویا تعریف می‌شوند تا «bulk»/«export» به‌عنوان مدل تفسیر نشوند.
         Route::get('/404/export', [NotFoundController::class, 'export'])->name('not-found.export');
-        Route::delete('/404/bulk', [NotFoundController::class, 'bulkDestroy'])->name('not-found.bulk-destroy');
+        Route::delete('/404/bulk', [NotFoundController::class, 'bulkDestroy'])->middleware('can:delete-site-content')->name('not-found.bulk-destroy');
         Route::post('/404/{notFound}/ignore', [NotFoundController::class, 'ignore'])->name('not-found.ignore');
         Route::post('/404/{notFound}/unignore', [NotFoundController::class, 'unignore'])->name('not-found.unignore');
-        Route::delete('/404/{notFound}', [NotFoundController::class, 'destroy'])->name('not-found.destroy');
+        Route::delete('/404/{notFound}', [NotFoundController::class, 'destroy'])->middleware('can:delete-site-content')->name('not-found.destroy');
 
         // مانیتورینگ و آدیت
         // بازبینیِ تایتل/دیسکریپشن — فقط نمایش. تنها نوشتنش بازسازیِ snapshot است.
@@ -93,7 +93,7 @@ Route::middleware(['auth', 'can:manage-seo'])
             Route::get('/{rule}', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'show'])->name('show')->whereNumber('rule');
             Route::post('/{rule}/apply', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'apply'])->name('apply')->whereNumber('rule');
             Route::put('/{rule}', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'update'])->name('update')->whereNumber('rule');
-            Route::delete('/{rule}', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'destroy'])->name('destroy')->whereNumber('rule');
+            Route::delete('/{rule}', [\Modules\Seo\Http\Controllers\LinkFixController::class, 'destroy'])->middleware('can:delete-site-content')->name('destroy')->whereNumber('rule');
         });
 
         // گزارش canonical (مشکلات + canonicalهای تکراری) از آخرین کرال تمام‌شده

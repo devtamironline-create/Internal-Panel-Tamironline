@@ -122,7 +122,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('brands/{brand}/edit', [BrandController::class, 'edit'])->name('brands.edit');
         Route::put('brands/{brand}', [BrandController::class, 'update'])->name('brands.update');
         Route::put('brands/{brand}/toggle/{flag}', [BrandController::class, 'toggle'])->whereIn('flag', ['is_active', 'is_featured'])->name('brands.toggle');
-        Route::delete('brands/{brand}', [BrandController::class, 'destroy'])->middleware('can:manage-permissions')->name('brands.destroy');
+        Route::delete('brands/{brand}', [BrandController::class, 'destroy'])->middleware('can:delete-site-content')->name('brands.destroy');
     });
     // فعال/غیرفعال‌سازی گروهیِ برندها — فقط مدیر کل.
     Route::middleware('can:manage-permissions')->group(function () {
@@ -155,7 +155,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::post('devices/{device}/coverage-titles', [DeviceController::class, 'saveCoverageTitles'])->name('devices.coverage-titles.save');
         Route::put('devices/{device}', [DeviceController::class, 'update'])->name('devices.update');
         Route::put('devices/{device}/toggle/{flag}', [DeviceController::class, 'toggle'])->whereIn('flag', ['is_active', 'is_active_app', 'is_featured'])->name('devices.toggle');
-        Route::delete('devices/{device}', [DeviceController::class, 'destroy'])->middleware('can:manage-permissions')->name('devices.destroy');
+        Route::delete('devices/{device}', [DeviceController::class, 'destroy'])->middleware('can:delete-site-content')->name('devices.destroy');
 
         // تعرفهٔ خدمات (قیمت‌ها) — هم صفحهٔ اختصاصی، هم لینک از ویرایشِ دستگاه.
         Route::get('service-prices', [\Modules\CRM\Http\Controllers\ServicePriceController::class, 'index'])->name('service-prices.index');
@@ -182,14 +182,14 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::get('device-brand-pages/{devicebrandpage}/edit', [DeviceBrandPageController::class, 'edit'])->name('device-brand-pages.edit');
         Route::put('device-brand-pages/{devicebrandpage}', [DeviceBrandPageController::class, 'update'])->name('device-brand-pages.update');
         Route::put('device-brand-pages/{devicebrandpage}/toggle', [DeviceBrandPageController::class, 'toggle'])->name('device-brand-pages.toggle');
-        Route::delete('device-brand-pages/{devicebrandpage}', [DeviceBrandPageController::class, 'destroy'])->middleware('can:manage-permissions')->name('device-brand-pages.destroy');
+        Route::delete('device-brand-pages/{devicebrandpage}', [DeviceBrandPageController::class, 'destroy'])->middleware('can:delete-site-content')->name('device-brand-pages.destroy');
     });
 
-    // ─── سطلِ بازیافتِ محتوای سایت — فقط ادمینِ کل (بالاترین دسترسی) ──────
+    // ─── سطلِ بازیافتِ محتوای سایت — فقط نقشِ admin (مدیر سیستم) ──────
     // فهرستِ حذف‌شده‌ها (برند/دستگاه/صفحهٔ ترکیبی/صفحهٔ شهر) + بازگردانی.
     // حذفِ دائمی عمداً وجود ندارد؛ فقط restore. حذف/بازگردانی مثلِ حذفِ خودِ
     // صفحات، انحصاراً در اختیارِ manage-permissions است.
-    Route::middleware('can:manage-permissions')->group(function () {
+    Route::middleware('can:delete-site-content')->group(function () {
         Route::get('seo-trash', [\Modules\CRM\Http\Controllers\SeoTrashController::class, 'index'])->name('seo-trash.index');
         Route::put('seo-trash/{type}/{id}/restore', [\Modules\CRM\Http\Controllers\SeoTrashController::class, 'restore'])
             ->whereIn('type', ['brand', 'device', 'device-brand-page', 'city-page'])
@@ -242,7 +242,7 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::put('city-pages/{cityPage}', [\Modules\CRM\Http\Controllers\CityPageController::class, 'update'])->name('city-pages.update');
         Route::put('city-pages/{cityPage}/toggle-publish', [\Modules\CRM\Http\Controllers\CityPageController::class, 'togglePublish'])->name('city-pages.toggle-publish');
         Route::get('city-pages/{cityPage}/preview', [\Modules\CRM\Http\Controllers\CityPageController::class, 'preview'])->name('city-pages.preview');
-        Route::delete('city-pages/{cityPage}', [\Modules\CRM\Http\Controllers\CityPageController::class, 'destroy'])->middleware('can:manage-permissions')->name('city-pages.destroy');
+        Route::delete('city-pages/{cityPage}', [\Modules\CRM\Http\Controllers\CityPageController::class, 'destroy'])->middleware('can:delete-site-content')->name('city-pages.destroy');
     });
 
     // ─── تاکسونومی ── انواع خدمات ──────────────────────────────────

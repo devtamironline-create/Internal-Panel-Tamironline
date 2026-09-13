@@ -116,10 +116,12 @@
             </div>
 
             @can('manage-site-media')
-                <form method="POST" action="{{ route('site.admin.media.destroy', $media->id) }}" onsubmit="return confirm('حذف فایل از روی disk و DB؟');">
+                @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.media.destroy', $media->id) }}" onsubmit="return confirm('حذف فایل از روی disk و DB؟');">
                     @csrf @method('DELETE')
                     <button class="w-full px-4 py-2 bg-red-600 text-white rounded-lg text-sm">حذف فایل از مخزن</button>
                 </form>
+@endcan
             @endcan
         </div>
     </div>

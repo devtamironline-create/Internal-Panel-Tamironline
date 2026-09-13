@@ -49,10 +49,12 @@
     </form>
 
     {{-- فرم حذف گروهی (با form-attribute به چک‌باکس‌ها وصل می‌شود تا تو‌درتو نشود) --}}
-    <form id="nf-bulk" method="POST" action="{{ route('seo.admin.not-found.bulk-destroy') }}"
+    @can('delete-site-content')
+{{-- delete-gate --}}<form id="nf-bulk" method="POST" action="{{ route('seo.admin.not-found.bulk-destroy') }}"
           onsubmit="return confirm('حذف رکوردهای انتخاب‌شده؟');">
         @csrf @method('DELETE')
     </form>
+@endcan
 
     <div>
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-x-auto">
@@ -111,10 +113,12 @@
                                         <button class="text-gray-500 hover:underline whitespace-nowrap">نادیده‌گرفتن</button>
                                     </form>
                                 @endif
-                                <form method="POST" action="{{ route('seo.admin.not-found.destroy', $log) }}" onsubmit="return confirm('حذف این رکورد؟');">
+                                @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('seo.admin.not-found.destroy', $log) }}" onsubmit="return confirm('حذف این رکورد؟');">
                                     @csrf @method('DELETE')
                                     <button class="text-rose-600 hover:underline">حذف</button>
                                 </form>
+@endcan
                             </div>
                         </td>
                     </tr>

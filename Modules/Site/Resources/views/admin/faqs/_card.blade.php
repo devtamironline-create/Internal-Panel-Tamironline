@@ -23,10 +23,12 @@
                         @csrf
                         <button class="text-sm text-indigo-600 hover:underline">کپی</button>
                     </form>
-                    <form method="POST" action="{{ route('site.admin.faqs.destroy', $f->id) }}" onsubmit="return confirm('این سوال حذف شود؟');">
+                    @can('delete-site-content')
+{{-- delete-gate --}}<form method="POST" action="{{ route('site.admin.faqs.destroy', $f->id) }}" onsubmit="return confirm('این سوال حذف شود؟');">
                         @csrf @method('DELETE')
                         <button class="text-sm text-red-600 hover:underline">حذف</button>
                     </form>
+@endcan
                 </div>
             </div>
             <h3 class="text-sm font-bold text-gray-900 dark:text-gray-100 leading-relaxed">{{ $f->question }}</h3>
