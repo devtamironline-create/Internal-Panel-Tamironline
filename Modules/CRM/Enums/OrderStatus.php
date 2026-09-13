@@ -49,7 +49,7 @@ enum OrderStatus: string
             self::Returned => 'برگشتی گارانتی',
             self::Declined => 'رد شده',
             self::AwaitingCoordination => 'در انتظار هماهنگی',
-            self::NoAnswer => 'مشتری پاسخگو نیست',
+            self::NoAnswer => 'عدم پاسخ',
             self::AwaitingPart => 'در انتظار قطعه',
             self::AwaitingCustomerApproval => 'در انتظار تأیید مشتری',
         };
@@ -68,7 +68,7 @@ enum OrderStatus: string
             self::Returned => 'bg-orange-100 text-orange-800',
             self::Declined => 'bg-red-200 text-red-900',
             self::AwaitingCoordination => 'bg-cyan-100 text-cyan-800',
-            self::NoAnswer => 'bg-rose-100 text-rose-800',
+            self::NoAnswer => 'bg-sky-100 text-sky-700',
             self::AwaitingPart => 'bg-teal-100 text-teal-800',
             self::AwaitingCustomerApproval => 'bg-lime-100 text-lime-800',
         };
