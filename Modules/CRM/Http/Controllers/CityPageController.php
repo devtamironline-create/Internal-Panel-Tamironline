@@ -239,9 +239,13 @@ class CityPageController extends Controller
     }
 
     /** انتشار/بازگردانی به پیش‌نویسِ یک صفحه (تاگل). */
-    public function togglePublish(CityPage $cityPage)
+    public function togglePublish(Request $request, CityPage $cityPage)
     {
         if ($cityPage->isPublished()) {
+            // غیرفعال‌کردن (خارج‌کردن از سایت) فقط با بالاترین دسترسی (مدیر کل).
+            if (! $request->user()?->can('manage-permissions')) {
+                abort(403, 'غیرفعال‌سازی/حذف صفحه فقط با دسترسی مدیر کل امکان‌پذیر است.');
+            }
             $cityPage->unpublish();
             $msg = 'صفحه به پیش‌نویس بازگشت (از سایت حذف شد).';
         } else {

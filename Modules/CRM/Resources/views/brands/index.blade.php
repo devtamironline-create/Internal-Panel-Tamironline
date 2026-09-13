@@ -154,7 +154,7 @@
                             @can('manage-crm-brands')
                             <a href="{{ route('crm.brands.edit', $brand) }}" class="text-blue-600 hover:text-blue-800 text-sm">ویرایش</a>
                             @endcan
-                            @can('delete-seo-content')
+                            @can('manage-permissions')
                             <form action="{{ route('crm.brands.destroy', $brand) }}" method="POST" class="inline" onsubmit="return window.seoConfirmDelete(this, @js($brand->slug), 'برند {{ $brand->name }}');">
                                 @csrf
                                 @method('DELETE')

@@ -17,14 +17,16 @@ use Morilog\Jalali\Jalalian;
  * گیرنده‌ها:
  *   ۱) اگر کلیدِ crm_settings: seo_delete_alert_mobiles مقدار داشته باشد، همان
  *      شماره‌ها (با , یا خطِ جدید جدا شده).
- *   ۲) در غیرِ این‌صورت، موبایلِ همهٔ کاربرانی که دسترسیِ delete-seo-content
- *      را دارند (مستقیم یا از طریقِ نقش).
+ *   ۲) در غیرِ این‌صورت، موبایلِ ادمین‌های کل (دسترسیِ manage-permissions) —
+ *      همان‌هایی که مجازِ حذف‌اند.
  *
  * سرویس هیچ‌وقت throw نمی‌کند؛ خطا فقط لاگ می‌شود تا حذف مختل نشود.
  */
 class SeoDeletionAlert
 {
-    public const PERMISSION = 'delete-seo-content';
+    // حذف فقط در اختیارِ ادمینِ کل است؛ پیامکِ هشدار هم به همان‌ها می‌رود
+    // (مگر اینکه شماره‌های مشخصی در seo_delete_alert_mobiles تنظیم شده باشد).
+    public const PERMISSION = 'manage-permissions';
 
     public const RECIPIENTS_SETTING = 'seo_delete_alert_mobiles';
 
@@ -109,7 +111,7 @@ class SeoDeletionAlert
     }
 
     /**
-     * موبایلِ کاربرانی که دسترسیِ delete-seo-content دارند (مستقیم یا از نقش).
+     * موبایلِ کاربرانی که دسترسیِ manage-permissions دارند (مستقیم یا از نقش).
      *
      * @return array<int, string>
      */
