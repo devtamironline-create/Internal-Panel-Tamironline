@@ -75,6 +75,20 @@ class SeoSoftDeleteTest extends TestCase
         $this->assertSame(1, DeviceBrandPage::count());
     }
 
+    public function test_combo_has_readable_activity_log_title(): void
+    {
+        $d = Device::create(['name' => 'لباسشویی', 'slug' => 'washing-machine']);
+        $b = Brand::create(['name' => 'کندی', 'slug' => 'candy']);
+        $page = DeviceBrandPage::ensureForPair($d->id, $b->id);
+
+        // عنوانِ اختصاصیِ لاگ باید «device/brand» باشد، نه فقط شناسه.
+        $this->assertSame('washing-machine/candy', $page->activityLogTitle());
+        $this->assertSame(
+            'washing-machine/candy',
+            \App\Support\ActivityLog\ActivityRegistry::titleOf($page)
+        );
+    }
+
     public function test_typed_confirmation_rejects_mismatch_and_accepts_exact(): void
     {
         $harness = new class

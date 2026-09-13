@@ -25,6 +25,14 @@ class DeviceBrandPage extends Model
 
     protected $table = 'crm_device_brand_pages';
 
+    /** عنوانِ خوانا برای گزارشِ فعالیت — «device-slug/brand-slug». */
+    public function activityLogTitle(): string
+    {
+        $d = $this->seoDeletionDescriptor();
+
+        return trim(($d['slug'] ?? '') ?: (string) ($d['name'] ?? ''));
+    }
+
     /** توصیف‌گرِ موجودیت برای هشدارِ حذف و سطلِ بازیافت. */
     public function seoDeletionDescriptor(): array
     {
