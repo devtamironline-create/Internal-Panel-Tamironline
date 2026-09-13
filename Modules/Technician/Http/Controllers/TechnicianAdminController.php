@@ -471,6 +471,15 @@ class TechnicianAdminController extends Controller
         $registration = TechnicianRegistration::findOrFail($id);
 
         $previousStatus = $registration->status;
+
+        // «رد/بایگانی» وضعیتِ نهایی است؛ خارج‌کردنِ درخواست از این حالت (فعال‌سازیِ
+        // مجدد) فقط با ادمینِ کل ممکن است، نه اپراتورِ عادیِ approve-technician.
+        if (in_array($previousStatus, ['rejected', 'archived'], true)
+            && $request->status !== $previousStatus
+            && ! auth()->user()->can('manage-permissions')) {
+            abort(403, 'خارج‌کردنِ درخواست از حالتِ رد/بایگانی فقط با دسترسیِ مدیر کل امکان‌پذیر است.');
+        }
+
         $data = ['status' => $request->status];
 
         if ($request->status === 'rejected') {
