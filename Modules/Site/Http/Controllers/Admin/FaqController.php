@@ -194,7 +194,11 @@ class FaqController extends Controller
                 break;
 
             case 'delete':
-                Faq::whereIn('id', $ids)->delete();
+                // حذف فقط برای نقشِ admin؛ تک‌تک حذف می‌شوند تا در لاگ ثبت شوند.
+                abort_unless(auth()->user()?->can('delete-site-content'), 403, 'حذف فقط با دسترسیِ مدیر سیستم امکان‌پذیر است.');
+                foreach ($faqs as $f) {
+                    $f->delete();
+                }
                 $msg = "{$count} سوال حذف شد.";
                 break;
 

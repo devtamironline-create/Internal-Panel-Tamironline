@@ -9,6 +9,7 @@ use Modules\SMS\Services\KavenegarService;
 use Modules\SMS\Services\OTPService;
 use Modules\Technician\Models\ApplianceCategory;
 use Modules\Technician\Models\TechnicianRegistration;
+use Modules\Technician\Models\TechnicianRegistrationLog;
 use Modules\Technician\Models\TechnicianSetting;
 use Modules\Technician\Services\ZohalService;
 
@@ -526,6 +527,11 @@ class RegistrationController extends Controller
             ], 422);
         }
 
+        // وضعیتِ قبل — برای ثبتِ انتقال در تاریخچه (باگِ قبلی: ثبتِ مجددِ اپ
+        // وضعیت را بی‌صدا از rejected/approved به pending برمی‌گرداند و در
+        // تاریخچه دیده نمی‌شد؛ حالا لاگ می‌شود).
+        $previousStatus = $registration->status;
+
         // به‌روزرسانی اطلاعات
         $registration->update([
             'activity_type' => $request->activity_type,
@@ -538,9 +544,25 @@ class RegistrationController extends Controller
             'status' => 'pending',
         ]);
 
+        // ثبتِ انتقالِ وضعیت در تاریخچه هنگامی که ثبتِ مجدد، وضعیت را عوض می‌کند
+        // (مثلاً rejected → pending). changed_by null است چون اقدام‌کننده خودِ
+        // متقاضی از اپ است، نه کاربرِ پنل.
+        if ($previousStatus !== 'pending') {
+            TechnicianRegistrationLog::create([
+                'registration_id' => $registration->id,
+                'action' => 'status_change',
+                'from_value' => (string) $previousStatus,
+                'to_value' => 'pending',
+                'description' => 'ثبت/ویرایشِ مجددِ اطلاعات توسط متقاضی از اپلیکیشن',
+                'changed_by_user_id' => null,
+                'created_at' => now(),
+            ]);
+        }
+
         Log::info('Technician registration step 5 completed', [
             'registration_id' => $registration->id,
             'mobile' => $request->mobile,
+            'previous_status' => $previousStatus,
         ]);
 
         return response()->json([
