@@ -91,6 +91,16 @@ class LeadController extends Controller
             abort(404);
         }
 
+        // ثبتِ خروجی‌گرفتنِ لیدها در گزارشِ فعالیت.
+        try {
+            \App\Support\ActivityLog\ActivityLog::record('export', 'خروجی گرفتن از لیدها', [
+                'entity_label' => 'خروجی',
+                'entity_title' => 'leads',
+                'meta' => ['format' => $format, 'filters' => $request->query() ?: null],
+            ]);
+        } catch (\Throwable) {
+        }
+
         $query = Order::with(['customer', 'brand', 'device', 'province', 'city', 'district', 'leadReason'])
             ->leads();
 

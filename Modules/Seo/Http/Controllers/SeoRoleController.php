@@ -74,6 +74,12 @@ class SeoRoleController extends Controller
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
         SeoChangeLog::record('updated', 'roles', 'دسترسی نقش‌ها به مدیریت سئو به‌روزرسانی شد.');
 
+        // در گزارشِ فعالیتِ پنل هم ثبت شود (تغییرِ دسترسی رویدادِ Eloquent ندارد).
+        \App\Support\ActivityLog\ActivityLog::record('updated', 'تغییر دسترسی‌های سئوی نقش‌ها', [
+            'entity_label' => 'دسترسی سئو',
+            'entity_title' => 'ماتریس دسترسی نقش‌ها (مدیریت سئو)',
+        ]);
+
         return back()->with('success', 'دسترسی نقش‌ها ذخیره شد.');
     }
 }

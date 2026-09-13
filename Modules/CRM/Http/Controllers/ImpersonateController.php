@@ -39,8 +39,17 @@ class ImpersonateController extends Controller
             'technician_id' => $technician->id,
         ]);
 
+        // ثبت در گزارشِ فعالیت — «کدام ادمین وارد پنلِ کدام تکنسین شد».
+        \App\Support\ActivityLog\ActivityLog::record('login', 'ورود به پنل تکنسین (impersonate)', [
+            'entity' => Technician::class,
+            'entity_label' => 'تکنسین',
+            'entity_id' => $technician->id,
+            'entity_title' => $technician->full_name ?: (string) $technician->mobile,
+            'meta' => ['impersonate' => 'start', 'admin_id' => $adminId],
+        ]);
+
         return redirect()->route('tech.dashboard')
-            ->with('success', 'به پنل تکنسین «' . $technician->full_name . '» وارد شدید.');
+            ->with('success', 'به پنل تکنسین «'.$technician->full_name.'» وارد شدید.');
     }
 
     public function leave(Request $request): RedirectResponse
@@ -54,6 +63,11 @@ class ImpersonateController extends Controller
 
         Log::info('crm.impersonate.leave', [
             'admin_id' => $adminId,
+        ]);
+
+        \App\Support\ActivityLog\ActivityLog::record('logout', 'خروج از پنل تکنسین (impersonate)', [
+            'entity_label' => 'تکنسین',
+            'meta' => ['impersonate' => 'leave', 'admin_id' => $adminId],
         ]);
 
         // اگر ادمین هنوز روی web guard لاگین است، به لیست تکنسین‌ها برمی‌گردیم.

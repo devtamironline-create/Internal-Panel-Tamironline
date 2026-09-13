@@ -33,7 +33,7 @@ class DataRestoreController extends Controller
 
             // جدول‌های هر دو دیتابیس
             $bt = DB::connection('backup')->select('SHOW TABLES');
-            $bcol = "Tables_in_" . $backupDb;
+            $bcol = 'Tables_in_'.$backupDb;
             foreach ($bt as $t) {
                 $name = $t->$bcol;
                 $count = DB::connection('backup')->table($name)->count();
@@ -41,7 +41,7 @@ class DataRestoreController extends Controller
             }
 
             $ct = DB::select('SHOW TABLES');
-            $ccol = "Tables_in_" . $currentDb;
+            $ccol = 'Tables_in_'.$currentDb;
             foreach ($ct as $t) {
                 $name = $t->$ccol;
                 $count = DB::table($name)->count();
@@ -82,7 +82,7 @@ class DataRestoreController extends Controller
         $onlyCorrupted = $request->boolean('only_corrupted', true);
 
         $currentQuery = DB::table($table);
-        if ($onlyCorrupted && !empty($textColumns)) {
+        if ($onlyCorrupted && ! empty($textColumns)) {
             $currentQuery->where(function ($q) use ($textColumns) {
                 foreach ($textColumns as $col) {
                     $q->orWhere($col, 'LIKE', '%?%');
@@ -96,7 +96,7 @@ class DataRestoreController extends Controller
         // پیدا کردن رکوردهای متناظر در بکاپ
         $ids = $currentRows->pluck($primaryKey)->toArray();
         $backupRows = collect();
-        if (!empty($ids)) {
+        if (! empty($ids)) {
             $backupRows = DB::connection('backup')->table($table)
                 ->whereIn($primaryKey, $ids)
                 ->get()
@@ -144,8 +144,9 @@ class DataRestoreController extends Controller
                     ->where($primaryKey, $id)
                     ->first();
 
-                if (!$backupRow) {
+                if (! $backupRow) {
                     $errors[] = "ID $id: یافت نشد در بکاپ";
+
                     continue;
                 }
 
@@ -156,26 +157,39 @@ class DataRestoreController extends Controller
                     }
                 }
 
-                if (!empty($update)) {
+                if (! empty($update)) {
                     DB::table($table)->where($primaryKey, $id)->update($update);
                     $restored++;
                 }
             } catch (\Exception $e) {
-                $errors[] = "ID $id: " . $e->getMessage();
+                $errors[] = "ID $id: ".$e->getMessage();
             }
         }
 
         $msg = "تعداد $restored رکورد بازیابی شد.";
-        if (!empty($errors)) {
-            $msg .= " خطاها: " . implode('; ', array_slice($errors, 0, 3));
+        if (! empty($errors)) {
+            $msg .= ' خطاها: '.implode('; ', array_slice($errors, 0, 3));
         }
+
+        // بازنویسیِ دادهٔ فعلی از بکاپ با DB::table انجام می‌شود (بدونِ رویدادِ
+        // مدل)؛ عملیاتی حساس است و باید صریح در گزارشِ فعالیت ثبت شود.
+        \App\Support\ActivityLog\ActivityLog::record('updated', 'بازیابی داده از بکاپ', [
+            'entity_label' => 'بازیابی داده',
+            'entity_title' => $table,
+            'meta' => [
+                'table' => $table,
+                'restored_rows' => $restored,
+                'columns' => array_values($columnsToRestore),
+                'ids' => array_slice(array_values($ids), 0, 50),
+            ],
+        ]);
 
         return back()->with('success', $msg);
     }
 
     private function validateTable(string $table): void
     {
-        if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+        if (! preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
             abort(400, 'نام جدول نامعتبر');
         }
 
@@ -190,7 +204,8 @@ class DataRestoreController extends Controller
     private function getColumns(string $table): array
     {
         $cols = DB::select("SHOW COLUMNS FROM `{$table}`");
-        return array_map(fn($c) => $c->Field, $cols);
+
+        return array_map(fn ($c) => $c->Field, $cols);
     }
 
     private function getTextColumns(string $table): array
@@ -204,12 +219,14 @@ class DataRestoreController extends Controller
                 $result[] = $c->Field;
             }
         }
+
         return $result;
     }
 
     private function getPrimaryKey(string $table): string
     {
         $cols = DB::select("SHOW KEYS FROM `{$table}` WHERE Key_name = 'PRIMARY'");
+
         return $cols[0]->Column_name ?? 'id';
     }
 }

@@ -122,7 +122,11 @@ class ArticleController extends Controller
         $count = $articles->count();
 
         if ($data['action'] === 'delete') {
-            Article::query()->whereIn('id', $data['ids'])->delete();
+            // به‌جای whereIn()->delete() (که رویدادِ مدل تولید نمی‌کند و در
+            // گزارشِ فعالیت ثبت نمی‌شود)، تک‌تک حذف می‌شوند تا هر حذف لاگ شود.
+            foreach ($articles as $a) {
+                $a->delete();
+            }
 
             return back()->with('success', "{$count} مقاله حذف شد.");
         }

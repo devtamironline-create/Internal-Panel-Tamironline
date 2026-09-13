@@ -23,6 +23,7 @@ class ActivityRegistry
         'login_failed' => 'ورود ناموفق',
         'assign' => 'تخصیص',
         'unassign' => 'لغو تخصیص',
+        'export' => 'خروجی گرفتن',
     ];
 
     /** رنگِ معناییِ هر اکشن برای UI. */
@@ -37,6 +38,7 @@ class ActivityRegistry
         'login_failed' => 'red',
         'assign' => 'indigo',
         'unassign' => 'amber',
+        'export' => 'indigo',
     ];
 
     /**
