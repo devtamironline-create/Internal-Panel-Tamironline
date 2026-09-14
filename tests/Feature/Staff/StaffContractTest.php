@@ -184,6 +184,21 @@ class StaffContractTest extends TestCase
         $this->actingAs($admin)->get("/admin/staff-contracts/{$contract->id}/download")->assertOk();
     }
 
+    public function test_admin_can_approve_a_complete_contract_still_awaiting_staff_submit(): void
+    {
+        $admin = $this->admin();
+        $staff = $this->staff('09120000221', 'کامل‌بی‌ارسال');
+        // همهٔ موارد کامل است ولی کارمند دکمهٔ «ارسال» را نزده → هنوز awaiting_staff.
+        $contract = $this->completedContract($staff);
+        $contract->forceFill(['status' => 'awaiting_staff'])->save();
+
+        $this->actingAs($admin)
+            ->post("/admin/staff-contracts/{$contract->id}/approve")
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('approved', $contract->fresh()->status);
+    }
+
     public function test_admin_can_reject_and_staff_can_fix_and_resubmit(): void
     {
         $admin = $this->admin();

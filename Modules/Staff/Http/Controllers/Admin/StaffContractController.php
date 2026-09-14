@@ -229,8 +229,11 @@ class StaffContractController extends Controller
     /** تأیید نهایی → تولید PDF مهر و امضاشده. */
     public function approve(StaffContract $staffContract)
     {
-        if ($staffContract->status !== 'submitted') {
-            return back()->withErrors(['status' => 'فقط قراردادِ ارسال‌شده برای بررسی قابل تأیید است.']);
+        // قراردادِ «ارسال‌شده» و همچنین قراردادِ «در انتظار تکمیل»‌ای که کارمند
+        // همه‌چیز را کامل کرده ولی دکمهٔ ارسال را نزده، قابلِ تأیید است — تا
+        // ادمین روی یک قراردادِ ۱۰۰٪‌کامل معطلِ کلیکِ کارمند نماند.
+        if (! in_array($staffContract->status, ['submitted', 'awaiting_staff'], true)) {
+            return back()->withErrors(['status' => 'فقط قراردادِ ارسال‌شده یا کاملِ در انتظار تکمیل قابل تأیید است.']);
         }
         if (! $staffContract->readyToSubmit()) {
             return back()->withErrors(['status' => 'مدارک، امضا یا ویدیوی احراز کامل نیست.']);
@@ -267,6 +270,11 @@ class StaffContractController extends Controller
     /** رد قرارداد با دلیل — کارمند دوباره امکان ویرایش پیدا می‌کند. */
     public function reject(Request $request, StaffContract $staffContract)
     {
+        // رد فقط روی قراردادِ ارسال‌شده یا در انتظار تکمیل معنی دارد (نه تأییدشده).
+        if (! in_array($staffContract->status, ['submitted', 'awaiting_staff'], true)) {
+            return back()->withErrors(['status' => 'این قرارداد در وضعیتی نیست که بتوان آن را رد کرد.']);
+        }
+
         $validated = $request->validate([
             'reject_reason' => 'required|string|min:3|max:1000',
         ], [], ['reject_reason' => 'دلیل رد']);
