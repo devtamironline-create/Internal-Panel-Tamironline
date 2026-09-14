@@ -12,6 +12,7 @@ use Modules\CRM\Support\HtmlSanitizer;
 use Modules\Site\Models\Faq;
 use Modules\Site\Models\Review;
 use Modules\Site\Models\Taxonomy;
+use Modules\Site\Support\FrontendRevalidator;
 
 /**
  * مدیریتِ صفحاتِ سئوِ شهری (SEO-024). هدفِ طراحی: «خیلی راحت برای ادمین» —
@@ -88,14 +89,21 @@ class CityPageController extends Controller
         abort_if($city->isDistrict(), 404);
 
         $count = 0;
+        $paths = [];
         CityPage::query()
             ->where('city_id', $city->id)
             ->where('status', CityPage::STATUS_DRAFT)
             ->get()
-            ->each(function (CityPage $page) use (&$count) {
+            ->each(function (CityPage $page) use (&$count, &$paths) {
                 $page->publish();
+                $paths[] = '/city'.$page->path;
                 $count++;
             });
+
+        // بازاعتبارسنجیِ فرانت با یک درخواست برای همهٔ مسیرها (نه هر صفحه جدا).
+        if ($paths !== []) {
+            app(FrontendRevalidator::class)->purgePaths($paths);
+        }
 
         return back()->with('success', "{$count} صفحه منتشر شد.");
     }
@@ -253,6 +261,9 @@ class CityPageController extends Controller
             $msg = 'صفحه منتشر شد.';
         }
 
+        // فرانت را برای همین مسیر تازه کن تا صفحهٔ استاتیک/لیست فوراً هم‌خوان شود.
+        app(FrontendRevalidator::class)->purgePaths(['/city'.$cityPage->path]);
+
         return back()->with('success', $msg);
     }
 
@@ -274,8 +285,13 @@ class CityPageController extends Controller
                 ->with('error', 'برای حذف باید مسیرِ صفحه («'.$cityPage->path.'») را دقیقاً تایپ کنید.');
         }
 
+        $path = (string) $cityPage->path;
+
         // soft-delete؛ قابلِ بازگردانی از سطلِ بازیافت.
         $cityPage->delete();
+
+        // فرانت را برای مسیرِ حذف‌شده تازه کن تا صفحهٔ استاتیک/لیست به‌روز شود.
+        app(FrontendRevalidator::class)->purgePaths(['/city'.$path]);
 
         return redirect()
             ->route('crm.cities.pages.index', $cityId)
