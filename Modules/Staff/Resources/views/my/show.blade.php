@@ -161,7 +161,10 @@
                 <div class="mb-3">
                     <video controls preload="metadata" class="w-full rounded-lg bg-black max-h-64"
                            src="{{ route('my-contracts.file', [$contract, 'video']) }}"></video>
-                    <p class="text-[11px] text-emerald-600 mt-1 text-center">ویدیو در {{ Jalalian::fromDateTime($contract->video_recorded_at)->format('Y/m/d H:i') }} ثبت شد. برای تغییر، دوباره ضبط کنید.</p>
+                    <p class="text-[11px] text-emerald-600 mt-1 text-center">✓ ویدیو در {{ Jalalian::fromDateTime($contract->video_recorded_at)->format('Y/m/d H:i') }} ثبت شد.</p>
+                </div>
+                <div class="text-[11px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/40 border border-gray-200 dark:border-gray-600 rounded-lg p-2 mb-2 leading-5">
+                    ویدیو مناسب نیست یا واضح نبود؟ با دکمهٔ زیر می‌توانید <b>دوباره ضبط کنید</b>؛ ویدیوی جدید جایگزین قبلی می‌شود.
                 </div>
             @endif
 
@@ -169,7 +172,7 @@
 
             <div class="flex flex-wrap items-center gap-2 mt-3">
                 <button type="button" @click="start()" x-show="!streaming && !recordedUrl"
-                        class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm">🎥 شروع ضبط</button>
+                        class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm">{{ $contract->hasVideo() ? '🔄 ضبط دوبارهٔ ویدیو' : '🎥 شروع ضبط' }}</button>
                 <button type="button" @click="stop()" x-show="streaming" x-cloak
                         class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm">⏹️ پایان ضبط (<span x-text="seconds"></span> ثانیه)</button>
                 <template x-if="recordedUrl">
