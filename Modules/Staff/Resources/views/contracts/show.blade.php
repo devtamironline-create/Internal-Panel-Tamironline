@@ -108,10 +108,18 @@
                 @endif
             </div>
 
-            {{-- تأیید / رد --}}
-            @if($contract->status === 'submitted')
+            {{-- تأیید / رد — برای قراردادِ ارسال‌شده، و همچنین قراردادِ ۱۰۰٪‌کاملی که
+                 کارمند هنوز دکمهٔ «ارسال» را نزده تا ادمین معطل نماند. --}}
+            @php($pendingComplete = $contract->status === 'awaiting_staff' && $contract->readyToSubmit())
+            @if($contract->status === 'submitted' || $pendingComplete)
                 <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
                     <h2 class="text-sm font-bold text-gray-800 dark:text-gray-100">تصمیم نهایی</h2>
+                    @if($pendingComplete)
+                        <p class="text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-2 leading-5">
+                            کارمند همهٔ موارد (مدارک، امضا و ویدیو) را کامل کرده اما هنوز دکمهٔ «ارسال برای بررسی» را نزده است.
+                            می‌توانید همین‌جا تأیید کنید یا برای اصلاح (مثلاً ضبط دوبارهٔ ویدیو) رد کنید.
+                        </p>
+                    @endif
                     <form method="POST" action="{{ route('admin.staff-contracts.approve', $contract) }}"
                           onsubmit="return confirm('قرارداد تأیید و نسخهٔ PDF مهر و امضاشده تولید شود؟');">
                         @csrf
