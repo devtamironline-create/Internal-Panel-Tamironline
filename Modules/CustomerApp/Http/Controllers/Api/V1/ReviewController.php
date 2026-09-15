@@ -70,8 +70,12 @@ class ReviewController extends Controller
      * GET /v1/customer/reviews
      *
      * نظرهایی که خودِ مشتری برای تکنسین‌ها ثبت کرده — برای بخشِ «نظرات من» در
-     * پروفایل. pending_count تعدادِ سفارش‌های تکمیل‌شده‌ای است که هنوز نظر نگرفته‌اند
-     * (برای ترغیبِ کاربر به ثبتِ نظر).
+     * پروفایل. علاوه بر آن، «سفارش‌های منتظرِ نظر» را هم برمی‌گرداند تا کاربر
+     * ترغیب به ثبتِ نظر شود.
+     *
+     * توجه: بخشِ پروفایل عمداً «بدونِ پنجرهٔ ۳۰ روزه» است — هر سفارشِ تکمیل‌شده‌ای
+     * که نظر نگرفته این‌جا می‌آید (برخلافِ مودالِ اجباریِ pending-reviews که فقط
+     * سفارش‌های اخیر را نشان می‌دهد تا کاربر بابتِ سفارشِ خیلی قدیمی اذیت نشود).
      */
     public function mine(Request $request): JsonResponse
     {
@@ -89,13 +93,19 @@ class ReviewController extends Controller
             ->latest()
             ->paginate(20);
 
-        $windowDays = (int) config('customerapp.reviews.pending_window_days', 30);
-        $pendingCount = Order::query()
+        // سفارش‌های تکمیل‌شدهٔ بدونِ نظر — بدونِ محدودیتِ زمانی.
+        $pendingRows = Order::query()
             ->where('customer_id', $customer->id)
             ->where('status', OrderStatus::Completed->value)
             ->whereDoesntHave('review')
-            ->when($windowDays > 0, fn ($q) => $q->where('completed_at', '>=', now()->subDays($windowDays)))
-            ->count();
+            ->with([
+                'device:id,name',
+                'brand:id,name',
+                'technician:id,first_name,last_name,firstname_tech',
+            ])
+            ->orderByDesc('completed_at')->orderByDesc('id')
+            ->limit(50)
+            ->get(['id', 'order_code', 'device_id', 'brand_id', 'technician_id', 'completed_at']);
 
         return response()->json([
             'data' => collect($reviews->items())->map(fn (OrderReview $r) => [
@@ -112,11 +122,20 @@ class ReviewController extends Controller
                 'status' => $r->status,
                 'created_at' => $r->created_at?->utc()->toIso8601String(),
             ])->all(),
+            // سفارش‌های منتظرِ نظر (برای بخشِ ترغیبیِ پروفایل).
+            'pending' => $pendingRows->map(fn (Order $o) => [
+                'order_id' => (int) $o->id,
+                'tracking_code' => $o->order_code,
+                'device_name' => $o->device?->name,
+                'brand_name' => $o->brand?->name,
+                'technician_name' => $o->technician?->display_name,
+                'completed_at' => $o->completed_at?->utc()->toIso8601String(),
+            ])->values(),
             'meta' => [
                 'current_page' => $reviews->currentPage(),
                 'last_page' => $reviews->lastPage(),
                 'total' => $reviews->total(),
-                'pending_count' => $pendingCount,
+                'pending_count' => $pendingRows->count(),
             ],
         ])->header('Cache-Control', 'no-store');
     }
