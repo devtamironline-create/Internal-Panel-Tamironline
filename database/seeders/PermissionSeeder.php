@@ -113,6 +113,9 @@ class PermissionSeeder extends Seeder
             // CRM - برداشت سرمایه (مالک/شرکا)
             'manage-owner-withdrawals' => 'مدیریت برداشت سرمایه (مالک/شرکا)',
 
+            // CRM - کیف‌پول مشتری و درخواست‌های برداشت
+            'manage-customer-wallet' => 'مدیریت کیف‌پول مشتری و برداشت‌ها',
+
             // CRM - HappyCall
             'view-crm-happycall' => 'مشاهده پاسخ‌های HappyCall',
             'manage-crm-happycall' => 'مدیریت HappyCall',
