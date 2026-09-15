@@ -491,14 +491,193 @@ class PaymentController extends Controller
             return;
         }
 
+        // customer_wallet_topup → شارژ کیف‌پول مشتری
+        if ($payment->purpose === 'customer_wallet_topup' && $payment->customer_id) {
+            $customer = \Modules\CRM\Models\Customer::find($payment->customer_id);
+            if ($customer) {
+                // گاردِ یکتایی: هر topup فقط یک‌بار به کیف‌پول واریز شود.
+                $already = \Modules\CRM\Models\CustomerWalletTransaction::where('type', \Modules\CRM\Enums\CustomerWalletTxType::Topup->value)
+                    ->whereJsonContains('meta->payment_id', $payment->id)
+                    ->exists();
+                if (! $already) {
+                    app(\Modules\CRM\Services\CustomerWalletService::class)->credit(
+                        $customer,
+                        \Modules\CRM\Enums\CustomerWalletTxType::Topup,
+                        (int) $payment->amount,
+                        [
+                            'note' => 'شارژ کیف‌پول از درگاه — refid: '.($refNumber ?: $payment->track_id),
+                            'meta' => ['payment_id' => $payment->id],
+                        ],
+                    );
+                }
+            }
+
+            return;
+        }
+
         // invoice → پرداخت فاکتور مشتری
         if ($payment->invoice && $payment->invoice->status !== 'paid') {
+            // سهمِ کیف‌پول (پرداختِ ترکیبی) در همین لحظه از کیف‌پولِ مشتری کسر
+            // می‌شود؛ برآیندِ درگاه + کیف‌پول = کلِ فاکتور.
+            $walletDebited = $this->debitWalletShare($payment);
+
             $payment->invoice->update([
                 'status' => 'paid',
                 'paid_at' => now(),
             ]);
 
-            $this->creditTechnicianForOnlinePayment($payment);
+            $this->creditTechnicianForOnlinePayment($payment, $walletDebited);
+
+            // پاداشِ معرف — اگر سفارشِ این مشتری تکمیل+پرداخت شده باشد (idempotent).
+            $this->maybeRewardReferrer($payment);
+        }
+    }
+
+    /**
+     * کسرِ سهمِ کیف‌پولِ مشتری در یک پرداختِ ترکیبی (reserve-at-settlement).
+     * تا لحظهٔ موفقیتِ پرداخت هیچ کسری انجام نشده، پس رهاکردنِ پرداخت پولی را
+     * بلوکه نمی‌کند. اگر موجودی در این فاصله خرج شده باشد، هرچه هست کسر می‌شود.
+     */
+    protected function debitWalletShare(Payment $payment): int
+    {
+        $share = (int) ($payment->wallet_amount ?? 0);
+        if ($share <= 0 || ! $payment->customer_id) {
+            return 0;
+        }
+        // گاردِ یکتایی — هر payment فقط یک‌بار کیف‌پول را کسر کند.
+        $already = \Modules\CRM\Models\CustomerWalletTransaction::where('type', \Modules\CRM\Enums\CustomerWalletTxType::Payment->value)
+            ->whereJsonContains('meta->payment_id', $payment->id)
+            ->exists();
+        if ($already) {
+            return $share;
+        }
+
+        $customer = \Modules\CRM\Models\Customer::whereKey($payment->customer_id)->lockForUpdate()->first();
+        if (! $customer) {
+            return 0;
+        }
+        $toDebit = min($share, (int) $customer->wallet_balance);
+        if ($toDebit <= 0) {
+            return 0;
+        }
+
+        app(\Modules\CRM\Services\CustomerWalletService::class)->debit(
+            $customer,
+            \Modules\CRM\Enums\CustomerWalletTxType::Payment,
+            $toDebit,
+            [
+                'note' => 'پرداخت فاکتور '.($payment->invoice?->invoice_code ?? '').' از کیف‌پول',
+                'invoice_id' => $payment->invoice_id,
+                'order' => $payment->order_id ? \Modules\CRM\Models\Order::find($payment->order_id) : null,
+                'meta' => ['payment_id' => $payment->id],
+            ],
+        );
+
+        return $toDebit;
+    }
+
+    /**
+     * پرداختِ کاملِ فاکتور از کیف‌پولِ مشتری (بدونِ درگاه). فراخوانی از اپ.
+     * ورودی باید تضمین کند موجودی ≥ مبلغِ فاکتور است.
+     */
+    public function settleInvoiceFromWallet(Invoice $invoice, int $walletAmount): Payment
+    {
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($invoice, $walletAmount) {
+            $payment = Payment::create([
+                'invoice_id' => $invoice->id,
+                'order_id' => $invoice->order_id,
+                'customer_id' => $invoice->customer_id,
+                'technician_id' => $invoice->technician_id,
+                'gateway' => 'wallet',
+                'purpose' => 'invoice',
+                'amount' => 0,                 // سهمِ درگاه صفر
+                'wallet_amount' => $walletAmount,
+                'status' => 'verified',
+                'verified_at' => now(),
+                'requested_at' => now(),
+            ]);
+
+            $this->applyVerifiedPaymentEffects($payment, null);
+
+            return $payment;
+        });
+    }
+
+    /**
+     * شروعِ پرداختِ ترکیبی برای اپ: سهمِ کیف‌پول روی payment ثبت می‌شود (کسرِ
+     * واقعی هنگامِ callbackِ موفق) و درگاه برای «سهمِ درگاه» باز می‌شود.
+     *
+     * @return array{gateway:string, method:string, url:string}
+     */
+    public function initiateGatewayForApp(Invoice $invoice, int $gatewayAmount, int $walletAmount, ?string $returnUrl): array
+    {
+        $callbackUrl = route('crm.payment.callback');
+
+        if (CrmSetting::get('payment_gateway', 'zibal') === 'mellat') {
+            if (! $this->mellat->isConfigured()) {
+                throw ValidationException::withMessages(['amount' => 'درگاه ملت تنظیم نشده است.']);
+            }
+            $orderId = (int) (now()->format('ymdHis').random_int(10, 99));
+            $response = $this->mellat->request(amount: $gatewayAmount, callbackUrl: $callbackUrl, orderId: $orderId);
+
+            Payment::create([
+                'invoice_id' => $invoice->id, 'order_id' => $invoice->order_id,
+                'customer_id' => $invoice->customer_id, 'technician_id' => $invoice->technician_id,
+                'gateway' => 'mellat', 'purpose' => 'invoice',
+                'amount' => $gatewayAmount, 'wallet_amount' => $walletAmount,
+                'track_id' => (string) $orderId, 'return_url' => $returnUrl,
+                'status' => $response['success'] ? 'pending' : 'failed',
+                'result_message' => $response['message'] ?? null,
+                'gateway_response' => ['refId' => $response['refId'] ?? null, 'raw' => $response['raw'] ?? null],
+                'requested_at' => now(),
+            ]);
+
+            if (! $response['success']) {
+                throw ValidationException::withMessages(['amount' => $response['message'] ?? 'خطا در شروع پرداخت ملت.']);
+            }
+
+            return ['gateway' => 'mellat', 'method' => 'POST', 'url' => $response['startPayUrl']];
+        }
+
+        if (! $this->zibal->isConfigured()) {
+            throw ValidationException::withMessages(['amount' => 'درگاه پرداخت تنظیم نشده است.']);
+        }
+        $response = $this->zibal->request(
+            amount: $gatewayAmount, callbackUrl: $callbackUrl, orderId: $invoice->invoice_code,
+            mobile: $invoice->customer?->mobile, description: 'پرداخت فاکتور '.$invoice->invoice_code.' (ترکیبی با کیف‌پول)',
+        );
+
+        Payment::create([
+            'invoice_id' => $invoice->id, 'order_id' => $invoice->order_id,
+            'customer_id' => $invoice->customer_id, 'technician_id' => $invoice->technician_id,
+            'gateway' => 'zibal', 'purpose' => 'invoice',
+            'amount' => $gatewayAmount, 'wallet_amount' => $walletAmount,
+            'track_id' => $response['trackId'] ?? null, 'return_url' => $returnUrl,
+            'status' => $response['success'] ? 'pending' : 'failed',
+            'result_message' => $response['message'] ?? null,
+            'gateway_response' => $response['raw'] ?? null, 'requested_at' => now(),
+        ]);
+
+        if (! $response['success']) {
+            throw ValidationException::withMessages(['amount' => $response['message'] ?? 'خطا در شروع پرداخت.']);
+        }
+
+        return ['gateway' => 'zibal', 'method' => 'GET', 'url' => $response['paymentUrl']];
+    }
+
+    /** تلاش برای پرداختِ پاداشِ معرف؛ خطای آن نباید پرداخت را rollback کند. */
+    protected function maybeRewardReferrer(Payment $payment): void
+    {
+        try {
+            $order = $payment->invoice?->order ?? ($payment->order_id ? \Modules\CRM\Models\Order::find($payment->order_id) : null);
+            if ($order) {
+                app(\Modules\CRM\Services\ReferralService::class)->rewardReferrerIfEligible($order);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('crm.referral.reward_failed', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -515,10 +694,12 @@ class PaymentController extends Controller
      * حالت، واریزِ دوباره ممکن نباشد. خطای کیف‌پول عمداً بلعیده نمی‌شود —
      * transaction بیرونی باید rollback شود تا paid بدونِ واریز ثبت نشود.
      */
-    protected function creditTechnicianForOnlinePayment(Payment $payment): void
+    protected function creditTechnicianForOnlinePayment(Payment $payment, int $walletShare = 0): void
     {
         $invoice = $payment->invoice;
-        if (! $invoice || ! $invoice->technician_id || (int) $payment->amount <= 0) {
+        // مبلغِ مؤثرِ تسویه = سهمِ درگاه + سهمِ کیف‌پول (پرداختِ ترکیبی).
+        $effective = (int) $payment->amount + max(0, $walletShare);
+        if (! $invoice || ! $invoice->technician_id || $effective <= 0) {
             return;
         }
 
@@ -543,8 +724,9 @@ class PaymentController extends Controller
         $this->wallet->recordTransaction(
             technician: $tech,
             type: WalletTxType::OnlinePayment,
-            amount: (int) $payment->amount,
+            amount: $effective,
             note: 'پرداخت آنلاین مشتری — فاکتور '.$invoice->invoice_code
+                .($walletShare > 0 ? ' (کیف‌پول: '.number_format($walletShare).')' : '')
                 .' — refid: '.($payment->ref_number ?: $payment->track_id)
                 .' [pay#'.$payment->id.']',
             order: $payment->order_id ? \Modules\CRM\Models\Order::find($payment->order_id) : null,

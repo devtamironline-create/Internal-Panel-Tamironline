@@ -19,6 +19,7 @@ class Payment extends Model
         'gateway',
         'purpose',
         'amount',
+        'wallet_amount',
         'track_id',
         'ref_number',
         'card_number',
@@ -36,6 +37,7 @@ class Payment extends Model
     protected $casts = [
         'wp_id' => 'integer',
         'amount' => 'integer',
+        'wallet_amount' => 'integer',
         'result_code' => 'integer',
         'gateway_response' => 'array',
         'requested_at' => 'datetime',

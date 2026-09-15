@@ -743,6 +743,15 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
     // خودش permissionِ خودش را دارد.
     Route::view('costs/outflow', 'crm::accounting.outflow')->name('costs.outflow');
 
+    // ─── کیف‌پولِ مشتری و درخواست‌های برداشت ───────────────────────
+    Route::middleware('can:manage-customer-wallet')->prefix('customer-wallet')->name('customer-wallet.')->group(function () {
+        Route::get('withdrawals', [\Modules\CRM\Http\Controllers\CustomerWalletController::class, 'withdrawals'])->name('withdrawals');
+        Route::put('withdrawals/{withdrawal}/approve', [\Modules\CRM\Http\Controllers\CustomerWalletController::class, 'approveWithdrawal'])->name('withdrawals.approve')->whereNumber('withdrawal');
+        Route::put('withdrawals/{withdrawal}/reject', [\Modules\CRM\Http\Controllers\CustomerWalletController::class, 'rejectWithdrawal'])->name('withdrawals.reject')->whereNumber('withdrawal');
+        Route::get('{customer}', [\Modules\CRM\Http\Controllers\CustomerWalletController::class, 'show'])->name('show')->whereNumber('customer');
+        Route::post('{customer}/adjust', [\Modules\CRM\Http\Controllers\CustomerWalletController::class, 'adjust'])->name('adjust')->whereNumber('customer');
+    });
+
     // ─── برداشتِ سرمایه (مالک/شرکا) — نوعِ دومِ خروج وجه ───────────
     Route::middleware('can:manage-owner-withdrawals')->prefix('withdrawals')->name('withdrawals.')->group(function () {
         Route::get('/', [\Modules\CRM\Http\Controllers\Accounting\OwnerWithdrawalController::class, 'index'])->name('index');

@@ -16,6 +16,8 @@ class VerifyOtpRequest extends FormRequest
         return [
             'mobile' => ['required', 'string', 'max:20'],
             'code' => ['required', 'string', 'min:4', 'max:8'],
+            // کدِ معرف (موبایلِ معرف) — اختیاری، فقط برای ثبت‌نامِ تازه.
+            'referral_code' => ['nullable', 'string', 'max:20'],
         ];
     }
 

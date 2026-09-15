@@ -1279,8 +1279,8 @@
 
                 <!-- حسابداری — دسترسی فقط با اعطای صریح (حتی admin هم bypass ندارد) -->
                 @if(Route::has('crm.costs.index'))
-                @canany(['view-crm-costs', 'manage-crm-costs', 'manage-owner-withdrawals'])
-                <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.costs.*') || request()->routeIs('crm.withdrawals.*') ? 'true' : 'false' }} }">
+                @canany(['view-crm-costs', 'manage-crm-costs', 'manage-owner-withdrawals', 'manage-customer-wallet'])
+                <div class="mt-2" x-data="{ open: {{ request()->routeIs('crm.costs.*') || request()->routeIs('crm.withdrawals.*') || request()->routeIs('crm.customer-wallet.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full sidebar-menu-item" style="justify-content: space-between;">
                         <span class="flex items-center gap-3">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1323,6 +1323,12 @@
                         <a href="{{ route('crm.withdrawals.index') }}" class="sidebar-menu-item {{ request()->routeIs('crm.withdrawals.*') ? 'sidebar-menu-item-active' : '' }}">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 6l9-4 9 4M4 10h16v9a1 1 0 01-1 1H5a1 1 0 01-1-1v-9zM12 14v3m-3-3h6"/></svg>
                             برداشت سرمایه
+                        </a>
+                        @endcan
+                        @can('manage-customer-wallet')
+                        <a href="{{ route('crm.customer-wallet.withdrawals') }}" class="sidebar-menu-item {{ request()->routeIs('crm.customer-wallet.*') ? 'sidebar-menu-item-active' : '' }}">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2m-6-3h9m0 0l-3-3m3 3l-3 3"/></svg>
+                            برداشت‌های مشتری
                         </a>
                         @endcan
                         @can('manage-crm-costs')

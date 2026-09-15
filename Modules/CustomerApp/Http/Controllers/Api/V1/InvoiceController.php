@@ -114,6 +114,69 @@ class InvoiceController extends Controller
     /**
      * @return array{0: Customer, 1: Order}
      */
+    /**
+     * POST /v1/customer/orders/{id}/pay-with-wallet
+     *
+     * پرداختِ فاکتور با کیف‌پول: اگر موجودی کلِ مبلغ را پوشش دهد، همان لحظه از
+     * کیف‌پول تسویه می‌شود؛ وگرنه پرداختِ ترکیبی — هرچه در کیف‌پول هست کسر و
+     * باقی از درگاه گرفته می‌شود (لینکِ درگاه برمی‌گردد).
+     */
+    public function payWithWallet(Request $request, int $id): JsonResponse
+    {
+        [$customer, $order] = $this->resolve($request, $id);
+
+        $invoice = $order->invoices()->with('customer')->latest('id')->first();
+        if (! $invoice) {
+            abort(404, 'فاکتوری برای این سفارش صادر نشده است.');
+        }
+        if ($invoice->status === 'paid') {
+            return response()->json(['ok' => true, 'paid' => true, 'message' => 'این فاکتور قبلاً پرداخت شده است.']);
+        }
+
+        $amount = (int) $invoice->total_amount;
+        if ($amount <= 0 || $invoice->status === 'cancelled' || $invoice->isCashCollected()) {
+            abort(422, 'این فاکتور قابلِ پرداختِ آنلاین نیست.');
+        }
+
+        $balance = (int) ($customer->wallet_balance ?? 0);
+        if ($balance <= 0) {
+            abort(422, 'موجودیِ کیف‌پول شما صفر است؛ از درگاه پرداخت کنید.');
+        }
+
+        $walletPart = min($balance, $amount);
+        $remainder = $amount - $walletPart;
+        $returnUrl = $request->input('return_url');
+
+        $pc = app(\Modules\CRM\Http\Controllers\PaymentController::class);
+
+        // پوششِ کامل — تسویهٔ فوری از کیف‌پول، بدونِ درگاه.
+        if ($remainder <= 0) {
+            $pc->settleInvoiceFromWallet($invoice, $walletPart);
+
+            return response()->json([
+                'ok' => true,
+                'paid' => true,
+                'message' => 'فاکتور با موفقیت از کیف‌پول پرداخت شد.',
+                'wallet_used' => $walletPart,
+                'balance' => (int) $customer->fresh()->wallet_balance,
+            ]);
+        }
+
+        // پرداختِ ترکیبی — کسرِ کیف‌پول هنگامِ موفقیتِ درگاه انجام می‌شود.
+        $gate = $pc->initiateGatewayForApp($invoice, $remainder, $walletPart, \Modules\CRM\Support\PaymentReturnUrl::sanitize($returnUrl));
+
+        return response()->json([
+            'ok' => true,
+            'paid' => false,
+            'wallet_part' => $walletPart,
+            'gateway_amount' => $remainder,
+            'gateway' => $gate['gateway'],
+            'method' => $gate['method'],
+            'payment_url' => $gate['url'],
+            'message' => 'سهمِ کیف‌پول کسر و باقی از درگاه دریافت می‌شود.',
+        ]);
+    }
+
     private function resolve(Request $request, int $id): array
     {
         $user = $request->user();

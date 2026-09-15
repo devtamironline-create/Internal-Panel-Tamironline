@@ -47,10 +47,13 @@ class AuthController extends Controller
         // فقط برای tagging توکن استفاده می‌شود تا بشود لیست دستگاه‌ها را داد.
         $deviceId = trim((string) $request->header('X-Device-ID', ''));
 
+        $referralCode = trim((string) $request->input('referral_code', ''));
+
         $result = $this->identity->verifyOtp(
             (string) $request->input('mobile'),
             (string) $request->input('code'),
             $deviceId !== '' ? $deviceId : null,
+            $referralCode !== '' ? $referralCode : null,
         );
 
         $customer = $result['customer'];

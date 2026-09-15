@@ -51,6 +51,9 @@ class Customer extends Authenticatable
         'blocked_by',
         'blocked_at',
         'bale_user_id',
+        'wallet_balance',
+        'referred_by',
+        'referral_rewarded_at',
     ];
 
     protected $hidden = [
@@ -69,7 +72,42 @@ class Customer extends Authenticatable
             'password' => 'hashed',
             'is_blocked' => 'boolean',
             'blocked_at' => 'datetime',
+            'wallet_balance' => 'integer',
+            'referred_by' => 'integer',
+            'referral_rewarded_at' => 'datetime',
         ];
+    }
+
+    // ─── Wallet & referral ────────────────────────────────────────
+
+    /** کدِ معرفِ این مشتری = موبایلِ او (بدونِ ستونِ جدا). */
+    public function referralCode(): ?string
+    {
+        return $this->mobile;
+    }
+
+    /** تراکنش‌های کیف‌پول. */
+    public function walletTransactions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CustomerWalletTransaction::class, 'customer_id');
+    }
+
+    /** درخواست‌های برداشتِ وجه. */
+    public function withdrawalRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CustomerWithdrawalRequest::class, 'customer_id');
+    }
+
+    /** معرفِ این مشتری (کسی که او را دعوت کرده). */
+    public function referrer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Customer::class, 'referred_by');
+    }
+
+    /** مشتریانی که این کاربر معرفی کرده. */
+    public function referrals(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Customer::class, 'referred_by');
     }
 
     // ─── Auth helpers ──────────────────────────────────────────────
@@ -227,6 +265,14 @@ class Customer extends Authenticatable
         };
 
         static::created($push);
-        static::updated($push);
+        static::updated(function (self $c) use ($push) {
+            // تغییرِ فقط-کیف‌پول/معرف به WP push نمی‌شود (WP این مفاهیم را ندارد).
+            $walletOnly = ['wallet_balance', 'referred_by', 'referral_rewarded_at', 'updated_at'];
+            $changed = array_keys($c->getChanges());
+            if ($changed !== [] && empty(array_diff($changed, $walletOnly))) {
+                return;
+            }
+            $push($c);
+        });
     }
 }
