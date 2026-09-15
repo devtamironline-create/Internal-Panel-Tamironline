@@ -112,7 +112,6 @@ class InvestmentFundTest extends TestCase
             ->post('/admin/investment', [
                 'asset' => 'gold_18k',
                 'amount' => '100',
-                'source' => 'tamir',
                 'bought_at' => '1405/05/01',
             ])
             ->assertRedirect()
@@ -121,61 +120,18 @@ class InvestmentFundTest extends TestCase
         $row = InvestmentAsset::firstOrFail();
         $this->assertSame('gold_18k', $row->asset);
         $this->assertSame(7_500_000, (int) $row->buy_unit_price);
-        $this->assertSame(750_000_000, $row->cost());
-        $this->assertSame('tamir', $row->source);
+        $this->assertSame(750_000_000, $row->cost()); // قیمتِ کل = مقدار × قیمتِ لحظه
+        $this->assertNull($row->source);              // «منبع» حذف شده است
         $this->assertSame('2026-07-23', $row->bought_at->toDateString());
     }
 
-    /** مبلغِ واقعیِ پرداختی بر قیمتِ نوسان مقدم است — برداشتِ دقیق از منبع. */
-    public function test_a_manual_total_overrides_the_navasan_price(): void
-    {
-        Http::fake(['*' => Http::response(['18ayar' => ['value' => '7500000']], 200)]);
-
-        $this->actingAs($this->user(access: true))
-            ->post('/admin/investment', [
-                'asset' => 'gold_18k', 'amount' => '100',
-                'source' => 'ganje', 'total_paid' => '851500000',
-            ])
-            ->assertSessionHas('success');
-
-        $row = InvestmentAsset::firstOrFail();
-        $this->assertSame(8_515_000, (int) $row->buy_unit_price);
-        $this->assertSame(851_500_000, $row->cost());
-    }
-
-    /** با مبلغِ دستی، قطعیِ نوسان مانعِ ثبت نیست. */
-    public function test_a_manual_total_works_even_when_navasan_is_down(): void
-    {
-        Http::fake(['*' => Http::response('upstream error', 502)]);
-
-        $this->actingAs($this->user(access: true))
-            ->post('/admin/investment', [
-                'asset' => 'gold_18k', 'amount' => '10',
-                'source' => 'tamir', 'total_paid' => '85000000',
-            ])
-            ->assertSessionHas('success');
-
-        $this->assertSame(85_000_000, InvestmentAsset::firstOrFail()->cost());
-    }
-
-    public function test_source_is_required_for_a_purchase(): void
-    {
-        Http::fake(['*' => Http::response(['18ayar' => ['value' => '7500000']], 200)]);
-
-        $this->actingAs($this->user(access: true))
-            ->post('/admin/investment', ['asset' => 'gold_18k', 'amount' => '10'])
-            ->assertSessionHasErrors('source');
-
-        $this->assertSame(0, InvestmentAsset::count());
-    }
-
-    /** بدونِ قیمتِ روز، ثبتِ خرید متوقف می‌شود — ردیفِ بی‌مبلغ ممنوع. */
+    /** بدونِ قیمتِ روز، ثبتِ خرید متوقف می‌شود — قیمتِ کل فقط از قیمتِ لحظه می‌آید. */
     public function test_a_purchase_is_rejected_when_navasan_is_down(): void
     {
         Http::fake(['*' => Http::response('upstream error', 502)]);
 
         $this->actingAs($this->user(access: true))
-            ->post('/admin/investment', ['asset' => 'gold_18k', 'amount' => '10', 'source' => 'ganje'])
+            ->post('/admin/investment', ['asset' => 'gold_18k', 'amount' => '10'])
             ->assertSessionHasErrors('asset');
 
         $this->assertSame(0, InvestmentAsset::count());
@@ -291,7 +247,6 @@ class InvestmentFundTest extends TestCase
             ->post('/admin/investment', [
                 'asset' => 'cash',
                 'amount' => '250000000',
-                'source' => 'tamir',
                 'bought_at' => '1405/05/01',
             ])
             ->assertRedirect()
@@ -322,7 +277,6 @@ class InvestmentFundTest extends TestCase
             ->post('/admin/investment', [
                 'asset' => 'doge',
                 'amount' => '1000',
-                'source' => 'ganje',
                 'bought_at' => '1405/05/01',
             ])
             ->assertRedirect()
@@ -344,42 +298,6 @@ class InvestmentFundTest extends TestCase
             ->assertSessionHasErrors('asset');
 
         $this->assertSame(0, InvestmentAsset::where('type', 'sell')->count());
-    }
-
-    /** فروش «برداشت از منبع» نیست — نمودار برداشت فقط خریدها را می‌شمارد. */
-    public function test_sells_are_excluded_from_the_withdrawal_chart(): void
-    {
-        Http::fake(['*' => Http::response(['18ayar' => ['value' => '8000000']], 200)]);
-        InvestmentAsset::create(['asset' => 'gold_18k', 'amount' => 10, 'buy_unit_price' => 1_000_000, 'bought_at' => '2026-07-23', 'source' => 'tamir']);
-        InvestmentAsset::create(['asset' => 'gold_18k', 'type' => 'sell', 'amount' => 5, 'buy_unit_price' => 2_000_000, 'bought_at' => '2026-07-25']);
-
-        $data = $this->indexData(['year' => '1405']);
-        $mordad = collect($data['withdrawMonths'])->firstWhere('month', 5);
-
-        $this->assertSame(10_000_000, $mordad['tamir']);
-        $this->assertSame(0, $mordad['unknown']); // فروش در برداشت‌ها نیامده
-    }
-
-    // ───────────────────────── نمودار برداشت از هر منبع
-
-    public function test_withdrawals_are_grouped_by_jalali_month_and_source(): void
-    {
-        Http::fake(['*' => Http::response(['18ayar' => ['value' => '8000000']], 200)]);
-
-        // ۱۴۰۵/۰۵ → مرداد؛ دو منبع + یک ردیف قدیمیِ بدونِ منبع.
-        InvestmentAsset::create(['asset' => 'gold_18k', 'amount' => 10, 'buy_unit_price' => 1_000_000, 'bought_at' => '2026-07-23', 'source' => 'tamir']);
-        InvestmentAsset::create(['asset' => 'gold_18k', 'amount' => 5, 'buy_unit_price' => 1_000_000, 'bought_at' => '2026-07-30', 'source' => 'ganje']);
-        InvestmentAsset::create(['asset' => 'gold_18k', 'amount' => 2, 'buy_unit_price' => 1_000_000, 'bought_at' => '2026-07-24']);
-
-        $data = $this->indexData(['year' => '1405']);
-
-        $mordad = collect($data['withdrawMonths'])->firstWhere('month', 5);
-        $this->assertSame(10_000_000, $mordad['tamir']);
-        $this->assertSame(5_000_000, $mordad['ganje']);
-        $this->assertSame(2_000_000, $mordad['unknown']);
-        $this->assertSame(10_000_000, $data['sourceTotals']['tamir']);
-        $this->assertSame(5_000_000, $data['sourceTotals']['ganje']);
-        $this->assertContains(1405, $data['withdrawYears']);
     }
 
     // ───────────────────────── snapshot روزانهٔ ارزش
