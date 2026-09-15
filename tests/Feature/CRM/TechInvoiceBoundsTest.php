@@ -41,10 +41,12 @@ class TechInvoiceBoundsTest extends TestCase
         $this->apply(199_000);
     }
 
-    public function test_rejects_amount_above_maximum(): void
+    public function test_accepts_large_amount_after_ceiling_removed(): void
     {
-        $this->expectException(ValidationException::class);
-        $this->apply(50_000_001);
+        // سقفِ ۵۰ میلیونی برداشته شده — مبلغِ بزرگ باید بدونِ خطا پذیرفته شود.
+        $updates = $this->apply(120_000_000);
+
+        $this->assertSame(120_000_000, $updates['price_customer']);
     }
 
     public function test_accepts_amount_within_bounds(): void
