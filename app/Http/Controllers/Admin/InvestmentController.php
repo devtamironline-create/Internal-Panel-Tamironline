@@ -49,9 +49,6 @@ class InvestmentController extends Controller
             'pricedTotalValue' => $data['priced_total_value'],
             'fetchedAt' => $data['fetched_at'],
             'navasanConfigured' => app(\App\Services\NavasanService::class)->isConfigured(),
-            'sources' => InvestmentAsset::SOURCES,
-            'monthNames' => self::MONTHS,
-            ...$this->withdrawalChart($rows, $request),
             ...$this->trendChart($request),
         ]);
     }
@@ -61,10 +58,6 @@ class InvestmentController extends Controller
         $v = $request->validate([
             'asset' => 'required|string|in:'.implode(',', array_keys(config('investment.assets', []))),
             'amount' => 'required|numeric|gt:0',
-            'source' => 'required|in:'.implode(',', array_keys(InvestmentAsset::SOURCES)),
-            // مبلغِ واقعیِ پرداختی (کل، تومان) — اختیاری. اگر بیاید، همین
-            // «برداشتِ از منبع» است؛ اگر نه، از قیمتِ لحظه‌ایِ نوسان.
-            'total_paid' => 'nullable|integer|min:1',
             'bought_at' => ['nullable', 'string', function ($attr, $value, $fail) {
                 if (filled($value) && ! JalaliDate::isValid((string) $value)) {
                     $fail('تاریخ خرید معتبر نیست (مثال: 1405/05/20).');
@@ -74,24 +67,14 @@ class InvestmentController extends Controller
         ], [
             'asset.in' => 'نوع دارایی نامعتبر است.',
             'amount.gt' => 'مقدار باید بیشتر از صفر باشد.',
-            'source.required' => 'منبع سرمایه (تعمیر یا گنجه) را انتخاب کنید.',
-            'source.in' => 'منبع سرمایه نامعتبر است.',
-            'total_paid.min' => 'مبلغ کل خرید را به تومان وارد کنید.',
         ]);
 
-        if (filled($v['total_paid'] ?? null)) {
-            // مبلغِ واقعی وارد شده → قیمتِ واحد از همان مشتق می‌شود تا جمعِ
-            // ردیف دقیقاً همان پولی باشد که از کسب‌وکار برداشته شده.
-            $unitPrice = max(1, (int) round(((int) $v['total_paid']) / (float) $v['amount']));
-        } else {
-            // قیمتِ واحد از نوسان — بدونِ قیمتِ روز، مبلغِ خرید قابلِ محاسبه
-            // نیست و ردیفِ بی‌مبلغ همهٔ جمع‌ها را خراب می‌کند؛ ثبت متوقف می‌شود.
-            $unitPrice = $portfolio->unitPrice($v['asset']);
-            if ($unitPrice === null || $unitPrice <= 0) {
-                throw ValidationException::withMessages([
-                    'asset' => 'قیمت لحظه‌ای این دارایی از نوسان در دسترس نیست — یا «مبلغ کل خرید» را دستی وارد کنید یا چند دقیقه بعد دوباره تلاش کنید.',
-                ]);
-            }
+        // قیمتِ کل همیشه از قیمتِ لحظه‌ایِ نوسان محاسبه می‌شود (مبلغِ دستی حذف شد).
+        $unitPrice = $portfolio->unitPrice($v['asset']);
+        if ($unitPrice === null || $unitPrice <= 0) {
+            throw ValidationException::withMessages([
+                'asset' => 'قیمت لحظه‌ای این دارایی از نوسان در دسترس نیست — چند دقیقه بعد دوباره تلاش کنید.',
+            ]);
         }
 
         $row = InvestmentAsset::create([
@@ -100,7 +83,7 @@ class InvestmentController extends Controller
             'amount' => $v['amount'],
             'buy_unit_price' => $unitPrice,
             'bought_at' => filled($v['bought_at'] ?? null) ? JalaliDate::toGregorian($v['bought_at']) : now()->toDateString(),
-            'source' => $v['source'],
+            'source' => null,
             'note' => $v['note'] ?? null,
             'created_by' => auth()->id(),
         ]);
@@ -108,11 +91,10 @@ class InvestmentController extends Controller
         $meta = config('investment.assets.'.$v['asset'], ['label' => $v['asset'], 'unit' => '']);
 
         return back()->with('success', sprintf(
-            'افزایش سرمایه ثبت شد: %s %s %s معادل %s تومان — برداشت از منبع %s.',
+            'افزایش سرمایه ثبت شد: %s %s %s معادل %s تومان (قیمت لحظه).',
             rtrim(rtrim(number_format((float) $v['amount'], 8), '0'), '.'),
             $meta['unit'], $meta['label'],
             number_format($row->cost()),
-            InvestmentAsset::SOURCES[$v['source']],
         ));
     }
 
@@ -180,7 +162,6 @@ class InvestmentController extends Controller
         // قیمتِ واحدِ ثبت‌شده عمداً دست نمی‌خورد — قیمتِ لحظهٔ خرید سند است.
         $v = $request->validate([
             'amount' => 'required|numeric|gt:0',
-            'source' => 'nullable|in:'.implode(',', array_keys(InvestmentAsset::SOURCES)),
             'bought_at' => ['nullable', 'string', function ($attr, $value, $fail) {
                 if (filled($value) && ! JalaliDate::isValid((string) $value)) {
                     $fail('تاریخ خرید معتبر نیست (مثال: 1405/05/20).');
@@ -193,7 +174,6 @@ class InvestmentController extends Controller
 
         $investmentAsset->update([
             'amount' => $v['amount'],
-            'source' => $v['source'] ?? $investmentAsset->source,
             'bought_at' => filled($v['bought_at'] ?? null) ? JalaliDate::toGregorian($v['bought_at']) : $investmentAsset->bought_at,
             'note' => $v['note'] ?? $investmentAsset->note,
         ]);
@@ -206,58 +186,6 @@ class InvestmentController extends Controller
         $investmentAsset->delete();
 
         return back()->with('success', 'حذف شد.');
-    }
-
-    /**
-     * دادهٔ نمودارِ «برداشتِ سرمایه از هر منبع» — جمعِ مبلغِ خریدهای هر
-     * ماهِ شمسیِ سالِ انتخابی، به تفکیکِ تعمیر/گنجه/نامشخص.
-     *
-     * @return array<string, mixed>
-     */
-    private function withdrawalChart($rows, Request $request): array
-    {
-        $byYear = [];
-        $sourceTotals = ['tamir' => 0, 'ganje' => 0, 'unknown' => 0];
-
-        foreach ($rows as $row) {
-            // فقط خریدها «برداشت از منبع» هستند — فروش برداشتی از کسب‌وکار نیست.
-            if ($row->isSell()) {
-                continue;
-            }
-            $date = $row->bought_at ?? $row->created_at;
-            if (! $date) {
-                continue;
-            }
-            $j = Jalalian::fromDateTime($date);
-            $year = (int) $j->getYear();
-            $month = (int) $j->getMonth();
-            $source = array_key_exists($row->source, InvestmentAsset::SOURCES) ? $row->source : 'unknown';
-
-            $byYear[$year][$month][$source] = ($byYear[$year][$month][$source] ?? 0) + $row->cost();
-            $sourceTotals[$source] += $row->cost();
-        }
-
-        krsort($byYear);
-        $years = array_keys($byYear);
-        $selectedYear = (int) $request->query('year', (string) ($years[0] ?? Jalalian::now()->getYear()));
-
-        $months = [];
-        foreach (range(1, 12) as $m) {
-            $months[] = [
-                'month' => $m,
-                'tamir' => (int) ($byYear[$selectedYear][$m]['tamir'] ?? 0),
-                'ganje' => (int) ($byYear[$selectedYear][$m]['ganje'] ?? 0),
-                'unknown' => (int) ($byYear[$selectedYear][$m]['unknown'] ?? 0),
-            ];
-        }
-
-        return [
-            'withdrawYears' => $years,
-            'withdrawYear' => $selectedYear,
-            'withdrawMonths' => $months,
-            'withdrawMax' => max(1, ...array_map(fn ($m) => $m['tamir'] + $m['ganje'] + $m['unknown'], $months)),
-            'sourceTotals' => $sourceTotals,
-        ];
     }
 
     /**
