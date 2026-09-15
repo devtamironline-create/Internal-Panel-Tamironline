@@ -114,11 +114,21 @@ final class IdentityService
      *
      * @throws ValidationException
      */
-    public function verifyOtp(string $mobile, string $code, ?string $deviceId = null): array
+    public function verifyOtp(string $mobile, string $code, ?string $deviceId = null, ?string $referralCode = null): array
     {
         $normalized = PhoneNormalizer::normalize($mobile);
         if ($normalized === null) {
             throw ValidationException::withMessages(['mobile' => 'شماره موبایل نامعتبر است.']);
+        }
+
+        // کدِ معرف = موبایلِ معرف. فقط برای کاربرِ تازه و اگر معرفِ معتبرِ دیگری
+        // باشد اعمال می‌شود (خودمعرفی مجاز نیست).
+        $referrerId = null;
+        if ($referralCode !== null && $referralCode !== '') {
+            $refMobile = PhoneNormalizer::normalize($referralCode);
+            if ($refMobile !== null && $refMobile !== $normalized) {
+                $referrerId = Customer::query()->active()->byMobile($refMobile)->value('id');
+            }
         }
 
         $trimmedCode = trim($code);
@@ -143,7 +153,7 @@ final class IdentityService
 
         // race-safe upsert — unique(mobile) + transaction جلوی duplicate در
         // درخواست‌های همزمان را می‌گیرد.
-        [$customer, $isNew] = DB::transaction(function () use ($normalized): array {
+        [$customer, $isNew] = DB::transaction(function () use ($normalized, $referrerId): array {
             // withTrashed: حسابِ حذف‌شده (soft delete از اپ) نباید دوباره ساخته
             // شود (unique mobile می‌شکست) و نباید بی‌سروصدا برگردد — بازگردانی
             // فقط توسط ادمین از پنل انجام می‌شود.
@@ -165,6 +175,7 @@ final class IdentityService
                 'mobile' => $normalized,
                 'mobile_verified_at' => now(),
                 'is_active' => true,
+                'referred_by' => $referrerId,
             ]);
 
             return [$created, true];

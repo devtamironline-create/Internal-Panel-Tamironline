@@ -499,6 +499,25 @@ class PaymentController extends Controller
             ]);
 
             $this->creditTechnicianForOnlinePayment($payment);
+
+            // پاداشِ معرف — اگر سفارشِ این مشتری تکمیل+پرداخت شده باشد (idempotent).
+            $this->maybeRewardReferrer($payment);
+        }
+    }
+
+    /** تلاش برای پرداختِ پاداشِ معرف؛ خطای آن نباید پرداخت را rollback کند. */
+    protected function maybeRewardReferrer(Payment $payment): void
+    {
+        try {
+            $order = $payment->invoice?->order ?? ($payment->order_id ? \Modules\CRM\Models\Order::find($payment->order_id) : null);
+            if ($order) {
+                app(\Modules\CRM\Services\ReferralService::class)->rewardReferrerIfEligible($order);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('crm.referral.reward_failed', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

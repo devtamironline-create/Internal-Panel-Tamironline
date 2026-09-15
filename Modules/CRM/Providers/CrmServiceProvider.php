@@ -89,6 +89,8 @@ class CrmServiceProvider extends ServiceProvider
         // با تغییرِ وضعیتِ انتشارِ صفحهٔ شهری، کشِ سایت‌مپ پاک و فرانت revalidate می‌شود
         // تا کامبوی غیرفعال فوراً از لیست و sitemap-local خارج شود.
         \Modules\CRM\Models\CityPage::observe(\Modules\CRM\Observers\CityPageSitemapObserver::class);
+        // با «انجام‌شدن» سفارش، پاداشِ معرف (در صورتِ واجدِ شرایط بودن) پرداخت می‌شود.
+        \Modules\CRM\Models\Order::observe(\Modules\CRM\Observers\OrderReferralObserver::class);
         \Illuminate\Support\Facades\Blade::componentNamespace('Modules\\CRM\\View\\Components', 'crm');
         \Illuminate\Support\Facades\Blade::anonymousComponentNamespace('crm::components', 'crm');
 
