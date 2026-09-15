@@ -26,10 +26,8 @@ use Modules\CRM\Support\TechImageStorage;
  */
 class OrderActionController extends Controller
 {
-    /** کف و سقفِ مبلغِ کلِ فاکتور برای بستنِ سفارش توسطِ تکنسین (تومان). */
+    /** کفِ مبلغِ کلِ فاکتور برای بستنِ سفارش توسطِ تکنسین (تومان). */
     private const MIN_INVOICE_CLOSE_TOMAN = 200_000;
-
-    private const MAX_INVOICE_CLOSE_TOMAN = 50_000_000;
 
     public function __construct(
         private OrderSmsNotifier $smsNotifier,
@@ -686,16 +684,11 @@ class OrderActionController extends Controller
                 'price_customer' => 'جمع کل مبلغ فاکتور نمی‌تواند کمتر از جمع هزینهٔ قطعات باشد.',
             ]);
         }
-        // کف و سقفِ مبلغِ فاکتور برای بستن — فقط سفارشِ عادیِ نهایی (برگشتیِ
-        // رایگان و پیش‌نویس مشمول نیستند).
+        // کفِ مبلغِ فاکتور برای بستن — فقط سفارشِ عادیِ نهایی (برگشتیِ رایگان و
+        // پیش‌نویس مشمول نیستند). سقفِ بالا برداشته شده است.
         if (! $isDraft && ! $isReturned && $priceCustomer < self::MIN_INVOICE_CLOSE_TOMAN) {
             throw ValidationException::withMessages([
                 'price_customer' => 'مبلغ کل فاکتور نمی‌تواند کمتر از '.number_format(self::MIN_INVOICE_CLOSE_TOMAN).' تومان باشد.',
-            ]);
-        }
-        if (! $isDraft && ! $isReturned && $priceCustomer > self::MAX_INVOICE_CLOSE_TOMAN) {
-            throw ValidationException::withMessages([
-                'price_customer' => 'مبلغ کل فاکتور نمی‌تواند بیشتر از '.number_format(self::MAX_INVOICE_CLOSE_TOMAN).' تومان باشد.',
             ]);
         }
         $updates['total_invoice'] = max(0, $priceCustomer - $costPrice);
