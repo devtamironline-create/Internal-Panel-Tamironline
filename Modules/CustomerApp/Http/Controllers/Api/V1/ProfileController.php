@@ -110,6 +110,8 @@ class ProfileController extends Controller
             'is_profile_complete' => ! empty($c->first_name),
             'mobile_verified_at' => $c->mobile_verified_at?->utc()->toIso8601String(),
             'subscription' => $c->subscription,
+            'wallet_balance' => (int) ($c->wallet_balance ?? 0),
+            'referral_code' => $c->referralCode(), // = موبایلِ خودِ کاربر
             'created_at' => $c->created_at?->utc()->toIso8601String(),
         ];
     }

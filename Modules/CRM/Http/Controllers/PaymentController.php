@@ -491,6 +491,30 @@ class PaymentController extends Controller
             return;
         }
 
+        // customer_wallet_topup → شارژ کیف‌پول مشتری
+        if ($payment->purpose === 'customer_wallet_topup' && $payment->customer_id) {
+            $customer = \Modules\CRM\Models\Customer::find($payment->customer_id);
+            if ($customer) {
+                // گاردِ یکتایی: هر topup فقط یک‌بار به کیف‌پول واریز شود.
+                $already = \Modules\CRM\Models\CustomerWalletTransaction::where('type', \Modules\CRM\Enums\CustomerWalletTxType::Topup->value)
+                    ->whereJsonContains('meta->payment_id', $payment->id)
+                    ->exists();
+                if (! $already) {
+                    app(\Modules\CRM\Services\CustomerWalletService::class)->credit(
+                        $customer,
+                        \Modules\CRM\Enums\CustomerWalletTxType::Topup,
+                        (int) $payment->amount,
+                        [
+                            'note' => 'شارژ کیف‌پول از درگاه — refid: '.($refNumber ?: $payment->track_id),
+                            'meta' => ['payment_id' => $payment->id],
+                        ],
+                    );
+                }
+            }
+
+            return;
+        }
+
         // invoice → پرداخت فاکتور مشتری
         if ($payment->invoice && $payment->invoice->status !== 'paid') {
             $payment->invoice->update([

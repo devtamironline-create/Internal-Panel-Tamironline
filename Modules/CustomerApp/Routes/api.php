@@ -13,6 +13,7 @@ use Modules\CustomerApp\Http\Controllers\Api\V1\ProfileController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\ReviewController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\ServiceController;
 use Modules\CustomerApp\Http\Controllers\Api\V1\StatusController;
+use Modules\CustomerApp\Http\Controllers\Api\V1\WalletController;
 use Modules\CustomerApp\Http\Middleware\ApiEnvelope;
 use Modules\CustomerApp\Http\Middleware\EnsureNoPendingReview;
 use Modules\CustomerApp\Http\Middleware\IdempotencyKey;
@@ -109,6 +110,18 @@ Route::prefix('v1/customer')
                 ->name('api.customer.auth.devices.index');
             Route::delete('/auth/devices/{id}', [DeviceController::class, 'destroy'])
                 ->whereNumber('id')->name('api.customer.auth.devices.destroy');
+
+            // ─── Wallet + Referral (کیف‌پول و معرف) ──────────────────
+            Route::get('/wallet', [WalletController::class, 'index'])
+                ->name('api.customer.wallet.index');
+            Route::get('/referral', [WalletController::class, 'referral'])
+                ->name('api.customer.referral');
+            Route::post('/wallet/topup', [WalletController::class, 'topup'])
+                ->middleware('throttle:20,1')->name('api.customer.wallet.topup');
+            Route::get('/wallet/withdrawals', [WalletController::class, 'withdrawals'])
+                ->name('api.customer.wallet.withdrawals');
+            Route::post('/wallet/withdraw', [WalletController::class, 'withdraw'])
+                ->middleware('throttle:10,1')->name('api.customer.wallet.withdraw');
 
             // Orders — customer-facing
             // cancel-reasons و pending-reviews قبل از {id} تا روت‌گذاری اشتباه نکند

@@ -29,6 +29,8 @@ class CustomerResource extends JsonResource
             'is_profile_complete' => $isProfileComplete,
             'mobile_verified_at' => $this->mobile_verified_at?->toIso8601String(),
             'subscription' => $this->subscription,
+            'wallet_balance' => (int) ($this->wallet_balance ?? 0),
+            'referral_code' => $this->resource->referralCode(), // = موبایلِ کاربر
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
