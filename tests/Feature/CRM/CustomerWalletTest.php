@@ -104,6 +104,33 @@ class CustomerWalletTest extends TestCase
         $this->assertSame(0, $c->walletTransactions()->count(), 'تراکنشِ ناموفق نباید ثبت شود.');
     }
 
+    public function test_referral_code_is_last_six_digits_of_mobile(): void
+    {
+        $c = Customer::create(['mobile' => '09121234567', 'is_active' => true, 'wallet_balance' => 0]);
+
+        $this->assertSame('234567', $c->referralCode());
+    }
+
+    public function test_find_by_referral_code_returns_single_active_match(): void
+    {
+        $ref = Customer::create(['mobile' => '09121234567', 'is_active' => true]);
+
+        // کدِ ۶رقمی و کلِ موبایل هر دو باید به همین معرف برسند.
+        $this->assertSame($ref->id, Customer::findByReferralCode('234567')?->id);
+        $this->assertSame($ref->id, Customer::findByReferralCode('09121234567')?->id);
+
+        // خودمعرفی حذف می‌شود.
+        $this->assertNull(Customer::findByReferralCode('234567', '09121234567'));
+    }
+
+    public function test_find_by_referral_code_is_null_on_ambiguous_match(): void
+    {
+        Customer::create(['mobile' => '09121234567', 'is_active' => true]);
+        Customer::create(['mobile' => '09351234567', 'is_active' => true]); // همان ۶ رقمِ آخر
+
+        $this->assertNull(Customer::findByReferralCode('234567'));
+    }
+
     public function test_reject_refund_restores_reserved_amount(): void
     {
         // شبیه‌سازیِ رزرو (برداشت) و سپس بازگشت در ردِ ادمین.

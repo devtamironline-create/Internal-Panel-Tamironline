@@ -121,14 +121,12 @@ final class IdentityService
             throw ValidationException::withMessages(['mobile' => 'شماره موبایل نامعتبر است.']);
         }
 
-        // کدِ معرف = موبایلِ معرف. فقط برای کاربرِ تازه و اگر معرفِ معتبرِ دیگری
-        // باشد اعمال می‌شود (خودمعرفی مجاز نیست).
+        // کدِ معرف = ۶ رقمِ آخرِ موبایلِ معرف (یا کلِ موبایل). فقط برای کاربرِ
+        // تازه و اگر دقیقاً یک معرفِ فعالِ دیگر بخورد اعمال می‌شود (خودمعرفی و
+        // تطابقِ چندگانه مجاز نیست).
         $referrerId = null;
         if ($referralCode !== null && $referralCode !== '') {
-            $refMobile = PhoneNormalizer::normalize($referralCode);
-            if ($refMobile !== null && $refMobile !== $normalized) {
-                $referrerId = Customer::query()->active()->byMobile($refMobile)->value('id');
-            }
+            $referrerId = Customer::findByReferralCode($referralCode, $normalized)?->id;
         }
 
         $trimmedCode = trim($code);

@@ -80,10 +80,39 @@ class Customer extends Authenticatable
 
     // ─── Wallet & referral ────────────────────────────────────────
 
-    /** کدِ معرفِ این مشتری = موبایلِ او (بدونِ ستونِ جدا). */
+    /** کدِ معرفِ این مشتری = ۶ رقمِ آخرِ موبایلِ او (بدونِ ستونِ جدا). */
     public function referralCode(): ?string
     {
-        return $this->mobile;
+        $digits = preg_replace('/\D/', '', (string) $this->mobile);
+
+        return strlen((string) $digits) >= 6 ? substr($digits, -6) : ($digits ?: null);
+    }
+
+    /**
+     * یافتنِ معرف از روی «کدِ معرف» (۶ رقمِ آخرِ موبایل). ورودی می‌تواند کدِ
+     * ۶رقمی یا کلِ موبایل باشد. چون ۶ رقمِ آخر یکتا نیست، فقط وقتی دقیقاً یک
+     * مشتریِ فعال بخورد معرف برگردانده می‌شود؛ در تطابقِ چندگانه null (تا پاداش
+     * به فردِ اشتباه نرسد). با excludeMobile می‌توان خودمعرفی را حذف کرد.
+     */
+    public static function findByReferralCode(?string $code, ?string $excludeMobile = null): ?self
+    {
+        $digits = preg_replace('/\D/', '', (string) $code);
+        if (strlen((string) $digits) < 6) {
+            return null;
+        }
+        $suffix = substr($digits, -6);
+
+        $matches = static::query()->active()
+            ->where('mobile', 'like', '%'.$suffix)
+            ->get(['id', 'mobile'])
+            ->filter(function (self $c) use ($suffix, $excludeMobile) {
+                $m = preg_replace('/\D/', '', (string) $c->mobile);
+
+                return substr((string) $m, -6) === $suffix && $c->mobile !== $excludeMobile;
+            })
+            ->values();
+
+        return $matches->count() === 1 ? $matches->first() : null;
     }
 
     /** تراکنش‌های کیف‌پول. */
