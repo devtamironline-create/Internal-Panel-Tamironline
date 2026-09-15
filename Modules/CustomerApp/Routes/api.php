@@ -149,6 +149,10 @@ Route::prefix('v1/customer')
             // Invoice — JSON و HTML (قابل تبدیل به PDF)
             Route::get('/orders/{id}/invoice', [InvoiceController::class, 'show'])
                 ->whereNumber('id')->name('api.customer.orders.invoice');
+            // پرداختِ فاکتور با کیف‌پول (کامل یا ترکیبی با درگاه)
+            Route::post('/orders/{id}/pay-with-wallet', [InvoiceController::class, 'payWithWallet'])
+                ->whereNumber('id')->middleware('throttle:20,1')
+                ->name('api.customer.orders.pay-with-wallet');
             Route::get('/orders/{id}/invoice.pdf', [InvoiceController::class, 'pdf'])
                 ->whereNumber('id')->name('api.customer.orders.invoice.pdf');
             // Invoice با توکنِ عمومی — برای فلوی login-gatedِ اپ/PWA
