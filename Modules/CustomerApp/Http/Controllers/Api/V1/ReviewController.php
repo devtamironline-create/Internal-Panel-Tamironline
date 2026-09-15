@@ -67,6 +67,61 @@ class ReviewController extends Controller
     }
 
     /**
+     * GET /v1/customer/reviews
+     *
+     * نظرهایی که خودِ مشتری برای تکنسین‌ها ثبت کرده — برای بخشِ «نظرات من» در
+     * پروفایل. pending_count تعدادِ سفارش‌های تکمیل‌شده‌ای است که هنوز نظر نگرفته‌اند
+     * (برای ترغیبِ کاربر به ثبتِ نظر).
+     */
+    public function mine(Request $request): JsonResponse
+    {
+        $customer = $this->customer($request);
+
+        $reviews = OrderReview::query()
+            ->where('customer_id', $customer->id)
+            ->with([
+                'order:id,order_code,device_id,brand_id',
+                'order.device:id,name',
+                'order.brand:id,name',
+                'technician:id,first_name,last_name,firstname_tech',
+                'tags',
+            ])
+            ->latest()
+            ->paginate(20);
+
+        $windowDays = (int) config('customerapp.reviews.pending_window_days', 30);
+        $pendingCount = Order::query()
+            ->where('customer_id', $customer->id)
+            ->where('status', OrderStatus::Completed->value)
+            ->whereDoesntHave('review')
+            ->when($windowDays > 0, fn ($q) => $q->where('completed_at', '>=', now()->subDays($windowDays)))
+            ->count();
+
+        return response()->json([
+            'data' => collect($reviews->items())->map(fn (OrderReview $r) => [
+                'id' => (int) $r->id,
+                'order_id' => (int) $r->order_id,
+                'tracking_code' => $r->order?->order_code,
+                'device_name' => $r->order?->device?->name,
+                'brand_name' => $r->order?->brand?->name,
+                'technician_name' => $r->technician?->display_name,
+                'rating' => (int) $r->rating,
+                'comment' => $r->comment,
+                'criteria' => $r->criteria,
+                'tags' => $r->tags->pluck('label')->values(),
+                'status' => $r->status,
+                'created_at' => $r->created_at?->utc()->toIso8601String(),
+            ])->all(),
+            'meta' => [
+                'current_page' => $reviews->currentPage(),
+                'last_page' => $reviews->lastPage(),
+                'total' => $reviews->total(),
+                'pending_count' => $pendingCount,
+            ],
+        ])->header('Cache-Control', 'no-store');
+    }
+
+    /**
      * POST /v1/customer/orders/{id}/review
      *
      * - فقط مالک سفارش (403 در غیر این صورت)

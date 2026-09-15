@@ -129,6 +129,9 @@ Route::prefix('v1/customer')
                 ->name('api.customer.orders.cancel-reasons');
             Route::get('/orders/pending-reviews', [ReviewController::class, 'pending'])
                 ->name('api.customer.orders.pending-reviews');
+            // نظرات من — نظرهایی که مشتری برای تکنسین‌ها ثبت کرده (بخشِ پروفایل).
+            Route::get('/reviews', [ReviewController::class, 'mine'])
+                ->name('api.customer.reviews.mine');
             Route::get('/orders', [OrderController::class, 'index'])
                 ->name('api.customer.orders.index');
             // Writes حساس — rate-limit per user
