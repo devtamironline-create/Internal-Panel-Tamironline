@@ -738,6 +738,22 @@ Route::middleware(['auth'])->prefix('admin/crm')->name('crm.')->group(function (
         Route::delete('{expense}', [\Modules\CRM\Http\Controllers\Accounting\ExpenseController::class, 'destroy'])->name('destroy')->whereNumber('expense');
     });
 
+    // ─── خروج وجه: انتخابگرِ نوع (هزینه | برداشت سرمایه) ───────────
+    // بدونِ can خاص؛ کارت‌های داخلِ صفحه با @can فیلتر می‌شوند و هر مقصد
+    // خودش permissionِ خودش را دارد.
+    Route::view('costs/outflow', 'crm::accounting.outflow')->name('costs.outflow');
+
+    // ─── برداشتِ سرمایه (مالک/شرکا) — نوعِ دومِ خروج وجه ───────────
+    Route::middleware('can:manage-owner-withdrawals')->prefix('withdrawals')->name('withdrawals.')->group(function () {
+        Route::get('/', [\Modules\CRM\Http\Controllers\Accounting\OwnerWithdrawalController::class, 'index'])->name('index');
+        Route::get('create', [\Modules\CRM\Http\Controllers\Accounting\OwnerWithdrawalController::class, 'create'])->name('create');
+        Route::post('/', [\Modules\CRM\Http\Controllers\Accounting\OwnerWithdrawalController::class, 'store'])->name('store');
+        Route::get('{withdrawal}/attachment', [\Modules\CRM\Http\Controllers\Accounting\OwnerWithdrawalController::class, 'attachment'])->name('attachment')->whereNumber('withdrawal');
+        Route::get('{withdrawal}/edit', [\Modules\CRM\Http\Controllers\Accounting\OwnerWithdrawalController::class, 'edit'])->name('edit')->whereNumber('withdrawal');
+        Route::put('{withdrawal}', [\Modules\CRM\Http\Controllers\Accounting\OwnerWithdrawalController::class, 'update'])->name('update')->whereNumber('withdrawal');
+        Route::delete('{withdrawal}', [\Modules\CRM\Http\Controllers\Accounting\OwnerWithdrawalController::class, 'destroy'])->name('destroy')->whereNumber('withdrawal');
+    });
+
     // ─── تیکت‌های پشتیبانی تکنسین (سمت ادمین) ─────────────────────
     // {ticket} با whereNumber محدود شده تا 'categories' را به اشتباه match نکند.
     Route::middleware('can:view-crm-tickets')->group(function () {

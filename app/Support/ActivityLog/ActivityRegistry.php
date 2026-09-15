@@ -70,6 +70,7 @@ class ActivityRegistry
             \Modules\CRM\Models\Payment::class => 'پرداخت',
             \Modules\CRM\Models\PaymentAccount::class => 'حساب پرداخت',
             \Modules\CRM\Models\Expense::class => 'هزینه',
+            \Modules\CRM\Models\OwnerWithdrawal::class => 'برداشت سرمایه',
             \Modules\CRM\Models\ExpenseCategory::class => 'دستهٔ هزینه',
             \Modules\CRM\Models\GoogleAdsEntry::class => 'ثبت گوگل ادز',
             \Modules\CRM\Models\Device::class => 'دستگاه',

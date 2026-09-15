@@ -185,6 +185,21 @@ class FinancialReportController extends Controller
                 ->sum('amount');
         }
 
+        // برداشت سرمایه (مالک/شرکا) در همین بازه — هزینه نیست و در سود لحاظ نمی‌شود؛
+        // فقط برای نمایشِ اطلاعیِ جداگانه در داشبورد. سفارش‌محور نیست، پس وقتی
+        // فیلترِ سفارش‌محور فعال است کنار گذاشته می‌شود.
+        $ownerWithdrawals = 0;
+        if (! $this->hasOrderScopedFilter($f) && \Illuminate\Support\Facades\Schema::hasTable('crm_owner_withdrawals')) {
+            $wq = \Modules\CRM\Models\OwnerWithdrawal::query();
+            if ($f['from_g']) {
+                $wq->whereDate('withdrawn_at', '>=', $f['from_g']);
+            }
+            if ($f['to_g']) {
+                $wq->whereDate('withdrawn_at', '<=', $f['to_g']);
+            }
+            $ownerWithdrawals = (int) $wq->sum('amount');
+        }
+
         $totalInvoice = (int) $invAgg->total_amount;
         $companyShare = (int) $invAgg->company_share;
         $techShare = (int) $invAgg->tech_share;
@@ -222,6 +237,7 @@ class FinancialReportController extends Controller
             'penalty' => $penaltySum + abs($adjNeg),
             'profit_pct' => $profitPct,
             'expenses' => $expenses,
+            'owner_withdrawals' => $ownerWithdrawals,
             'wallet_charge' => $chargeSum,
             'online_payment' => $onlinePaymentSum,
             'tech_status' => $techStatusLabel,

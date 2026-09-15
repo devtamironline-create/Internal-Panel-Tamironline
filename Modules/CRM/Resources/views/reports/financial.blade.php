@@ -185,6 +185,14 @@
             <div class="{{ $labelClass }}">هزینه‌ها (قطعات)</div>
             <div class="{{ $valueClass }} text-gray-700 dark:text-gray-300" dir="ltr">{{ number_format($summary['expenses']) }}</div>
         </div>
+
+        @can('manage-owner-withdrawals')
+        <div class="{{ $boxClass }} border-indigo-200 dark:border-indigo-800">
+            <div class="{{ $labelClass }}">برداشت سرمایه (مالک/شرکا)</div>
+            <div class="{{ $valueClass }} text-indigo-600" dir="ltr">{{ number_format($summary['owner_withdrawals'] ?? 0) }}</div>
+            <div class="text-[10px] text-gray-400 mt-0.5">هزینه نیست و سود را کاهش نمی‌دهد</div>
+        </div>
+        @endcan
     </div>
 
     {{-- ─── باکس‌های جمع‌بندی (ردیف ۲) ─── --}}

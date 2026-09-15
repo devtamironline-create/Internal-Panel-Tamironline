@@ -110,6 +110,9 @@ class PermissionSeeder extends Seeder
             'view-crm-costs' => 'مشاهده هزینه‌های CRM',
             'manage-crm-costs' => 'مدیریت هزینه‌های CRM',
 
+            // CRM - برداشت سرمایه (مالک/شرکا)
+            'manage-owner-withdrawals' => 'مدیریت برداشت سرمایه (مالک/شرکا)',
+
             // CRM - HappyCall
             'view-crm-happycall' => 'مشاهده پاسخ‌های HappyCall',
             'manage-crm-happycall' => 'مدیریت HappyCall',
